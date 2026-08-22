@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "synapseos"
+version = "0.1.0"
+description = "SynapseOS — Agentic Software Company Operating System (Phase 1 scaffolding)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Neocraft" }]
+# NOTE: license intentionally unset. Choosing AGPL-3.0 vs Apache-2.0 (or dual
+# licensing) is an owner-level governance decision (cahier des charges, Annexe C)
+# and must be recorded as an ADR before any public release.
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps", "core", "infrastructure"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra -q"
+filterwarnings = [
+    # Advisory deprecation from Starlette's TestClient stack; not our code.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy"]

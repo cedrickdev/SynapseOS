@@ -1,0 +1,42 @@
+# SynapseOS — Docker Compose (Phase 1)
+# Brings up the Platform API together with PostgreSQL.
+# Values default to safe local placeholders and can be overridden via a `.env` file.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-synapseos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-synapseos}
+      POSTGRES_DB: ${POSTGRES_DB:-synapseos}
+    ports:
+      - "5432:5432"
+    volumes:
+      - synapseos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-synapseos} -d ${POSTGRES_DB:-synapseos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://synapseos:synapseos@db:5432/synapseos}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status == 200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  synapseos_pgdata:

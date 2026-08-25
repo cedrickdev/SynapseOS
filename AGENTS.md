@@ -4,13 +4,13 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Repository status
 
-The repository has completed **Phase 1 — repository initialization** and is implementing
-**Phase 2 — fundamental data model**. It contains a minimal FastAPI application, typed SQLAlchemy
-models, Alembic migrations, append-only history protection, a PostgreSQL Docker Compose service,
-and real-PostgreSQL integration tests.
+The repository has completed **Phase 1 — repository initialization** and **Phase 2 — fundamental
+data model**, and is implementing **Phase 3 — task state machine**. It contains a minimal FastAPI
+application, typed SQLAlchemy models, Alembic migrations, append-only history protection, an
+audited task workflow, a PostgreSQL Docker Compose service, and real-PostgreSQL integration tests.
 
-Phase 3 and later phases are not implemented. In particular, there are no task-transition rules,
-LLM integrations, autonomous runtime agents, executable tools, skills, MCP integrations, or
+Phase 4 and later phases are not implemented. In particular, there are no LLM integrations,
+autonomous runtime agents, executable tools, skills, MCP integrations, QA/security engines, or
 frontend. Do not implement work from a later phase unless the user explicitly starts that phase.
 
 Important files:

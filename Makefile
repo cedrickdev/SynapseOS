@@ -1,11 +1,12 @@
-# SynapseOS — developer commands (Phase 1)
+# SynapseOS developer commands
 # Run `make help` to list available targets.
 
 .DEFAULT_GOAL := help
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: help venv install dev test lint format typecheck check up down clean
+.PHONY: help venv install dev test lint format typecheck check migrate migration-current \
+	migration-downgrade up down clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -33,6 +34,15 @@ typecheck: ## Run the mypy type checker
 	$(BIN)/mypy .
 
 check: lint typecheck test ## Run lint + typecheck + tests
+
+migrate: ## Upgrade the configured PostgreSQL database to Alembic head
+	$(BIN)/alembic upgrade head
+
+migration-current: ## Show the current PostgreSQL migration revision
+	$(BIN)/alembic current
+
+migration-downgrade: ## Downgrade PostgreSQL by one migration (development only)
+	$(BIN)/alembic downgrade -1
 
 up: ## Start API + PostgreSQL via Docker Compose
 	docker compose up --build

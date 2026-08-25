@@ -34,3 +34,4 @@ Trade-offs, risks, follow-ups.
 ## Index
 
 - [ADR-0001 — Phase 1 project initialization](0001-phase-1-project-initialization.md)
+- [ADR-0002 — Phase 2 fundamental data model](0002-phase-2-fundamental-data-model.md)

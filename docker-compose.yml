@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-synapseos}
       POSTGRES_DB: ${POSTGRES_DB:-synapseos}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-55432}:5432"
     volumes:
       - synapseos_pgdata:/var/lib/postgresql/data
     healthcheck:

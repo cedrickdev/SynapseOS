@@ -50,15 +50,18 @@ def test_shared_enums_have_the_approved_persisted_values() -> None:
         "CANCELLED",
     ]
     assert [item.value for item in TaskStatus] == [
-        "DRAFT",
+        "BACKLOG",
         "READY",
         "ASSIGNED",
         "IN_PROGRESS",
         "WAITING_REVIEW",
-        "REJECTED",
+        "CHANGES_REQUESTED",
+        "WAITING_QA",
+        "WAITING_SECURITY",
         "BLOCKED",
         "WAITING_HUMAN",
-        "DONE",
+        "COMPLETED",
+        "FAILED",
         "CANCELLED",
     ]
     assert [item.value for item in TaskPriority] == ["LOW", "MEDIUM", "HIGH", "CRITICAL"]

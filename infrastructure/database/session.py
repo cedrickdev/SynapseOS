@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from core.config import get_settings
 from infrastructure.database.append_only import register_append_only_guard
+from infrastructure.database.task_status_guard import register_task_status_guard
 
 register_append_only_guard()
+register_task_status_guard()
 
 
 def create_database_engine() -> Engine:

@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_1-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_2-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,15 +48,19 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 1 — repository initialization.** This is the clean, testable foundation for the agentic
-runtime. The following are intentionally **not implemented yet** (they belong to later phases):
-agents, LLM engine, tools, skills, MCP, frontend, and ORM models / database migrations.
+**Phase 2 — fundamental data model.** The repository now provides the persistence foundation for
+the future runtime. Runtime agents, LLM calls, task transitions, tool execution, skills, MCP, and
+the frontend remain intentionally unimplemented.
 
 What exists today:
 
 - A minimal FastAPI application (`apps/api`) exposing a `/health` liveness endpoint.
-- Environment-driven configuration (`core/config.py`) and SQLAlchemy engine/session wiring
-  (`infrastructure/database`), with no ORM models yet.
+- Nine typed SQLAlchemy models covering agents, projects, tasks, executions, decisions, tool-call
+  records, score history, and audit history.
+- A reviewed Alembic migration with PostgreSQL enums, JSONB, constraints, indexes, and reversible
+  upgrade/downgrade behavior.
+- Application-level append-only protection and insert/read-only repositories for `AgentScore` and
+  `AuditEvent`.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -86,6 +90,7 @@ docker compose up --build
 
 - API: <http://localhost:8000>
 - Health check: <http://localhost:8000/health> → `{"status": "ok"}`
+- PostgreSQL host port: `55432` by default (container-to-container traffic remains on `5432`)
 
 ### Run locally
 
@@ -105,9 +110,10 @@ core/                     # Domain layer (placeholders filled in later phases)
   agents/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
-  database/               # SQLAlchemy engine/session wiring (no models yet)
+  database/               # SQLAlchemy models, sessions, repositories, and append-only guard
   llm/ git/               # Placeholders for later phases
-tests/                    # Test suite
+alembic/                  # Versioned PostgreSQL migrations
+tests/                    # Unit and real-PostgreSQL integration tests
 docs/adr/                 # Architecture Decision Records
 ```
 
@@ -121,6 +127,8 @@ make lint        # lint with Ruff
 make format      # format with Ruff
 make typecheck   # type-check with mypy
 make check       # lint + typecheck + tests
+make migrate     # upgrade the configured database to Alembic head
+make migration-current    # show the current migration revision
 ```
 
 Run `make help` to list every available target.
@@ -133,9 +141,9 @@ must pass before any task is considered done.
 Development proceeds strictly **one phase at a time** — each phase is a single, independently
 validated pull request. The near-term sequence is:
 
-1. **Repository initialization** — *current*
-2. Fundamental data model
-3. Task state machine
+1. **Repository initialization** — completed
+2. **Fundamental data model** — *current*
+3. Task state machine — not started
 4. LLM provider abstraction (Ollama first)
 5. Agent core
 6. Tool registry
@@ -147,7 +155,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 
 - **Product / organization specification:** [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
-- **Guidance for AI tooling contributors:** [`CLAUDE.md`](CLAUDE.md)
+- **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 
 ## Contributing
 

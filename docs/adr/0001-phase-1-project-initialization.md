@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-22
-- **Deciders:** Platform Owner (with Claude Code)
+- **Deciders:** Platform Owner
 
 ## Context
 

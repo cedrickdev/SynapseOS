@@ -134,7 +134,7 @@ synapseos/
 
 ## Critères d'acceptation
 
-- [ ] `docker compose up` démarre API + PostgreSQL. <!-- non vérifié : Docker absent de l'environnement de build -->
+- [x] `docker compose up` démarre API + PostgreSQL.
 - [x] `/health` retourne HTTP 200.
 - [x] `pytest` passe.
 - [x] Ruff ne retourne pas d'erreur.
@@ -217,89 +217,89 @@ Créer les entités centrales nécessaires au fonctionnement du runtime.
 
 ## Entités V1
 
-- [ ] `Agent`
-- [ ] `Project`
-- [ ] `Task`
-- [ ] `TaskDependency`
-- [ ] `AgentRun`
-- [ ] `Decision`
-- [ ] `ToolCall`
-- [ ] `AgentScore`
-- [ ] `AuditEvent`
+- [x] `Agent`
+- [x] `Project`
+- [x] `Task`
+- [x] `TaskDependency`
+- [x] `AgentRun`
+- [x] `Decision`
+- [x] `ToolCall`
+- [x] `AgentScore`
+- [x] `AuditEvent`
 
 ## Agent
 
 Champs minimum :
 
-- [ ] `id`
-- [ ] `name`
-- [ ] `slug`
-- [ ] `role`
-- [ ] `department`
-- [ ] `seniority`
-- [ ] `status`
-- [ ] `autonomy_level`
-- [ ] `reputation_score`
-- [ ] `reliability_score`
-- [ ] `created_at`
-- [ ] `updated_at`
+- [x] `id`
+- [x] `name`
+- [x] `slug`
+- [x] `role`
+- [x] `department`
+- [x] `seniority`
+- [x] `status`
+- [x] `autonomy_level`
+- [x] `reputation_score`
+- [x] `reliability_score`
+- [x] `created_at`
+- [x] `updated_at`
 
 ## Project
 
-- [ ] `id`
-- [ ] `name`
-- [ ] `description`
-- [ ] `status`
-- [ ] `client_name`
-- [ ] `created_at`
-- [ ] `updated_at`
+- [x] `id`
+- [x] `name`
+- [x] `description`
+- [x] `status`
+- [x] `client_name`
+- [x] `created_at`
+- [x] `updated_at`
 
 ## Task
 
-- [ ] `id`
-- [ ] `project_id`
-- [ ] `parent_task_id`
-- [ ] `title`
-- [ ] `description`
-- [ ] `status`
-- [ ] `priority`
-- [ ] `assigned_agent_id`
-- [ ] `acceptance_criteria`
-- [ ] `max_iterations`
-- [ ] `iteration_count`
-- [ ] `created_at`
-- [ ] `updated_at`
+- [x] `id`
+- [x] `project_id`
+- [x] `parent_task_id`
+- [x] `title`
+- [x] `description`
+- [x] `status`
+- [x] `priority`
+- [x] `assigned_agent_id`
+- [x] `acceptance_criteria`
+- [x] `max_iterations`
+- [x] `iteration_count`
+- [x] `created_at`
+- [x] `updated_at`
 
 ## AgentRun
 
-- [ ] `id`
-- [ ] `agent_id`
-- [ ] `task_id`
-- [ ] `status`
-- [ ] `started_at`
-- [ ] `finished_at`
-- [ ] `iteration`
-- [ ] `confidence`
-- [ ] `error_message`
+- [x] `id`
+- [x] `agent_id`
+- [x] `task_id`
+- [x] `status`
+- [x] `started_at`
+- [x] `finished_at`
+- [x] `iteration`
+- [x] `confidence`
+- [x] `error_message`
 
 ## Decision
 
-- [ ] décision
-- [ ] alternatives
-- [ ] justification
-- [ ] confidence
-- [ ] evidence
-- [ ] agent
-- [ ] task
-- [ ] résultat final
+- [x] décision
+- [x] alternatives
+- [x] justification
+- [x] confidence
+- [x] evidence
+- [x] agent
+- [x] task
+- [x] résultat final
 
 ## Critères d'acceptation
 
-- [ ] Migrations Alembic fonctionnelles.
-- [ ] Relations SQLAlchemy testées.
-- [ ] États représentés avec des enums.
-- [ ] Tests CRUD minimaux.
-- [ ] Contraintes DB définies.
+- [x] Migrations Alembic fonctionnelles.
+- [x] Relations SQLAlchemy testées.
+- [x] États représentés avec des enums.
+- [x] Tests CRUD minimaux.
+- [x] Contraintes DB définies.
 
 ## Prompt Claude Code — Phase 2
 

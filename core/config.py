@@ -21,7 +21,12 @@ class Settings(BaseSettings):
     app_env: str = "development"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    database_url: str = "postgresql+psycopg://synapseos:synapseos@localhost:5432/synapseos"
+    postgres_user: str = "synapseos"
+    postgres_password: str = "synapseos"
+    postgres_db: str = "synapseos"
+    test_postgres_host: str = "localhost"
+    test_postgres_port: int = 55432
+    database_url: str = "postgresql+psycopg://synapseos:synapseos@localhost:55432/synapseos"
 
 
 def get_settings() -> Settings:

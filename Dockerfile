@@ -10,8 +10,9 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Copy metadata + sources needed to build/install the package.
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md alembic.ini ./
 COPY apps ./apps
+COPY alembic ./alembic
 COPY core ./core
 COPY infrastructure ./infrastructure
 

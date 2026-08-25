@@ -1,9 +1,4 @@
-"""Database engine and session wiring for SynapseOS.
-
-Phase 1 only prepares the SQLAlchemy engine and session factory so the platform
-is ready to host persistence. ORM models and Alembic migrations are intentionally
-deferred to Phase 2 (fundamental data model).
-"""
+"""Database engine, sessions, and persistence guards for SynapseOS."""
 
 from __future__ import annotations
 
@@ -13,6 +8,9 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.config import get_settings
+from infrastructure.database.append_only import register_append_only_guard
+
+register_append_only_guard()
 
 
 def create_database_engine() -> Engine:

@@ -15,8 +15,10 @@ from sqlalchemy.orm import Session
 from alembic import command
 from core.config import get_settings
 from infrastructure.database.append_only import register_append_only_guard
+from infrastructure.database.task_status_guard import register_task_status_guard
 
 register_append_only_guard()
+register_task_status_guard()
 
 TEST_DATABASE_PREFIX = "synapseos_test_"
 

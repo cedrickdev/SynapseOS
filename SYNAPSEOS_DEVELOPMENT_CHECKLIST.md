@@ -373,14 +373,14 @@ CANCELLED
 
 ## Checklist
 
-- [ ] Créer `TaskStateMachine`.
-- [ ] Définir transitions autorisées.
-- [ ] Interdire transitions invalides.
-- [ ] Créer événements d'audit pour chaque transition.
-- [ ] Ajouter raison du changement.
-- [ ] Ajouter acteur à l'origine du changement.
-- [ ] Tests complets des transitions.
-- [ ] Document Mermaid de la machine à états.
+- [x] Créer `TaskStateMachine`.
+- [x] Définir transitions autorisées.
+- [x] Interdire transitions invalides.
+- [x] Créer événements d'audit pour chaque transition.
+- [x] Ajouter raison du changement.
+- [x] Ajouter acteur à l'origine du changement.
+- [x] Tests complets des transitions.
+- [x] Document Mermaid de la machine à états.
 
 ## Mermaid
 

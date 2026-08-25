@@ -46,7 +46,10 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status"), default=TaskStatus.DRAFT, nullable=False
+        Enum(TaskStatus, name="task_status"),
+        default=TaskStatus.BACKLOG,
+        nullable=False,
+        active_history=True,
     )
     priority: Mapped[TaskPriority] = mapped_column(
         Enum(TaskPriority, name="task_priority"), default=TaskPriority.MEDIUM, nullable=False

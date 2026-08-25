@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_2-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_3-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,9 +48,9 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 2 — fundamental data model.** The repository now provides the persistence foundation for
-the future runtime. Runtime agents, LLM calls, task transitions, tool execution, skills, MCP, and
-the frontend remain intentionally unimplemented.
+**Phase 3 — task state machine.** The repository now provides the persistence foundation and a
+deterministic, audited task workflow. Runtime agents, LLM calls, executable tools, skills, MCP, QA
+and security engines, and the frontend remain intentionally unimplemented.
 
 What exists today:
 
@@ -61,6 +61,8 @@ What exists today:
   upgrade/downgrade behavior.
 - Application-level append-only protection and insert/read-only repositories for `AgentScore` and
   `AuditEvent`.
+- A framework-independent `TaskStateMachine` with exhaustive transition rules, atomic audit
+  events, and protection against direct persisted status changes.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -142,8 +144,8 @@ Development proceeds strictly **one phase at a time** — each phase is a single
 validated pull request. The near-term sequence is:
 
 1. **Repository initialization** — completed
-2. **Fundamental data model** — *current*
-3. Task state machine — not started
+2. **Fundamental data model** — completed
+3. **Task state machine** — *current*
 4. LLM provider abstraction (Ollama first)
 5. Agent core
 6. Tool registry
@@ -154,6 +156,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 ## Documentation
 
 - **Product / organization specification:** [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md)
+- **Task workflow:** [`docs/task-state-machine.md`](docs/task-state-machine.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

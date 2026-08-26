@@ -18,6 +18,7 @@ env/
 .ruff_cache/
 .coverage
 htmlcov/
+.superpowers/sdd/
 
 # Environment / secrets (never commit real secrets)
 .env

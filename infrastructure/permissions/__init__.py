@@ -1,0 +1,5 @@
+"""SQLAlchemy adapters for the Phase 7 Permission Engine."""
+
+from infrastructure.permissions.policy import SQLAlchemyPermissionPolicy
+
+__all__ = ["SQLAlchemyPermissionPolicy"]

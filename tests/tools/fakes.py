@@ -6,6 +6,7 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
+from core.enums import Permission
 from core.tools import JsonValue, Tool, ToolExecutionContext, ToolRiskLevel
 
 
@@ -23,7 +24,7 @@ class FakeTool(Tool[FakeInput]):
     name = "fake_read"
     description = "Read one deterministic fake resource."
     input_type = FakeInput
-    required_permissions = frozenset({"workspace.read"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 1.0
     calls: ClassVar[int] = 0

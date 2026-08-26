@@ -7,7 +7,8 @@ from collections.abc import Mapping
 
 from pydantic import BaseModel
 
-from core.tools.types import JsonValue, ToolExecutionContext, ToolRiskLevel
+from core.enums import Permission, ToolRiskLevel
+from core.tools.types import JsonValue, ToolExecutionContext
 
 
 class Tool[InputT: BaseModel](ABC):
@@ -16,7 +17,7 @@ class Tool[InputT: BaseModel](ABC):
     name: str
     description: str
     input_type: type[InputT]
-    required_permissions: frozenset[str]
+    required_permissions: frozenset[Permission]
     risk_level: ToolRiskLevel
     timeout_seconds: float
 

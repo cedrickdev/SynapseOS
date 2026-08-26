@@ -30,7 +30,6 @@ def _context(workspace_root: Path) -> ToolExecutionContext:
         project_id=uuid.uuid4(),
         task_id=uuid.uuid4(),
         declared_tool_ids={"read_file", "list_files", "search_text"},
-        permission_ids={"workspace.read", "workspace.list", "workspace.search"},
         correlation_id=uuid.uuid4(),
     )
 

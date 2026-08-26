@@ -53,7 +53,6 @@ def _context(workspace_root: Path) -> ToolExecutionContext:
         project_id=uuid.uuid4(),
         task_id=uuid.uuid4(),
         declared_tool_ids={"git_status", "git_diff"},
-        permission_ids={"git.read"},
         correlation_id=uuid.uuid4(),
     )
 

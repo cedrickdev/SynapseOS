@@ -21,6 +21,15 @@ class Permission(StrEnum):
     DEPLOYMENT_PRODUCTION = "deployment.production"
 
 
+class ToolRiskLevel(StrEnum):
+    """Risk classification shared by tool definitions and permission policy."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
 class AgentSeniority(StrEnum):
     TRAINEE = "TRAINEE"
     JUNIOR = "JUNIOR"

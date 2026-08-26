@@ -24,7 +24,6 @@ def _context(workspace_root: Path, **changes: object) -> ToolExecutionContext:
         "project_id": uuid.uuid4(),
         "task_id": uuid.uuid4(),
         "declared_tool_ids": {"read_file"},
-        "permission_ids": {"workspace.read"},
         "correlation_id": uuid.uuid4(),
     }
     values.update(changes)
@@ -39,7 +38,6 @@ def test_execution_context_canonicalizes_root_and_freezes_capabilities(tmp_path:
 
     assert context.workspace_root == nested.resolve()
     assert context.declared_tool_ids == frozenset({"read_file"})
-    assert context.permission_ids == frozenset({"workspace.read"})
     with pytest.raises(ValidationError):
         context.agent_id = "changed"  # type: ignore[misc]
 
@@ -49,7 +47,6 @@ def test_execution_context_canonicalizes_root_and_freezes_capabilities(tmp_path:
     [
         ({"agent_id": "UPPERCASE"}, "UPPERCASE"),
         ({"declared_tool_ids": {"../escape"}}, "../escape"),
-        ({"permission_ids": set()}, "unused-marker"),
     ],
 )
 def test_execution_context_rejects_invalid_identifiers(

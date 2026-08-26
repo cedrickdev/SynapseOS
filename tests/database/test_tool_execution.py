@@ -13,7 +13,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from core.enums import AuditActorType, AuditResult, ToolCallStatus
+from core.enums import AuditActorType, AuditResult, Permission, ToolCallStatus
+from core.permissions import PermissionEngine
 from core.tools import (
     JsonValue,
     Tool,
@@ -24,7 +25,11 @@ from core.tools import (
     ToolRegistry,
     ToolRiskLevel,
 )
-from infrastructure.database.models import AuditEvent, ToolCall
+from infrastructure.database.models import AgentPermission, AuditEvent, ToolCall
+from infrastructure.permissions import (
+    SQLAlchemyPermissionAuditRecorder,
+    SQLAlchemyPermissionPolicy,
+)
 from infrastructure.tools.audit import SQLAlchemyToolAuditRecorder
 from infrastructure.tools.filesystem import ReadFileInput, ReadFileTool
 from tests.database.tool_fixtures import create_tool_run
@@ -36,9 +41,21 @@ def _context(
     workspace_root: Path,
     *,
     declared_tools: set[str] | None = None,
-    permissions: set[str] | None = None,
+    grant_permissions: frozenset[Permission] = frozenset({Permission.FILESYSTEM_READ}),
 ) -> ToolExecutionContext:
     project, agent, task, run = create_tool_run(session)
+    session.add_all(
+        AgentPermission(
+            agent_id=agent.id,
+            project_id=project.id,
+            permission=permission,
+            granted_by_actor_type=AuditActorType.HUMAN,
+            granted_by_actor_id="test-administrator",
+            reason="Test execution grant.",
+        )
+        for permission in grant_permissions
+    )
+    session.flush()
     return ToolExecutionContext(
         workspace_root=workspace_root,
         agent_id=agent.slug,
@@ -46,8 +63,14 @@ def _context(
         project_id=project.id,
         task_id=task.id,
         declared_tool_ids=declared_tools or {"fake_read"},
-        permission_ids=permissions or {"workspace.read"},
         correlation_id=uuid.uuid4(),
+    )
+
+
+def _permission_engine(session: Session) -> PermissionEngine:
+    return PermissionEngine(
+        SQLAlchemyPermissionPolicy(session),
+        SQLAlchemyPermissionAuditRecorder(session),
     )
 
 
@@ -56,7 +79,7 @@ def test_successful_tool_execution_is_audited(db_session: Session, tmp_path: Pat
     recorder = SQLAlchemyToolAuditRecorder(db_session)
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([FakeTool()]), recorder).execute(
+        ToolExecutor(ToolRegistry([FakeTool()]), recorder, _permission_engine(db_session)).execute(
             "fake_read", {"path": "README.md"}, context
         )
     )
@@ -69,7 +92,10 @@ def test_successful_tool_execution_is_audited(db_session: Session, tmp_path: Pat
     assert call.output_data["output_field_count"] == 2
     assert call.output_data["truncated"] is False
     event = db_session.scalar(
-        select(AuditEvent).where(AuditEvent.agent_run_id == context.agent_run_id)
+        select(AuditEvent).where(
+            AuditEvent.agent_run_id == context.agent_run_id,
+            AuditEvent.event_type == "TOOL_EXECUTION",
+        )
     )
     assert event is not None
     assert event.actor_type is AuditActorType.AGENT
@@ -82,20 +108,26 @@ def test_successful_tool_execution_is_audited(db_session: Session, tmp_path: Pat
 
 
 @pytest.mark.parametrize(
-    ("tool_name", "declared_tools", "permissions", "expected_status", "expected_result"),
+    ("tool_name", "declared_tools", "grants", "expected_status", "expected_result"),
     [
-        ("unknown", {"unknown"}, {"workspace.read"}, ToolCallStatus.DENIED, AuditResult.DENIED),
+        (
+            "unknown",
+            {"unknown"},
+            frozenset({Permission.FILESYSTEM_READ}),
+            ToolCallStatus.DENIED,
+            AuditResult.DENIED,
+        ),
         (
             "fake_read",
             {"another_tool"},
-            {"workspace.read"},
+            frozenset({Permission.FILESYSTEM_READ}),
             ToolCallStatus.DENIED,
             AuditResult.DENIED,
         ),
         (
             "fake_read",
             {"fake_read"},
-            {"git.read"},
+            frozenset({Permission.GIT_READ}),
             ToolCallStatus.DENIED,
             AuditResult.DENIED,
         ),
@@ -106,7 +138,7 @@ def test_denied_attempts_are_persisted(
     tmp_path: Path,
     tool_name: str,
     declared_tools: set[str],
-    permissions: set[str],
+    grants: frozenset[Permission],
     expected_status: ToolCallStatus,
     expected_result: AuditResult,
 ) -> None:
@@ -114,12 +146,14 @@ def test_denied_attempts_are_persisted(
         db_session,
         tmp_path,
         declared_tools=declared_tools,
-        permissions=permissions,
+        grant_permissions=grants,
     )
     recorder = SQLAlchemyToolAuditRecorder(db_session)
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([FakeTool()]), recorder).execute(tool_name, {}, context)
+        ToolExecutor(ToolRegistry([FakeTool()]), recorder, _permission_engine(db_session)).execute(
+            tool_name, {}, context
+        )
     )
     db_session.flush()
 
@@ -127,7 +161,10 @@ def test_denied_attempts_are_persisted(
     assert call is not None
     assert call.status is expected_status
     event = db_session.scalar(
-        select(AuditEvent).where(AuditEvent.agent_run_id == context.agent_run_id)
+        select(AuditEvent).where(
+            AuditEvent.agent_run_id == context.agent_run_id,
+            AuditEvent.event_type == "TOOL_EXECUTION",
+        )
     )
     assert event is not None
     assert event.result is expected_result
@@ -141,7 +178,7 @@ class _BlockingTool(Tool[_NoInput]):
     name = "blocking"
     description = "Wait until timed out or cancelled."
     input_type = _NoInput
-    required_permissions = frozenset({"workspace.read"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 0.01
 
@@ -171,9 +208,11 @@ def test_timeout_and_cancellation_have_terminal_audits(
     )
     timeout_recorder = SQLAlchemyToolAuditRecorder(db_session)
     timeout_result = asyncio.run(
-        ToolExecutor(ToolRegistry([_BlockingTool()]), timeout_recorder).execute(
-            "blocking", {}, timeout_context
-        )
+        ToolExecutor(
+            ToolRegistry([_BlockingTool()]),
+            timeout_recorder,
+            _permission_engine(db_session),
+        ).execute("blocking", {}, timeout_context)
     )
 
     cancellation_context = _context(
@@ -187,9 +226,11 @@ def test_timeout_and_cancellation_have_terminal_audits(
 
     async def cancel() -> None:
         operation = asyncio.create_task(
-            ToolExecutor(ToolRegistry([cancellation_tool]), cancellation_recorder).execute(
-                "blocking", {}, cancellation_context
-            )
+            ToolExecutor(
+                ToolRegistry([cancellation_tool]),
+                cancellation_recorder,
+                _permission_engine(db_session),
+            ).execute("blocking", {}, cancellation_context)
         )
         while cancellation_tool.started is None:
             await asyncio.sleep(0)
@@ -214,9 +255,10 @@ def test_timeout_and_cancellation_have_terminal_audits(
     results = set(
         db_session.scalars(
             select(AuditEvent.result).where(
+                AuditEvent.event_type == "TOOL_EXECUTION",
                 AuditEvent.agent_run_id.in_(
                     [timeout_context.agent_run_id, cancellation_context.agent_run_id]
-                )
+                ),
             )
         )
     )
@@ -233,20 +275,22 @@ def test_audit_persists_no_raw_file_or_host_content(
         db_session,
         tmp_path,
         declared_tools={"read_file"},
-        permissions={"workspace.read"},
     )
     recorder = SQLAlchemyToolAuditRecorder(db_session)
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([ReadFileTool()]), recorder).execute(
-            "read_file", ReadFileInput(path="client.txt").model_dump(), context
-        )
+        ToolExecutor(
+            ToolRegistry([ReadFileTool()]), recorder, _permission_engine(db_session)
+        ).execute("read_file", ReadFileInput(path="client.txt").model_dump(), context)
     )
     db_session.flush()
 
     call = db_session.get(ToolCall, result.tool_call_id)
     event = db_session.scalar(
-        select(AuditEvent).where(AuditEvent.agent_run_id == context.agent_run_id)
+        select(AuditEvent).where(
+            AuditEvent.agent_run_id == context.agent_run_id,
+            AuditEvent.event_type == "TOOL_EXECUTION",
+        )
     )
     assert call is not None
     assert event is not None
@@ -269,9 +313,9 @@ def test_recorder_never_owns_session_transaction_or_lifecycle(
         patch.object(db_session, "close", side_effect=AssertionError("close called")),
     ):
         asyncio.run(
-            ToolExecutor(ToolRegistry([FakeTool()]), recorder).execute(
-                "fake_read", {"path": "README.md"}, context
-            )
+            ToolExecutor(
+                ToolRegistry([FakeTool()]), recorder, _permission_engine(db_session)
+            ).execute("fake_read", {"path": "README.md"}, context)
         )
         db_session.flush()
 
@@ -288,6 +332,7 @@ def test_recorder_rejects_forged_scope_before_tool_call(
             ToolExecutor(
                 ToolRegistry([FakeTool()]),
                 SQLAlchemyToolAuditRecorder(db_session),
+                _permission_engine(db_session),
             ).execute("fake_read", {"path": "README.md"}, forged)
         )
 

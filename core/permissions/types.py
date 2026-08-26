@@ -9,8 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from core.enums import Permission
-from core.tools.types import ToolRiskLevel
+from core.enums import Permission, ToolRiskLevel
 
 Identifier = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._:-]{0,127}$")]
 IdentifierSet = Annotated[frozenset[Identifier], Field(min_length=1, max_length=128)]

@@ -1,0 +1,9 @@
+id: generic-frontend
+name: Generic Frontend Engineering
+description: Build accessible maintainable user interfaces from explicit product requirements.
+domains: [frontend, user-interface]
+technologies: [generic, web]
+tags: [accessibility, component, usability]
+version: 1.0.0
+recommended_tool_ids: [git_diff, git_status, list_files, read_file, search_text]
+required_permissions: [filesystem.read, git.read]

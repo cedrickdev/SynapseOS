@@ -1,0 +1,9 @@
+id: testing
+name: Deterministic Testing
+description: Design focused tests that prove behavior and expose every failure.
+domains: [engineering, quality]
+technologies: [generic]
+tags: [evidence, testing, verification]
+version: 1.0.0
+recommended_tool_ids: [git_diff, list_files, read_file, search_text]
+required_permissions: [filesystem.read]

@@ -5,6 +5,22 @@ from __future__ import annotations
 from enum import StrEnum
 
 
+class Permission(StrEnum):
+    """Canonical capabilities shared by agents, tools, and persistence."""
+
+    FILESYSTEM_READ = "filesystem.read"
+    FILESYSTEM_WRITE = "filesystem.write"
+    GIT_READ = "git.read"
+    GIT_WRITE = "git.write"
+    SHELL_EXECUTE = "shell.execute"
+    TESTS_EXECUTE = "tests.execute"
+    NETWORK_ACCESS = "network.access"
+    DATABASE_READ = "database.read"
+    DATABASE_WRITE = "database.write"
+    DEPLOYMENT_STAGING = "deployment.staging"
+    DEPLOYMENT_PRODUCTION = "deployment.production"
+
+
 class AgentSeniority(StrEnum):
     TRAINEE = "TRAINEE"
     JUNIOR = "JUNIOR"

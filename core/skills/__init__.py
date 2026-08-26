@@ -2,6 +2,7 @@
 
 from core.skills.errors import SkillError, SkillErrorCode, SkillLoadError, SkillRegistryError
 from core.skills.registry import SkillRegistry
+from core.skills.selector import SkillSelector
 from core.skills.types import (
     Skill,
     SkillMatch,
@@ -21,4 +22,5 @@ __all__ = [
     "SkillRegistry",
     "SkillSelectionReason",
     "SkillSelectionRequest",
+    "SkillSelector",
 ]

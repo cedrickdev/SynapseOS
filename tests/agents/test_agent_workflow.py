@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 from collections.abc import Callable, Coroutine
 
 import pytest
@@ -22,6 +23,8 @@ from core.llm import LLMModelMetadata, LLMProviderError, LLMRequest, LLMResponse
 from infrastructure.llm.fake import FakeLLMProvider
 
 type WorkflowOperation = Callable[[Agent], Coroutine[None, None, object]]
+type StructuredInput = Observation | Plan | Decision
+type ForgedInputOperation = Callable[[Agent, StructuredInput], Coroutine[None, None, object]]
 
 
 class CancellingProvider:
@@ -78,6 +81,85 @@ async def _call_report(agent: Agent) -> object:
     """Run reporting with complete valid values."""
     observation, plan, decision = _workflow_values()
     return await agent.report(observation, plan, decision)
+
+
+async def _plan_with_forged_observation(agent: Agent, value: StructuredInput) -> object:
+    """Pass one forged observation to the planning boundary."""
+    assert isinstance(value, Observation)
+    return await agent.plan(value, "Complete the bounded workflow operation.")
+
+
+async def _decide_with_forged_observation(agent: Agent, value: StructuredInput) -> object:
+    """Pass one forged observation to the decision boundary."""
+    assert isinstance(value, Observation)
+    _, plan, _ = _workflow_values()
+    return await agent.decide(value, plan)
+
+
+async def _decide_with_forged_plan(agent: Agent, value: StructuredInput) -> object:
+    """Pass one forged plan to the decision boundary."""
+    assert isinstance(value, Plan)
+    observation, _, _ = _workflow_values()
+    return await agent.decide(observation, value)
+
+
+async def _report_with_forged_observation(agent: Agent, value: StructuredInput) -> object:
+    """Pass one forged observation to the reporting boundary."""
+    assert isinstance(value, Observation)
+    _, plan, decision = _workflow_values()
+    return await agent.report(value, plan, decision)
+
+
+async def _report_with_forged_plan(agent: Agent, value: StructuredInput) -> object:
+    """Pass one forged plan to the reporting boundary."""
+    assert isinstance(value, Plan)
+    observation, _, decision = _workflow_values()
+    return await agent.report(observation, value, decision)
+
+
+async def _report_with_forged_decision(agent: Agent, value: StructuredInput) -> object:
+    """Pass one forged decision to the reporting boundary."""
+    assert isinstance(value, Decision)
+    observation, plan, _ = _workflow_values()
+    return await agent.report(observation, plan, value)
+
+
+def _forged_observation_with_oversized_summary() -> Observation:
+    """Forge an observation that exceeds its validated text limit."""
+    observation, _, _ = _workflow_values()
+    return observation.model_copy(update={"summary": "oversized-input-marker-7f2e" + "x" * 4_097})
+
+
+def _forged_observation_with_wrong_facts_type() -> Observation:
+    """Forge an observation whose facts field is no longer a tuple of text."""
+    observation, _, _ = _workflow_values()
+    return observation.model_copy(update={"facts": "wrong-facts-type-marker-6d1b"})
+
+
+def _forged_plan_with_wrong_steps_type() -> Plan:
+    """Forge a plan whose required steps field is no longer a tuple of text."""
+    _, plan, _ = _workflow_values()
+    return plan.model_copy(update={"steps": "wrong-steps-type-marker-5c0a"})
+
+
+def _forged_observation_with_extra_field() -> Observation:
+    """Forge an observation that carries an unexpected field."""
+    observation, _, _ = _workflow_values()
+    return observation.model_copy(update={"unexpected": "extra-field-marker-4b9e"})
+
+
+def _forged_plan_with_oversized_objective() -> Plan:
+    """Forge a plan that exceeds its validated objective limit."""
+    _, plan, _ = _workflow_values()
+    return plan.model_copy(update={"objective": "oversized-plan-marker-3a8d" + "x" * 2_049})
+
+
+def _forged_decision_with_non_finite_confidence() -> Decision:
+    """Forge a decision with non-finite confidence and a sensitive marker."""
+    _, _, decision = _workflow_values()
+    return decision.model_copy(
+        update={"choice": "non-finite-decision-marker-2f7c", "confidence": math.nan}
+    )
 
 
 def test_plan_returns_validated_plan_with_one_call(agent_profile: AgentProfile) -> None:
@@ -319,6 +401,61 @@ def test_plan_rejects_invalid_objective_before_calling_provider(
     with pytest.raises(ValueError):
         asyncio.run(agent.plan(observation, objective))
 
+    assert provider.requests == ()
+    assert agent.history == ()
+
+
+@pytest.mark.parametrize(
+    ("operation", "forged_input", "marker"),
+    [
+        (
+            _plan_with_forged_observation,
+            _forged_observation_with_oversized_summary,
+            "oversized-input-marker-7f2e",
+        ),
+        (
+            _decide_with_forged_observation,
+            _forged_observation_with_wrong_facts_type,
+            "wrong-facts-type-marker-6d1b",
+        ),
+        (
+            _decide_with_forged_plan,
+            _forged_plan_with_wrong_steps_type,
+            "wrong-steps-type-marker-5c0a",
+        ),
+        (
+            _report_with_forged_observation,
+            _forged_observation_with_extra_field,
+            "extra-field-marker-4b9e",
+        ),
+        (
+            _report_with_forged_plan,
+            _forged_plan_with_oversized_objective,
+            "oversized-plan-marker-3a8d",
+        ),
+        (
+            _report_with_forged_decision,
+            _forged_decision_with_non_finite_confidence,
+            "non-finite-decision-marker-2f7c",
+        ),
+    ],
+)
+def test_workflow_operations_reject_forged_inputs_before_provider_requests(
+    agent_profile: AgentProfile,
+    operation: ForgedInputOperation,
+    forged_input: Callable[[], StructuredInput],
+    marker: str,
+) -> None:
+    """Forged Pydantic values must never be serialized or sent to a provider."""
+    provider = FakeLLMProvider()
+    agent = Agent(agent_profile, provider)
+
+    with pytest.raises(ValueError) as raised:
+        asyncio.run(operation(agent, forged_input()))
+
+    assert marker not in str(raised.value)
+    assert marker not in repr(raised.value)
+    assert marker not in raised.value.args
     assert provider.requests == ()
     assert agent.history == ()
 

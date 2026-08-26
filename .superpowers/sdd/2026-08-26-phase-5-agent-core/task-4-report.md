@@ -125,3 +125,67 @@ public operation has one explicit-token provider call, no retry, repair, or
 fallback; provider errors and cancellation are not caught; only successful
 decoded values append metadata-only history; and prompts never include prior
 history or raw provider output.
+
+## Fix Round 1: Strict Structured Input Revalidation
+
+### Finding Addressed
+
+`model_copy(update=...)` can bypass Pydantic field validation. The original
+planning, decision, and reporting methods serialized the supplied models
+directly, allowing forged values to reach the provider.
+
+### RED Evidence
+
+Command:
+
+```bash
+.venv/bin/pytest tests/agents/test_agent_workflow.py::test_workflow_operations_reject_forged_inputs_before_provider_requests -q
+```
+
+Observed result: `6 failed`. Each forged value reached `FakeLLMProvider`, which
+recorded a request before raising its empty-response error. The cases covered:
+
+- `plan()` observation with an oversized summary;
+- `decide()` observation with a wrong facts type;
+- `decide()` plan with a wrong steps type;
+- `report()` observation with an injected extra field;
+- `report()` plan with an oversized objective;
+- `report()` decision with non-finite confidence.
+
+### GREEN Evidence
+
+Command:
+
+```bash
+.venv/bin/pytest tests/agents/test_agent_workflow.py::test_workflow_operations_reject_forged_inputs_before_provider_requests -q
+```
+
+Observed result: `6 passed`.
+
+The fix reconstructs each supplied structured value through its exact model
+with `strict=True` and `extra="forbid"` before prompt construction. Any
+failure raises a stable `ValueError` naming only the expected model type; it
+does not expose input values, and no provider request or history entry occurs.
+
+### Final Verification
+
+Commands and results:
+
+```bash
+.venv/bin/pytest tests/agents/test_agent_workflow.py -q
+# 25 passed
+
+.venv/bin/pytest tests/agents -q
+# 134 passed
+
+.venv/bin/ruff check core/agents tests/agents && .venv/bin/mypy core/agents tests/agents
+# All checks passed!
+# Success: no issues found in 11 source files
+
+make test
+# 420 passed in 1.49s
+```
+
+Self-review confirmed that valid operation inputs retain their one-call
+behavior, provider errors and cancellation are still unmodified, and the
+revalidation path neither retains nor replays provider content.

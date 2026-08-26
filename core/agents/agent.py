@@ -6,7 +6,7 @@ import json
 from collections import deque
 from datetime import UTC, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from core.agents.structured_output import decode_structured_output
 from core.agents.types import (
@@ -46,6 +46,19 @@ def _normalize_history_label(value: str) -> str:
     """Produce a bounded, non-blank label that is safe to retain in history."""
     normalized = value.strip()[:_MAX_HISTORY_LABEL_LENGTH]
     return normalized or _UNKNOWN_HISTORY_LABEL
+
+
+def _revalidate_structured_input[ModelT: BaseModel](
+    value: ModelT,
+    model_type: type[ModelT],
+) -> ModelT:
+    """Return one strict model reconstruction without exposing invalid input values."""
+    if type(value) is not model_type:
+        raise ValueError(f"{model_type.__name__} input is invalid")
+    try:
+        return model_type.model_validate(value.__dict__, strict=True, extra="forbid")
+    except ValidationError:
+        raise ValueError(f"{model_type.__name__} input is invalid") from None
 
 
 class Agent:
@@ -93,11 +106,12 @@ class Agent:
             raise ValueError("objective must not be blank")
         if len(objective) > _MAX_OBJECTIVE_LENGTH:
             raise ValueError("objective must not exceed 8192 characters")
+        validated_observation = _revalidate_structured_input(observation, Observation)
 
         return await self._generate_structured(
             content=(
                 f"{_PLAN_INSTRUCTION}{objective}\nObservation:\n"
-                f"{json.dumps(observation.model_dump(mode='json'))}"
+                f"{json.dumps(validated_observation.model_dump(mode='json'))}"
             ),
             model_type=Plan,
             operation=AgentOperation.PLAN,
@@ -105,11 +119,13 @@ class Agent:
 
     async def decide(self, observation: Observation, plan: Plan) -> Decision:
         """Return one validated decision for supplied immutable values."""
+        validated_observation = _revalidate_structured_input(observation, Observation)
+        validated_plan = _revalidate_structured_input(plan, Plan)
         return await self._generate_structured(
             content=(
                 f"{_DECISION_INSTRUCTION}\nObservation:\n"
-                f"{json.dumps(observation.model_dump(mode='json'))}\nPlan:\n"
-                f"{json.dumps(plan.model_dump(mode='json'))}\nDecision:\n"
+                f"{json.dumps(validated_observation.model_dump(mode='json'))}\nPlan:\n"
+                f"{json.dumps(validated_plan.model_dump(mode='json'))}\nDecision:\n"
             ),
             model_type=Decision,
             operation=AgentOperation.DECIDE,
@@ -122,12 +138,15 @@ class Agent:
         decision: Decision,
     ) -> AgentReport:
         """Return one validated report for supplied immutable values."""
+        validated_observation = _revalidate_structured_input(observation, Observation)
+        validated_plan = _revalidate_structured_input(plan, Plan)
+        validated_decision = _revalidate_structured_input(decision, Decision)
         return await self._generate_structured(
             content=(
                 f"{_REPORT_INSTRUCTION}\nObservation:\n"
-                f"{json.dumps(observation.model_dump(mode='json'))}\nPlan:\n"
-                f"{json.dumps(plan.model_dump(mode='json'))}\nDecision:\n"
-                f"{json.dumps(decision.model_dump(mode='json'))}\nReport:\n"
+                f"{json.dumps(validated_observation.model_dump(mode='json'))}\nPlan:\n"
+                f"{json.dumps(validated_plan.model_dump(mode='json'))}\nDecision:\n"
+                f"{json.dumps(validated_decision.model_dump(mode='json'))}\nReport:\n"
             ),
             model_type=AgentReport,
             operation=AgentOperation.REPORT,

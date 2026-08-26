@@ -8,6 +8,13 @@ from infrastructure.tools.filesystem import (
     SearchTextInput,
     SearchTextTool,
 )
+from infrastructure.tools.git import (
+    GitDiffInput,
+    GitDiffTarget,
+    GitDiffTool,
+    GitStatusInput,
+    GitStatusTool,
+)
 
 __all__ = [
     "ListFilesInput",
@@ -16,4 +23,9 @@ __all__ = [
     "ReadFileTool",
     "SearchTextInput",
     "SearchTextTool",
+    "GitDiffInput",
+    "GitDiffTarget",
+    "GitDiffTool",
+    "GitStatusInput",
+    "GitStatusTool",
 ]

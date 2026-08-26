@@ -7,6 +7,8 @@ from core.tools.errors import (
     ToolInputError,
     ToolWorkspaceError,
 )
+from core.tools.registry import ToolDefinition, ToolRegistry
+from core.tools.tool import Tool
 from core.tools.types import (
     JsonValue,
     ToolErrorCode,
@@ -18,14 +20,17 @@ from core.tools.types import (
 
 __all__ = [
     "JsonValue",
+    "Tool",
     "ToolAuditError",
     "ToolDefinitionError",
+    "ToolDefinition",
     "ToolError",
     "ToolErrorCode",
     "ToolExecutionContext",
     "ToolInputError",
     "ToolResult",
     "ToolResultStatus",
+    "ToolRegistry",
     "ToolRiskLevel",
     "ToolWorkspaceError",
 ]

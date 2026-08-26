@@ -449,18 +449,18 @@ Découpler SynapseOS du fournisseur de modèle.
 
 ## Checklist
 
-- [ ] Créer interface `LLMProvider`.
-- [ ] Créer types `LLMRequest`.
-- [ ] Créer `LLMResponse`.
-- [ ] Créer provider Ollama.
-- [ ] Support system prompt.
-- [ ] Support messages.
-- [ ] Timeout.
-- [ ] Gestion erreurs.
-- [ ] Nombre de tokens si disponible.
-- [ ] Métadonnées modèle.
-- [ ] Mock provider pour tests.
-- [ ] Tests sans dépendre d'Ollama réel.
+- [x] Créer interface `LLMProvider`.
+- [x] Créer types `LLMRequest`.
+- [x] Créer `LLMResponse`.
+- [x] Créer provider Ollama.
+- [x] Support system prompt.
+- [x] Support messages.
+- [x] Timeout.
+- [x] Gestion erreurs.
+- [x] Nombre de tokens si disponible.
+- [x] Métadonnées modèle.
+- [x] Mock provider pour tests.
+- [x] Tests sans dépendre d'Ollama réel.
 
 ## Prompt Claude Code — Phase 4
 

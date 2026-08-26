@@ -165,15 +165,23 @@ def _forged_decision_with_non_finite_confidence() -> Decision:
 def test_plan_returns_validated_plan_with_one_call(agent_profile: AgentProfile) -> None:
     """Planning must use only the supplied observation and one provider response."""
     objective = "Produce a bounded implementation plan."
-    raw_prompt_marker = "earlier-raw-prompt-marker-638e"
+    earlier_subject_marker = "earlier-subject-marker-638e"
     raw_response_marker = "earlier-raw-response-marker-b86a"
-    observation = Observation(
-        summary="The supplied repository needs a focused change.",
-        facts=["The provider boundary is already available."],
-        uncertainties=["No prior provider output may be replayed."],
-        risks=["Adding an execution loop exceeds the task scope."],
+    observation_response = LLMResponse(
+        content=(
+            '{"summary":"The supplied repository needs a focused change.",'
+            '"facts":["The provider boundary is already available."],'
+            '"uncertainties":["No prior provider output may be replayed."],'
+            '"risks":["Adding an execution loop exceeds the task scope."]}'
+        ),
+        finish_reason=raw_response_marker,
+        model=LLMModelMetadata(
+            provider="fake",
+            model="deterministic-observation-v1",
+            details={"raw_trace": raw_response_marker},
+        ),
     )
-    response = LLMResponse(
+    plan_response = LLMResponse(
         content=(
             '{"objective":"Produce a bounded implementation plan.",'
             '"steps":["Add the operation through a failing test."],'
@@ -182,9 +190,10 @@ def test_plan_returns_validated_plan_with_one_call(agent_profile: AgentProfile) 
         ),
         model=LLMModelMetadata(provider="fake", model="deterministic-plan-v1"),
     )
-    provider = FakeLLMProvider(responses=[response])
+    provider = FakeLLMProvider(responses=[observation_response, plan_response])
     agent = Agent(agent_profile, provider, max_tokens=1234)
 
+    observation = asyncio.run(agent.observe(earlier_subject_marker))
     plan = asyncio.run(agent.plan(observation, objective))
 
     assert plan == Plan(
@@ -193,8 +202,9 @@ def test_plan_returns_validated_plan_with_one_call(agent_profile: AgentProfile) 
         success_criteria=["The operation makes one provider call."],
         risks=["Do not retain raw provider content."],
     )
-    assert len(provider.requests) == 1
-    request = provider.requests[0]
+    assert len(provider.requests) == 2
+    assert provider.requests[0].messages[0].content.count(earlier_subject_marker) == 1
+    request = provider.requests[1]
     assert request.system_prompt == agent_profile.system_prompt
     assert request.max_tokens == 1234
     assert len(request.messages) == 1
@@ -202,9 +212,9 @@ def test_plan_returns_validated_plan_with_one_call(agent_profile: AgentProfile) 
     assert request.messages[0].content.count(objective) == 1
     serialized_observation = request.messages[0].content.split("Observation:\n", maxsplit=1)[1]
     assert json.loads(serialized_observation) == observation.model_dump(mode="json")
-    assert raw_prompt_marker not in request.messages[0].content
+    assert earlier_subject_marker not in request.messages[0].content
     assert raw_response_marker not in request.messages[0].content
-    assert agent.history[0].operation.value == "PLAN"
+    assert agent.history[1].operation.value == "PLAN"
 
 
 def test_decide_returns_validated_decision_with_one_call(agent_profile: AgentProfile) -> None:

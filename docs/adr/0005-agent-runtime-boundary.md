@@ -27,8 +27,9 @@ receives an immutable profile and an injected provider-neutral `LLMProvider`; it
 provider client nor its lifecycle.
 
 Expose only `observe()`, `plan()`, `decide()`, and `report()`. Each operation validates its inputs,
-builds one bounded request, performs exactly one provider call with no retry or fallback, strictly
-decodes one JSON object, and returns an immutable structured result. Invalid output produces a safe
+builds one bounded request, rejects any generated user prompt over 262,144 characters before the
+provider is called, performs exactly one provider call with no retry or fallback, strictly decodes
+one JSON object, and returns an immutable structured result. Invalid output produces a safe
 `AgentOutputValidationError`; provider errors and cancellation propagate without transformation.
 
 Retain only a bounded in-memory history of successful-operation metadata: operation, UTC timestamp,

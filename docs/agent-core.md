@@ -77,6 +77,10 @@ makes exactly one `LLMProvider.generate()` call. There is no retry, repair reque
 duplicate call. The caller controls what to do after the returned value; `next_actions` are data,
 not commands that the runtime executes.
 
+After operation inputs are validated and serialized, the generated user prompt is checked against
+an explicit 262,144-character ceiling before the provider is called. This catches worst-case JSON
+escaping growth without retaining the oversized prompt in safe failures.
+
 ## Structured validation and failures
 
 The runtime accepts only a single JSON object that strictly matches the expected result model.

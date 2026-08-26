@@ -1,6 +1,7 @@
 """Public contracts for the Phase 8 Skills Registry."""
 
 from core.skills.errors import SkillError, SkillErrorCode, SkillLoadError, SkillRegistryError
+from core.skills.registry import SkillRegistry
 from core.skills.types import (
     Skill,
     SkillMatch,
@@ -17,6 +18,7 @@ __all__ = [
     "SkillMatch",
     "SkillMetadata",
     "SkillRegistryError",
+    "SkillRegistry",
     "SkillSelectionReason",
     "SkillSelectionRequest",
 ]

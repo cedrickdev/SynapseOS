@@ -1,5 +1,7 @@
-"""Public immutable values for the Phase 5 agents domain."""
+"""Public contracts for the Phase 5 agents domain."""
 
+from core.agents.errors import AgentError, AgentOutputValidationError
+from core.agents.structured_output import decode_structured_output
 from core.agents.types import (
     AgentHistoryEntry,
     AgentOperation,
@@ -12,12 +14,15 @@ from core.agents.types import (
 )
 
 __all__ = [
+    "AgentError",
     "AgentHistoryEntry",
     "AgentOperation",
+    "AgentOutputValidationError",
     "AgentProfile",
     "AgentReport",
     "AgentReportOutcome",
     "Decision",
     "Observation",
     "Plan",
+    "decode_structured_output",
 ]

@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_3-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_4-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,8 +48,9 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 3 — task state machine.** The repository now provides the persistence foundation and a
-deterministic, audited task workflow. Runtime agents, LLM calls, executable tools, skills, MCP, QA
+**Phase 4 — LLM provider boundary.** The repository now provides the persistence foundation, an
+audited task workflow, and a bounded provider-neutral LLM interface with an Ollama adapter. Runtime
+agents, executable tools, skills, MCP, QA
 and security engines, and the frontend remain intentionally unimplemented.
 
 What exists today:
@@ -63,6 +64,8 @@ What exists today:
   `AuditEvent`.
 - A framework-independent `TaskStateMachine` with exhaustive transition rules, atomic audit
   events, and protection against direct persisted status changes.
+- Provider-neutral immutable LLM contracts, normalized errors, a bounded Ollama HTTP adapter, and a
+  deterministic fake provider that requires no Ollama service in tests.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -113,7 +116,8 @@ core/                     # Domain layer (placeholders filled in later phases)
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
-  llm/ git/               # Placeholders for later phases
+  llm/                    # Ollama and deterministic fake LLM adapters
+  git/                    # Placeholder for a later phase
 alembic/                  # Versioned PostgreSQL migrations
 tests/                    # Unit and real-PostgreSQL integration tests
 docs/adr/                 # Architecture Decision Records
@@ -145,8 +149,8 @@ validated pull request. The near-term sequence is:
 
 1. **Repository initialization** — completed
 2. **Fundamental data model** — completed
-3. **Task state machine** — *current*
-4. LLM provider abstraction (Ollama first)
+3. **Task state machine** — completed
+4. **LLM provider abstraction (Ollama first)** — *current*
 5. Agent core
 6. Tool registry
 
@@ -157,6 +161,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 
 - **Product / organization specification:** [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md)
 - **Task workflow:** [`docs/task-state-machine.md`](docs/task-state-machine.md)
+- **LLM providers:** [`docs/llm-providers.md`](docs/llm-providers.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

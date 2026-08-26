@@ -1,5 +1,12 @@
 """Public contracts for the Phase 6 tool registry."""
 
+from core.tools.audit import (
+    ToolAuditFinish,
+    ToolAuditHandle,
+    ToolAuditOutcome,
+    ToolAuditRecorder,
+    ToolAuditStart,
+)
 from core.tools.errors import (
     ToolAuditError,
     ToolDefinitionError,
@@ -7,6 +14,7 @@ from core.tools.errors import (
     ToolInputError,
     ToolWorkspaceError,
 )
+from core.tools.executor import ToolExecutor
 from core.tools.registry import ToolDefinition, ToolRegistry
 from core.tools.tool import Tool
 from core.tools.types import (
@@ -21,11 +29,17 @@ from core.tools.types import (
 __all__ = [
     "JsonValue",
     "Tool",
+    "ToolAuditFinish",
+    "ToolAuditHandle",
+    "ToolAuditOutcome",
+    "ToolAuditRecorder",
+    "ToolAuditStart",
     "ToolAuditError",
     "ToolDefinitionError",
     "ToolDefinition",
     "ToolError",
     "ToolErrorCode",
+    "ToolExecutor",
     "ToolExecutionContext",
     "ToolInputError",
     "ToolResult",

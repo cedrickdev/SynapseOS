@@ -10,10 +10,18 @@ from core.agents.types import AgentHistoryEntry, AgentOperation, AgentProfile, O
 from core.llm import LLMMessage, LLMProvider, LLMRequest, LLMRole
 
 _MAX_SUBJECT_LENGTH = 32_768
+_MAX_HISTORY_LABEL_LENGTH = 255
+_UNKNOWN_HISTORY_LABEL = "unknown"
 _OBSERVATION_INSTRUCTION = (
     "Observe the following subject. Return exactly one JSON object with only these fields: "
     "summary, facts, uncertainties, risks.\nSubject:\n"
 )
+
+
+def _normalize_history_label(value: str) -> str:
+    """Produce a bounded, non-blank label that is safe to retain in history."""
+    normalized = value.strip()[:_MAX_HISTORY_LABEL_LENGTH]
+    return normalized or _UNKNOWN_HISTORY_LABEL
 
 
 class Agent:
@@ -65,8 +73,8 @@ class Agent:
             AgentHistoryEntry(
                 operation=AgentOperation.OBSERVE,
                 completed_at=datetime.now(UTC),
-                provider=response.model.provider,
-                model=response.model.model,
+                provider=_normalize_history_label(response.model.provider),
+                model=_normalize_history_label(response.model.model),
                 usage=response.usage,
             )
         )

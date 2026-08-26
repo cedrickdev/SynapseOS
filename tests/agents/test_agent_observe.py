@@ -198,3 +198,53 @@ def test_observe_propagates_cancellation_without_retry_or_history(
 
     assert provider.calls == 1
     assert agent.history == ()
+
+
+def test_observe_normalizes_overlong_history_provider_and_model_labels(
+    agent_profile: AgentProfile,
+    observation_response: LLMResponse,
+) -> None:
+    provider_marker = "overlong-provider-marker-8ad3"
+    model_marker = "overlong-model-marker-4e71"
+    response = observation_response.model_copy(
+        update={
+            "model": LLMModelMetadata(
+                provider=f" {'p' * 256}{provider_marker} ",
+                model=f" {'m' * 256}{model_marker} ",
+            )
+        }
+    )
+    provider = FakeLLMProvider(responses=[response])
+    agent = Agent(agent_profile, provider)
+
+    observation = asyncio.run(agent.observe("valid subject"))
+
+    assert observation.summary == "Repository is ready for inspection."
+    assert len(provider.requests) == 1
+    assert len(agent.history) == 1
+    assert agent.history[0].provider == "p" * 255
+    assert agent.history[0].model == "m" * 255
+    serialized_history = agent.history[0].model_dump_json()
+    assert provider_marker not in serialized_history
+    assert model_marker not in serialized_history
+
+
+def test_observe_replaces_whitespace_only_history_labels_with_unknown(
+    agent_profile: AgentProfile,
+    observation_response: LLMResponse,
+) -> None:
+    response = observation_response.model_copy(
+        update={
+            "model": LLMModelMetadata(provider=" \t\n", model="\r\n "),
+        }
+    )
+    provider = FakeLLMProvider(responses=[response])
+    agent = Agent(agent_profile, provider)
+
+    observation = asyncio.run(agent.observe("valid subject"))
+
+    assert observation.summary == "Repository is ready for inspection."
+    assert len(provider.requests) == 1
+    assert len(agent.history) == 1
+    assert agent.history[0].provider == "unknown"
+    assert agent.history[0].model == "unknown"

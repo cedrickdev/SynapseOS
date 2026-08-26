@@ -28,6 +28,9 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 def decode_structured_output[ModelT: BaseModel](content: str, model_type: type[ModelT]) -> ModelT:
     """Decode one JSON object into the requested strict Pydantic model."""
     expected_type = model_type.__name__
+    parsed: Any = None
+    result: ModelT | None = None
+    failed = False
     try:
         parsed = json.loads(
             content,
@@ -36,8 +39,17 @@ def decode_structured_output[ModelT: BaseModel](content: str, model_type: type[M
         )
         if not isinstance(parsed, dict):
             raise ValueError("structured output root must be an object")
-        return model_type.model_validate(parsed)
-    except (json.JSONDecodeError, ValidationError, ValueError):
-        pass
+        parsed = None
+        result = model_type.model_validate_json(content, strict=True, extra="forbid")
+    except (json.JSONDecodeError, ValidationError, ValueError) as raw_error:
+        failed = True
+        del raw_error
 
-    raise AgentOutputValidationError(expected_type) from None
+    if failed:
+        del content
+        del parsed
+        del result
+        raise AgentOutputValidationError(expected_type) from None
+
+    assert result is not None
+    return result

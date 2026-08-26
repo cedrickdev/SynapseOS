@@ -46,9 +46,17 @@
 ```python
 def test_permission_enum_contains_exactly_v1_values() -> None:
     assert tuple(permission.value for permission in Permission) == (
-        "filesystem.read", "filesystem.write", "git.read", "git.write",
-        "shell.execute", "tests.execute", "network.access", "database.read",
-        "database.write", "deployment.staging", "deployment.production",
+        "filesystem.read",
+        "filesystem.write",
+        "git.read",
+        "git.write",
+        "shell.execute",
+        "tests.execute",
+        "network.access",
+        "database.read",
+        "database.write",
+        "deployment.staging",
+        "deployment.production",
     )
 ```
 
@@ -127,8 +135,16 @@ git commit -m "feat(permissions): add strict permission contracts"
 def test_agent_permission_has_required_columns_and_indexes() -> None:
     table = AgentPermission.__table__
     assert set(table.columns) == {
-        "id", "agent_id", "permission", "project_id", "granted_by_actor_type",
-        "granted_by_actor_id", "reason", "expires_at", "revoked_at", "created_at",
+        "id",
+        "agent_id",
+        "permission",
+        "project_id",
+        "granted_by_actor_type",
+        "granted_by_actor_id",
+        "reason",
+        "expires_at",
+        "revoked_at",
+        "created_at",
     }
     assert table.c.permission.type.name == "permission"
 ```
@@ -196,7 +212,9 @@ git commit -m "feat(database): persist scoped agent permissions"
 - [ ] **Step 1: Write a failing allowed-decision lifecycle test**
 
 ```python
-def test_engine_canonicalizes_evaluates_once_and_audits_allow(valid_request: PermissionRequest) -> None:
+def test_engine_canonicalizes_evaluates_once_and_audits_allow(
+    valid_request: PermissionRequest,
+) -> None:
     policy = RecordingPolicy(PermissionOutcome.ALLOW, PermissionReasonCode.GRANTED)
     audit = RecordingPermissionAudit()
     decision = PermissionEngine(policy, audit, clock=fixed_clock).evaluate(valid_request)
@@ -328,13 +346,19 @@ git commit -m "feat(permissions): resolve scoped PostgreSQL grants"
 - [ ] **Step 1: Write a failing sanitized ALLOW audit test**
 
 ```python
-def test_allow_decision_appends_sanitized_event(db_session: Session, allowed_decision: PermissionDecision) -> None:
+def test_allow_decision_appends_sanitized_event(
+    db_session: Session, allowed_decision: PermissionDecision
+) -> None:
     SQLAlchemyPermissionAuditRecorder(db_session).record(allowed_decision)
-    event = db_session.scalar(select(AuditEvent).where(AuditEvent.event_type == "PERMISSION_EVALUATED"))
+    event = db_session.scalar(
+        select(AuditEvent).where(AuditEvent.event_type == "PERMISSION_EVALUATED")
+    )
     assert event is not None
     assert event.result is AuditResult.SUCCEEDED
     assert event.data == {
-        "decision": "ALLOW", "required_permissions": ["filesystem.read"], "reason_code": "GRANTED"
+        "decision": "ALLOW",
+        "required_permissions": ["filesystem.read"],
+        "reason_code": "GRANTED",
     }
 ```
 
@@ -415,7 +439,9 @@ change the generic tool contract, descriptors, and five concrete definitions to 
 def test_executor_runs_once_only_after_allow(executable_context: ToolExecutionContext) -> None:
     permission_engine = RecordingPermissionEngine(PermissionOutcome.ALLOW)
     tool = CountingTool()
-    result = asyncio.run(executor(tool, permission_engine).execute("fake_read", {}, executable_context))
+    result = asyncio.run(
+        executor(tool, permission_engine).execute("fake_read", {}, executable_context)
+    )
     assert result.status is ToolResultStatus.SUCCEEDED
     assert tool.calls == 1
     assert permission_engine.calls == 1

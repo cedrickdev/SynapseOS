@@ -647,27 +647,27 @@ Empêcher un agent d'utiliser une capacité qu'il ne possède pas.
 
 ## Permissions V1
 
-- [ ] `filesystem.read`
-- [ ] `filesystem.write`
-- [ ] `git.read`
-- [ ] `git.write`
-- [ ] `shell.execute`
-- [ ] `tests.execute`
-- [ ] `network.access`
-- [ ] `database.read`
-- [ ] `database.write`
-- [ ] `deployment.staging`
-- [ ] `deployment.production`
+- [x] `filesystem.read`
+- [x] `filesystem.write`
+- [x] `git.read`
+- [x] `git.write`
+- [x] `shell.execute`
+- [x] `tests.execute`
+- [x] `network.access`
+- [x] `database.read`
+- [x] `database.write`
+- [x] `deployment.staging`
+- [x] `deployment.production`
 
 ## Checklist
 
-- [ ] Permission enum.
-- [ ] Permission policy.
-- [ ] AgentPermission.
-- [ ] ToolPermission.
-- [ ] Deny by default.
-- [ ] Audit refus.
-- [ ] Tests.
+- [x] Permission enum.
+- [x] Permission policy.
+- [x] AgentPermission.
+- [x] ToolPermission.
+- [x] Deny by default.
+- [x] Audit refus.
+- [x] Tests.
 
 ## Prompt Claude Code — Phase 7
 

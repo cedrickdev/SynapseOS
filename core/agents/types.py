@@ -13,7 +13,7 @@ from core.enums import AgentSeniority, AgentStatus
 from core.llm import LLMUsage
 
 Identifier = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._:-]{0,127}$")]
-NonBlankText = Annotated[str, Field(min_length=1)]
+RetainedText = Annotated[str, Field(min_length=1, max_length=255)]
 Score = Annotated[
     Decimal,
     Field(ge=Decimal("0"), le=Decimal("1"), allow_inf_nan=False),
@@ -36,8 +36,8 @@ class AgentProfile(_ImmutableModel):
     """Validated immutable identity and capability declarations for one agent."""
 
     id: Identifier
-    name: NonBlankText
-    role: NonBlankText
+    name: RetainedText
+    role: RetainedText
     department: Identifier
     seniority: AgentSeniority
     status: AgentStatus
@@ -184,8 +184,8 @@ class AgentHistoryEntry(_ImmutableModel):
 
     operation: AgentOperation
     completed_at: datetime
-    provider: NonBlankText
-    model: NonBlankText
+    provider: RetainedText
+    model: RetainedText
     usage: LLMUsage | None = None
 
     @field_validator("completed_at")

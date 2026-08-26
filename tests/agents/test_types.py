@@ -86,6 +86,19 @@ def test_profile_rejects_system_prompt_over_16384_characters() -> None:
         valid_profile(system_prompt="x" * 16_385)
 
 
+@pytest.mark.parametrize("field", ["name", "role"])
+def test_profile_accepts_name_and_role_at_255_characters(field: str) -> None:
+    value = "x" * 255
+
+    assert getattr(valid_profile(**{field: value}), field) == value
+
+
+@pytest.mark.parametrize("field", ["name", "role"])
+def test_profile_rejects_name_and_role_over_255_characters(field: str) -> None:
+    with pytest.raises(ValidationError):
+        valid_profile(**{field: "x" * 256})
+
+
 @pytest.mark.parametrize("autonomy_level", [-1, 6])
 def test_profile_rejects_autonomy_outside_zero_through_five(autonomy_level: int) -> None:
     with pytest.raises(ValidationError):
@@ -290,6 +303,34 @@ def test_history_entry_accepts_only_safe_timezone_aware_metadata() -> None:
     assert entry.completed_at.tzinfo is UTC
     assert entry.usage is not None
     assert entry.usage.total_tokens == 5
+
+
+@pytest.mark.parametrize("field", ["provider", "model"])
+def test_history_entry_accepts_provider_and_model_at_255_characters(field: str) -> None:
+    value = "x" * 255
+    values: dict[str, object] = {
+        "operation": AgentOperation.OBSERVE,
+        "completed_at": datetime(2026, 8, 26, 12, 30, tzinfo=UTC),
+        "provider": "ollama",
+        "model": "qwen3",
+    }
+    values[field] = value
+
+    assert getattr(AgentHistoryEntry(**values), field) == value
+
+
+@pytest.mark.parametrize("field", ["provider", "model"])
+def test_history_entry_rejects_provider_and_model_over_255_characters(field: str) -> None:
+    values: dict[str, object] = {
+        "operation": AgentOperation.OBSERVE,
+        "completed_at": datetime(2026, 8, 26, 12, 30, tzinfo=UTC),
+        "provider": "ollama",
+        "model": "qwen3",
+    }
+    values[field] = "x" * 256
+
+    with pytest.raises(ValidationError):
+        AgentHistoryEntry(**values)
 
 
 @pytest.mark.parametrize(

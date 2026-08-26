@@ -1,5 +1,6 @@
 """Public contracts for the Phase 5 agents domain."""
 
+from core.agents.agent import Agent
 from core.agents.errors import AgentError, AgentOutputValidationError
 from core.agents.structured_output import decode_structured_output
 from core.agents.types import (
@@ -14,6 +15,7 @@ from core.agents.types import (
 )
 
 __all__ = [
+    "Agent",
     "AgentError",
     "AgentHistoryEntry",
     "AgentOperation",

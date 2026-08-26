@@ -88,6 +88,7 @@ class Observation(_ImmutableModel):
             raise ValueError("text must not be blank")
         return value
 
+
 class Plan(_ImmutableModel):
     """A bounded ordered plan with verifiable completion criteria."""
 
@@ -111,6 +112,7 @@ class Plan(_ImmutableModel):
         if any(not item.strip() for item in value):
             raise ValueError("text must not be blank")
         return value
+
 
 class Decision(_ImmutableModel):
     """A bounded decision with evidence and an escalation signal."""
@@ -136,6 +138,7 @@ class Decision(_ImmutableModel):
         if any(not item.strip() for item in value):
             raise ValueError("text must not be blank")
         return value
+
 
 class AgentReportOutcome(StrEnum):
     """Terminal outcome reported by one bounded agent operation."""
@@ -169,6 +172,7 @@ class AgentReport(_ImmutableModel):
         if any(not item.strip() for item in value):
             raise ValueError("text must not be blank")
         return value
+
 
 class AgentOperation(StrEnum):
     """The runtime operation that produced a history entry."""

@@ -109,6 +109,7 @@
       BLOCKED = "BLOCKED"
       NEEDS_HUMAN = "NEEDS_HUMAN"
 
+
   class AgentOperation(StrEnum):
       OBSERVE = "OBSERVE"
       PLAN = "PLAN"

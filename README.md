@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_4-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_5-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,10 +48,11 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 4 — LLM provider boundary.** The repository now provides the persistence foundation, an
-audited task workflow, and a bounded provider-neutral LLM interface with an Ollama adapter. Runtime
-agents, executable tools, skills, MCP, QA
-and security engines, and the frontend remain intentionally unimplemented.
+**Phase 5 — Agent core.** The repository now provides the persistence foundation, an audited task
+workflow, provider-neutral LLM contracts with an Ollama adapter, and a bounded runtime agent with
+four strict structured operations. Executable tools, skill loading, MCP, autonomous loops,
+multi-agent coordination, QA and security engines, and the frontend remain intentionally
+unimplemented.
 
 What exists today:
 
@@ -66,6 +67,9 @@ What exists today:
   events, and protection against direct persisted status changes.
 - Provider-neutral immutable LLM contracts, normalized errors, a bounded Ollama HTTP adapter, and a
   deterministic fake provider that requires no Ollama service in tests.
+- A provider-neutral, in-memory agent runtime with immutable profiles, `observe()`, `plan()`,
+  `decide()`, and `report()` operations, strict structured validation, and bounded metadata-only
+  history.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -137,6 +141,18 @@ make migrate     # upgrade the configured database to Alembic head
 make migration-current    # show the current migration revision
 ```
 
+The complete suite uses the Docker PostgreSQL service when it is exposed on the default host port:
+
+```bash
+TEST_POSTGRES_PORT=55432 make test
+```
+
+The focused Phase 5 runtime suite is deterministic and needs no live LLM provider:
+
+```bash
+.venv/bin/pytest tests/agents -q
+```
+
 Run `make help` to list every available target.
 
 **Working agreement:** changes are test-driven (write the failing test first), and `make check`
@@ -150,8 +166,8 @@ validated pull request. The near-term sequence is:
 1. **Repository initialization** — completed
 2. **Fundamental data model** — completed
 3. **Task state machine** — completed
-4. **LLM provider abstraction (Ollama first)** — *current*
-5. Agent core
+4. **LLM provider abstraction (Ollama first)** — completed
+5. **Agent core** — *current*
 6. Tool registry
 
 The complete phased plan (up to a full engineering organisation) lives in
@@ -162,6 +178,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Product / organization specification:** [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md)
 - **Task workflow:** [`docs/task-state-machine.md`](docs/task-state-machine.md)
 - **LLM providers:** [`docs/llm-providers.md`](docs/llm-providers.md)
+- **Agent core:** [`docs/agent-core.md`](docs/agent-core.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

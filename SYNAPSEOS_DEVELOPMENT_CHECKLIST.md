@@ -496,31 +496,31 @@ Créer la représentation runtime d'un agent.
 
 ## Agent V1 doit posséder
 
-- [ ] identité
-- [ ] rôle
-- [ ] département
-- [ ] system prompt
-- [ ] autonomie
-- [ ] permissions
-- [ ] liste de tools
-- [ ] liste de skills
-- [ ] LLM provider
-- [ ] score de réputation
-- [ ] historique minimal
-- [ ] statut
+- [x] identité
+- [x] rôle
+- [x] département
+- [x] system prompt
+- [x] autonomie
+- [x] permissions
+- [x] liste de tools
+- [x] liste de skills
+- [x] LLM provider
+- [x] score de réputation
+- [x] historique minimal
+- [x] statut
 
 ## Méthodes
 
-- [ ] `observe()`
-- [ ] `plan()`
-- [ ] `decide()`
-- [ ] `report()`
+- [x] `observe()`
+- [x] `plan()`
+- [x] `decide()`
+- [x] `report()`
 
 ## À NE PAS FAIRE
 
-- [ ] Pas encore de boucle autonome complète.
-- [ ] Pas encore de modification de fichiers.
-- [ ] Pas encore de terminal.
+- [x] Pas encore de boucle autonome complète.
+- [x] Pas encore de modification de fichiers.
+- [x] Pas encore de terminal.
 
 ## Prompt Claude Code — Phase 5
 

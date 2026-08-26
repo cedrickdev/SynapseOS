@@ -4,16 +4,19 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Repository status
 
-The repository has completed **Phase 1 — repository initialization** and **Phase 2 — fundamental
-data model** and **Phase 3 — task state machine**, and is implementing **Phase 4 — LLM provider
-boundary**. It contains a minimal FastAPI
-application, typed SQLAlchemy models, Alembic migrations, append-only history protection, an
-audited task workflow, bounded provider-neutral LLM contracts, an Ollama adapter, a PostgreSQL
-Docker Compose service, and real-PostgreSQL integration tests.
+The repository has completed **Phase 1 — repository initialization**, **Phase 2 — fundamental data
+model**, **Phase 3 — task state machine**, and **Phase 4 — LLM provider boundary**, and is
+implementing **Phase 5 — agent core**. It contains a minimal FastAPI application, typed SQLAlchemy
+models, Alembic migrations, append-only history protection, an audited task workflow, bounded
+provider-neutral LLM contracts, an Ollama adapter, a bounded runtime agent with four strict
+structured operations, a PostgreSQL Docker Compose service, and real-PostgreSQL integration tests.
 
-Phase 5 and later phases are not implemented. In particular, there are no autonomous runtime
-agents, executable tools, skills, MCP integrations, QA/security engines, provider router, or
-frontend. Do not implement work from a later phase unless the user explicitly starts that phase.
+Phase 5 does not include autonomous loops, executable tools, skill loading, shell/filesystem/MCP
+access, provider routing, or multi-agent behavior. `skill_ids` are inert declarations; do not read
+or execute `SKILL.md` before the Phase 8 Skills Registry. Phase 6 and later phases are not
+implemented. In particular, there are no tool registry, permission engine, MCP integrations,
+QA/security engines, provider router, or frontend. Do not implement work from a later phase unless
+the user explicitly starts that phase.
 
 Important files:
 
@@ -45,6 +48,18 @@ make format     # Format Python files with Ruff
 make typecheck  # Run mypy in strict mode
 make check      # Run linting, type checking, and tests
 make migrate    # Upgrade PostgreSQL to Alembic head
+```
+
+For repository acceptance against the Docker PostgreSQL port, run:
+
+```bash
+TEST_POSTGRES_PORT=55432 make test
+```
+
+For the focused Phase 5 runtime tests, run:
+
+```bash
+.venv/bin/pytest tests/agents -q
 ```
 
 Run a single test with:

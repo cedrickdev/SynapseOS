@@ -64,9 +64,7 @@ def test_successful_observation_retains_only_safe_immutable_metadata(
     response_marker = "response-marker-0d23"
     output_marker = "output-marker-73b8"
     response = LLMResponse(
-        content=(
-            f'{{"summary":"{output_marker}","facts":[],"uncertainties":[],"risks":[]}}'
-        ),
+        content=(f'{{"summary":"{output_marker}","facts":[],"uncertainties":[],"risks":[]}}'),
         finish_reason=response_marker,
         usage=LLMUsage(prompt_tokens=13, completion_tokens=8, total_tokens=21),
         model=LLMModelMetadata(

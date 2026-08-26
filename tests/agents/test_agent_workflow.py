@@ -249,9 +249,11 @@ def test_decide_returns_validated_decision_with_one_call(agent_profile: AgentPro
     assert request.max_tokens == 987
     assert len(request.messages) == 1
     assert request.messages[0].role is LLMRole.USER
-    serialized_observation, serialized_plan_and_instruction = request.messages[0].content.split(
-        "\nObservation:\n", maxsplit=1
-    )[1].split("\nPlan:\n", maxsplit=1)
+    serialized_observation, serialized_plan_and_instruction = (
+        request.messages[0]
+        .content.split("\nObservation:\n", maxsplit=1)[1]
+        .split("\nPlan:\n", maxsplit=1)
+    )
     serialized_plan = serialized_plan_and_instruction.split("\nDecision:\n", maxsplit=1)[0]
     assert json.loads(serialized_observation) == observation.model_dump(mode="json")
     assert json.loads(serialized_plan) == plan.model_dump(mode="json")
@@ -309,9 +311,11 @@ def test_report_returns_validated_report_with_one_call(
     assert request.max_tokens == 765
     assert len(request.messages) == 1
     assert request.messages[0].role is LLMRole.USER
-    serialized_observation, serialized_plan_and_rest = request.messages[0].content.split(
-        "\nObservation:\n", maxsplit=1
-    )[1].split("\nPlan:\n", maxsplit=1)
+    serialized_observation, serialized_plan_and_rest = (
+        request.messages[0]
+        .content.split("\nObservation:\n", maxsplit=1)[1]
+        .split("\nPlan:\n", maxsplit=1)
+    )
     serialized_plan, serialized_decision_and_instruction = serialized_plan_and_rest.split(
         "\nDecision:\n", maxsplit=1
     )

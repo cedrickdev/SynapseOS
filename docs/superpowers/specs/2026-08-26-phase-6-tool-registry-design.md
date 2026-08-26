@@ -184,7 +184,7 @@ resource. For each invocation it:
 
 1. validates the context and raw arguments without retaining them;
 2. asks the audit recorder to create a `RUNNING` `ToolCall` using only the requested tool name and
-   sanitized argument-shape metadata;
+   argument count; caller-controlled keys and values are not retained;
 3. obtains the registered tool or returns an audited, sanitized unknown-tool failure without
    executing code;
 4. denies undeclared tools;
@@ -230,13 +230,14 @@ the Phase 2 schema.
 ## Workspace and path security
 
 Every filesystem request is relative to a mandatory canonical workspace root. Inputs reject absolute
-paths, NUL bytes, blank paths, and parent traversal components. The path guard resolves the nearest
-existing path and every selected entry with symlinks followed, then verifies containment using path
-semantics rather than string prefixes.
+paths, NUL bytes, blank paths, and parent traversal components. The path guard inspects every existing
+component with `lstat`, rejects all symlinks, resolves the selected path, then verifies containment
+using path semantics rather than string prefixes. The conservative no-symlink rule removes the
+validation/open race that would otherwise allow a link target to change after authorization.
 
 Consequences:
 
-- `../secret`, absolute paths, prefix-confusion paths, and symlink escapes are denied;
+- `../secret`, absolute paths, prefix-confusion paths, and all symlinks are denied;
 - the workspace root is resolved once during context validation and only that canonical root is used;
 - special files, sockets, devices, and FIFOs are not read;
 - generated output uses workspace-relative POSIX paths only;

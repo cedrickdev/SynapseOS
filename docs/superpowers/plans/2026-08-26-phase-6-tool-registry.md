@@ -221,11 +221,11 @@ Expected: failure because the executor and audit port do not exist.
 
 - [ ] **Step 3: Implement one validated success path**
 
-Begin audit before lookup using only tool name and argument key/type metadata, revalidate the registered input model with strict/forbid settings, call the tool once under `asyncio.timeout(tool.timeout_seconds)`, validate output, finish audit, and return `ToolResult`.
+Begin audit before lookup using only tool name and argument count, revalidate the registered input model with strict/forbid settings, call the tool once under `asyncio.timeout(tool.timeout_seconds)`, validate output, finish audit, and return `ToolResult`.
 
 - [ ] **Step 4: Add deny-by-default tests**
 
-Prove unknown, undeclared, missing-permission, extra-input, coercible-input, and malformed-output requests never execute and each valid-scope attempt finishes one audit with the expected safe code. Verify audit metadata contains argument keys/types but no values.
+Prove unknown, undeclared, missing-permission, extra-input, coercible-input, and malformed-output requests never execute and each valid-scope attempt finishes one audit with the expected safe code. Verify initial audit metadata contains only argument count, never caller-controlled keys or values.
 
 - [ ] **Step 5: Implement denial and failure mappings**
 
@@ -285,7 +285,7 @@ Reject blank, absolute, NUL, and `..` components before joining. Resolve the roo
 
 - [ ] **Step 4: Add symlink, prefix-confusion, special-file, and race-oriented tests**
 
-Create internal symlinks, file symlinks escaping the root, directory symlinks escaping the root, a sibling named with the root prefix, broken symlinks, and a FIFO where supported. Assert allowed internal symlinks resolve safely and all escapes/special files fail without leaking either root or target path.
+Create internal symlinks, file symlinks escaping the root, directory symlinks escaping the root, a sibling named with the root prefix, broken symlinks, and a FIFO where supported. Assert every symlink and special file fails without leaking either root or target path; Phase 6 intentionally follows no symlinks to remove validation/open races.
 
 - [ ] **Step 5: Implement safe relative rendering**
 

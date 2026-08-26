@@ -6,6 +6,7 @@ file). No secrets are hard-coded; see ``.env.example`` for the expected keys.
 
 from __future__ import annotations
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,6 +28,10 @@ class Settings(BaseSettings):
     test_postgres_host: str = "localhost"
     test_postgres_port: int = 55432
     database_url: str = "postgresql+psycopg://synapseos:synapseos@localhost:55432/synapseos"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen3:8b"
+    ollama_timeout_seconds: float = Field(default=60.0, gt=0)
+    ollama_max_response_bytes: int = Field(default=10_485_760, gt=0)
 
 
 def get_settings() -> Settings:

@@ -63,9 +63,7 @@ def test_git_status_returns_bounded_porcelain_output(tmp_path: Path) -> None:
     (repository / "tracked.txt").write_text("changed\n", encoding="utf-8")
     (repository / "untracked.txt").write_text("new\n", encoding="utf-8")
 
-    output = asyncio.run(
-        GitStatusTool().execute(GitStatusInput(), _context(repository))
-    )
+    output = asyncio.run(GitStatusTool().execute(GitStatusInput(), _context(repository)))
 
     status = output["status"]
     assert isinstance(status, str)
@@ -133,9 +131,7 @@ def test_git_diff_disables_repository_external_diff_and_textconv(tmp_path: Path)
     _git(repository, "config", "diff.unsafe.textconv", str(external))
     (repository / "tracked.txt").write_text("changed\n", encoding="utf-8")
 
-    output = asyncio.run(
-        GitDiffTool().execute(GitDiffInput(), _context(repository))
-    )
+    output = asyncio.run(GitDiffTool().execute(GitDiffInput(), _context(repository)))
 
     assert "+changed" in str(output["diff"])
     assert not marker.exists()
@@ -153,9 +149,7 @@ def test_git_tools_do_not_inherit_secret_environment(
     monkeypatch.setenv("GIT_CONFIG_KEY_0", "alias.status")
     monkeypatch.setenv("GIT_CONFIG_VALUE_0", f"!echo {secret}")
 
-    output = asyncio.run(
-        GitStatusTool().execute(GitStatusInput(), _context(repository))
-    )
+    output = asyncio.run(GitStatusTool().execute(GitStatusInput(), _context(repository)))
 
     assert output["exit_code"] == 0
     assert secret not in repr(output)
@@ -165,9 +159,7 @@ def test_git_diff_caps_large_output(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
     (repository / "tracked.txt").write_text("x" * 700_000 + "\n", encoding="utf-8")
 
-    output = asyncio.run(
-        GitDiffTool().execute(GitDiffInput(), _context(repository))
-    )
+    output = asyncio.run(GitDiffTool().execute(GitDiffInput(), _context(repository)))
 
     diff = output["diff"]
     assert isinstance(diff, str)
@@ -216,9 +208,7 @@ def test_git_process_environment_cannot_use_host_path(tmp_path: Path) -> None:
     old_path = os.environ.get("PATH")
     os.environ["PATH"] = str(repository)
     try:
-        output = asyncio.run(
-            GitStatusTool().execute(GitStatusInput(), _context(repository))
-        )
+        output = asyncio.run(GitStatusTool().execute(GitStatusInput(), _context(repository)))
     finally:
         if old_path is None:
             os.environ.pop("PATH", None)

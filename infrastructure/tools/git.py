@@ -147,9 +147,7 @@ async def _run_git(
         if process is not None:
             await _terminate_process(process)
         pending_tasks = [
-            task
-            for task in (stdout_task, stderr_task)
-            if task is not None and not task.done()
+            task for task in (stdout_task, stderr_task) if task is not None and not task.done()
         ]
         for task in pending_tasks:
             task.cancel()

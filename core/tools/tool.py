@@ -27,4 +27,3 @@ class Tool[InputT: BaseModel](ABC):
         context: ToolExecutionContext,
     ) -> Mapping[str, JsonValue]:
         """Execute one already-authorized invocation exactly once."""
-

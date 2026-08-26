@@ -574,29 +574,29 @@ Permettre aux agents d'utiliser uniquement des capacités explicitement enregist
 
 ## Interface d'un Tool
 
-- [ ] nom
-- [ ] description
-- [ ] schéma d'entrée
-- [ ] permissions requises
-- [ ] niveau de risque
-- [ ] timeout
-- [ ] méthode `execute`
+- [x] nom
+- [x] description
+- [x] schéma d'entrée
+- [x] permissions requises
+- [x] niveau de risque
+- [x] timeout
+- [x] méthode `execute`
 
 ## Tools V1
 
-- [ ] `read_file`
-- [ ] `list_files`
-- [ ] `search_text`
-- [ ] `git_status`
-- [ ] `git_diff`
+- [x] `read_file`
+- [x] `list_files`
+- [x] `search_text`
+- [x] `git_status`
+- [x] `git_diff`
 
 ## Sécurité
 
-- [ ] path traversal bloqué
-- [ ] sandbox root obligatoire
-- [ ] audit automatique
-- [ ] permissions vérifiées
-- [ ] timeout
+- [x] path traversal bloqué
+- [x] sandbox root obligatoire
+- [x] audit automatique
+- [x] permissions vérifiées
+- [x] timeout
 
 ## Prompt Claude Code — Phase 6
 

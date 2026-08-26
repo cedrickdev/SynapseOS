@@ -489,9 +489,7 @@ git commit -m "feat(tools): persist sanitized tool audits"
 ```python
 def test_default_registry_contains_only_phase_6_tools() -> None:
     registry = create_default_tool_registry()
-    assert registry.names == (
-        "git_diff", "git_status", "list_files", "read_file", "search_text"
-    )
+    assert registry.names == ("git_diff", "git_status", "list_files", "read_file", "search_text")
 ```
 
 Also assert exact required permissions, LOW risk, timeouts, strict input schemas, and absence of registration mutation methods.

@@ -1,5 +1,7 @@
 """Concrete bounded tool adapters for SynapseOS."""
 
+from core.tools import ToolRegistry
+from infrastructure.tools.audit import SQLAlchemyToolAuditRecorder
 from infrastructure.tools.filesystem import (
     ListFilesInput,
     ListFilesTool,
@@ -16,7 +18,23 @@ from infrastructure.tools.git import (
     GitStatusTool,
 )
 
+
+def create_default_tool_registry() -> ToolRegistry:
+    """Build the immutable registry of approved Phase 6 read-only tools."""
+    return ToolRegistry(
+        [
+            ReadFileTool(),
+            ListFilesTool(),
+            SearchTextTool(),
+            GitStatusTool(),
+            GitDiffTool(),
+        ]
+    )
+
+
 __all__ = [
+    "create_default_tool_registry",
+    "SQLAlchemyToolAuditRecorder",
     "ListFilesInput",
     "ListFilesTool",
     "ReadFileInput",

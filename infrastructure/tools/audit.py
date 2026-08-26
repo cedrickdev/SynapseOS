@@ -70,11 +70,7 @@ class SQLAlchemyToolAuditRecorder:
         validated_handle = self._validate_handle(handle)
         validated_finish = self._validate_finish(finish)
         pending = self._pending.get(validated_handle.tool_call_id)
-        if (
-            pending is None
-            or pending.finished
-            or object_session(pending.call) is not self._session
-        ):
+        if pending is None or pending.finished or object_session(pending.call) is not self._session:
             raise self._finalization_failed()
 
         call_status, audit_result = _status_mapping(validated_finish.outcome)
@@ -91,9 +87,7 @@ class SQLAlchemyToolAuditRecorder:
         pending.call.finished_at = datetime.now(UTC)
         pending.call.output_data = dict(terminal_data)
         pending.call.error_message = (
-            validated_finish.error_code.value
-            if validated_finish.error_code is not None
-            else None
+            validated_finish.error_code.value if validated_finish.error_code is not None else None
         )
         event = AuditEvent(
             actor_type=AuditActorType.AGENT,
@@ -111,6 +105,7 @@ class SQLAlchemyToolAuditRecorder:
         )
         try:
             self._session.add(event)
+            self._session.flush()
             pending.finished = True
         except Exception as error:
             error.__traceback__ = None

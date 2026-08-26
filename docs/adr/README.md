@@ -38,3 +38,4 @@ Trade-offs, risks, follow-ups.
 - [ADR-0003 — Audited task state machine](0003-phase-3-task-state-machine.md)
 - [ADR-0004 — Provider-neutral LLM boundary](0004-provider-neutral-llm-boundary.md)
 - [ADR-0005 — Agent runtime boundary](0005-agent-runtime-boundary.md)
+- [ADR-0006 — Tool registry execution boundary](0006-tool-registry-execution-boundary.md)

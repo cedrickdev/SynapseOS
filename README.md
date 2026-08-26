@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_5-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_6-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,11 +48,11 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 5 — Agent core.** The repository now provides the persistence foundation, an audited task
-workflow, provider-neutral LLM contracts with an Ollama adapter, and a bounded runtime agent with
-four strict structured operations. Executable tools, skill loading, MCP, autonomous loops,
-multi-agent coordination, QA and security engines, and the frontend remain intentionally
-unimplemented.
+**Phase 6 — Tool registry completed.** The repository now provides the persistence foundation, an
+audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
+agent, and five deny-by-default read-only repository tools. Write tools, shell access, rich
+permission policy, skill loading, MCP, autonomous loops, multi-agent coordination, QA and security
+engines, and the frontend remain intentionally unimplemented.
 
 What exists today:
 
@@ -70,6 +70,9 @@ What exists today:
 - A provider-neutral, in-memory agent runtime with immutable profiles, `observe()`, `plan()`,
   `decide()`, and `report()` operations, strict structured validation, and bounded metadata-only
   history.
+- An immutable registry and central executor for bounded file reads, file listing, literal search,
+  Git status, and Git diff, with workspace isolation, permission membership, timeout, cancellation,
+  safe output limits, and sanitized PostgreSQL audit records.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -121,7 +124,7 @@ core/                     # Domain layer (placeholders filled in later phases)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
   llm/                    # Ollama and deterministic fake LLM adapters
-  git/                    # Placeholder for a later phase
+  tools/                  # Bounded filesystem, Git, path, and audit adapters
 alembic/                  # Versioned PostgreSQL migrations
 tests/                    # Unit and real-PostgreSQL integration tests
 docs/adr/                 # Architecture Decision Records
@@ -147,10 +150,10 @@ The complete suite uses the Docker PostgreSQL service when it is exposed on the 
 TEST_POSTGRES_PORT=55432 make test
 ```
 
-The focused Phase 5 runtime suite is deterministic and needs no live LLM provider:
+The focused Phase 6 tool suite uses deterministic adapters plus real PostgreSQL audit tests:
 
 ```bash
-.venv/bin/pytest tests/agents -q
+.venv/bin/pytest tests/tools tests/database/test_tool_execution.py -q
 ```
 
 Run `make help` to list every available target.
@@ -167,8 +170,9 @@ validated pull request. The near-term sequence is:
 2. **Fundamental data model** — completed
 3. **Task state machine** — completed
 4. **LLM provider abstraction (Ollama first)** — completed
-5. **Agent core** — *current*
-6. Tool registry
+5. **Agent core** — completed
+6. **Tool registry** — completed
+7. Permission engine — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -179,6 +183,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Task workflow:** [`docs/task-state-machine.md`](docs/task-state-machine.md)
 - **LLM providers:** [`docs/llm-providers.md`](docs/llm-providers.md)
 - **Agent core:** [`docs/agent-core.md`](docs/agent-core.md)
+- **Tool registry:** [`docs/tools.md`](docs/tools.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

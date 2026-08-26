@@ -32,9 +32,10 @@ def test_path_guard_resolves_regular_workspace_resources(tmp_path: Path) -> None
     file_path = directory / "main.py"
     file_path.write_text("print('safe')", encoding="utf-8")
 
-    assert resolve_workspace_path(
-        tmp_path, "src", must_exist=True, expected_kind="directory"
-    ) == directory.resolve()
+    assert (
+        resolve_workspace_path(tmp_path, "src", must_exist=True, expected_kind="directory")
+        == directory.resolve()
+    )
     resolved_file = resolve_workspace_path(
         tmp_path, "src/main.py", must_exist=True, expected_kind="file"
     )
@@ -43,9 +44,10 @@ def test_path_guard_resolves_regular_workspace_resources(tmp_path: Path) -> None
 
 
 def test_path_guard_allows_dot_as_workspace_directory(tmp_path: Path) -> None:
-    assert resolve_workspace_path(
-        tmp_path, ".", must_exist=True, expected_kind="directory"
-    ) == tmp_path.resolve()
+    assert (
+        resolve_workspace_path(tmp_path, ".", must_exist=True, expected_kind="directory")
+        == tmp_path.resolve()
+    )
 
 
 @pytest.mark.parametrize("target_kind", ["file", "directory"])
@@ -108,12 +110,15 @@ def test_path_guard_rejects_special_file(tmp_path: Path) -> None:
 def test_path_guard_validates_nonexistent_git_filter_without_escape(tmp_path: Path) -> None:
     expected = tmp_path / "future.txt"
 
-    assert resolve_workspace_path(
-        tmp_path,
-        "future.txt",
-        must_exist=False,
-        expected_kind="any",
-    ) == expected
+    assert (
+        resolve_workspace_path(
+            tmp_path,
+            "future.txt",
+            must_exist=False,
+            expected_kind="any",
+        )
+        == expected
+    )
 
 
 def test_relative_renderer_rejects_sibling_prefix_confusion(tmp_path: Path) -> None:

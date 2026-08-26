@@ -81,9 +81,7 @@ def test_read_file_rejects_oversized_binary_and_symlink_files(tmp_path: Path) ->
 
     for path in ("oversized.txt", "binary.dat", "link.txt"):
         with pytest.raises(ToolError) as captured:
-            asyncio.run(
-                ReadFileTool().execute(ReadFileInput(path=path), _context(tmp_path))
-            )
+            asyncio.run(ReadFileTool().execute(ReadFileInput(path=path), _context(tmp_path)))
         assert captured.value.code in {
             ToolErrorCode.OUTPUT_LIMIT,
             ToolErrorCode.UNSUPPORTED_FILE,
@@ -213,6 +211,4 @@ def test_list_files_rejects_special_directory(tmp_path: Path) -> None:
     os.mkfifo(fifo)
 
     with pytest.raises(ToolWorkspaceError):
-        asyncio.run(
-            ListFilesTool().execute(ListFilesInput(path="pipe"), _context(tmp_path))
-        )
+        asyncio.run(ListFilesTool().execute(ListFilesInput(path="pipe"), _context(tmp_path)))

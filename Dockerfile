@@ -9,6 +9,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Phase 6 Git tools invoke this fixed executable directly without a shell.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy metadata + sources needed to build/install the package.
 COPY pyproject.toml README.md alembic.ini ./
 COPY apps ./apps

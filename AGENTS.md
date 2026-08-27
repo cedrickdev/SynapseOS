@@ -5,17 +5,19 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## Repository status
 
 The repository has completed **Phase 1 — repository initialization**, **Phase 2 — fundamental data
-model**, **Phase 3 — task state machine**, and **Phase 4 — LLM provider boundary**, and is
-implementing **Phase 5 — agent core**. It contains a minimal FastAPI application, typed SQLAlchemy
-models, Alembic migrations, append-only history protection, an audited task workflow, bounded
-provider-neutral LLM contracts, an Ollama adapter, a bounded runtime agent with four strict
-structured operations, a PostgreSQL Docker Compose service, and real-PostgreSQL integration tests.
+model**, **Phase 3 — task state machine**, **Phase 4 — LLM provider boundary**, **Phase 5 — agent
+core**, and **Phase 6 — tool registry**. It contains a minimal FastAPI application, typed
+SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
+bounded provider-neutral LLM contracts, an Ollama adapter, a bounded runtime agent with four
+strict structured operations, five bounded read-only repository tools, a PostgreSQL Docker
+Compose service, and real-PostgreSQL integration tests.
 
-Phase 5 does not include autonomous loops, executable tools, skill loading, shell/filesystem/MCP
-access, provider routing, or multi-agent behavior. `skill_ids` are inert declarations; do not read
-or execute `SKILL.md` before the Phase 8 Skills Registry. Phase 6 and later phases are not
-implemented. In particular, there are no tool registry, permission engine, MCP integrations,
-QA/security engines, provider router, or frontend. Do not implement work from a later phase unless
+Phase 6 includes only `read_file`, `list_files`, `search_text`, `git_status`, and `git_diff` behind
+the central executor. It does not include autonomous loops, write tools, free-form shell, skill
+loading, MCP access, provider routing, or multi-agent behavior. `skill_ids` are inert declarations;
+do not read or execute `SKILL.md` before the Phase 8 Skills Registry. Phase 7 and later phases are
+not implemented. In particular, there is no policy-based permission engine, MCP integration,
+QA/security engine, provider router, or frontend. Do not implement work from a later phase unless
 the user explicitly starts that phase.
 
 Important files:
@@ -56,10 +58,10 @@ For repository acceptance against the Docker PostgreSQL port, run:
 TEST_POSTGRES_PORT=55432 make test
 ```
 
-For the focused Phase 5 runtime tests, run:
+For the focused Phase 6 tool tests, run:
 
 ```bash
-.venv/bin/pytest tests/agents -q
+.venv/bin/pytest tests/tools tests/database/test_tool_execution.py -q
 ```
 
 Run a single test with:

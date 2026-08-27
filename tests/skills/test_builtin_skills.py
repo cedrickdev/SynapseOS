@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from core.commands import CommandLimits
 from core.enums import Permission
 from core.skills import SkillRegistry, SkillSelectionRequest, SkillSelector
 from core.workspaces import WorkspaceLimits
+from infrastructure.commands import LocalCommandPolicy, LocalCommandRunner
 from infrastructure.skills import SkillLoader
 from infrastructure.tools import LocalTextMutator, MutationLimits, create_default_tool_registry
 from infrastructure.workspaces import ManagedWorkspaceFilesystem
@@ -44,7 +46,23 @@ def test_builtin_skill_snapshot_is_exact_and_cross_references_are_valid(tmp_path
             max_diff_bytes=1_024,
         ),
     )
-    tool_ids = set(create_default_tool_registry(mutator).names)
+    tool_ids = set(
+        create_default_tool_registry(
+            mutator,
+            LocalCommandPolicy(
+                filesystem,
+                CommandLimits(
+                    timeout_seconds=10.0,
+                    stdout_max_bytes=4_096,
+                    stderr_max_bytes=2_048,
+                    marker_max_bytes=4_096,
+                    read_chunk_bytes=1_024,
+                    termination_grace_seconds=1.0,
+                ),
+            ),
+            LocalCommandRunner(),
+        ).names
+    )
     for skill in skills:
         assert skill.metadata.recommended_tool_ids <= tool_ids
         assert all(

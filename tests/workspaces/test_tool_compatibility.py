@@ -6,9 +6,11 @@ import asyncio
 from pathlib import Path
 from uuid import uuid4
 
+from core.commands import CommandLimits
 from core.enums import AuditActorType
 from core.tools import ToolExecutionContext
 from core.workspaces import WorkspaceAuditContext, WorkspaceLimits
+from infrastructure.commands import LocalCommandPolicy, LocalCommandRunner
 from infrastructure.tools import (
     LocalTextMutator,
     MutationLimits,
@@ -71,7 +73,22 @@ def test_managed_workspace_is_accepted_by_read_only_tool_boundary(tmp_path: Path
             max_diff_bytes=1_024,
         ),
     )
-    assert create_default_tool_registry(mutator).names == (
+    registry = create_default_tool_registry(
+        mutator,
+        LocalCommandPolicy(
+            filesystem,
+            CommandLimits(
+                timeout_seconds=10.0,
+                stdout_max_bytes=4_096,
+                stderr_max_bytes=2_048,
+                marker_max_bytes=4_096,
+                read_chunk_bytes=1_024,
+                termination_grace_seconds=1.0,
+            ),
+        ),
+        LocalCommandRunner(),
+    )
+    assert registry.names == (
         "create_file",
         "delete_file",
         "git_diff",
@@ -79,6 +96,7 @@ def test_managed_workspace_is_accepted_by_read_only_tool_boundary(tmp_path: Path
         "list_files",
         "patch_file",
         "read_file",
+        "run_command_profile",
         "search_text",
         "write_file",
     )

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
 
+from core.commands import CommandProfileId, CommandResult, CommandSpec
 from core.enums import Permission, ToolRiskLevel
 from core.tools import ToolExecutionContext
 from core.workspaces import WorkspaceLimits
@@ -25,6 +26,23 @@ from infrastructure.tools.write import (
     WriteFileTool,
 )
 from infrastructure.workspaces import ManagedWorkspaceFilesystem
+
+
+class UnusedCommandPolicy:
+    def resolve(
+        self,
+        profile_id: CommandProfileId,
+        project_id: UUID,
+        workspace_root: Path,
+    ) -> CommandSpec:
+        del profile_id, project_id, workspace_root
+        raise AssertionError("registry construction must not resolve commands")
+
+
+class UnusedCommandRunner:
+    async def run(self, spec: CommandSpec) -> CommandResult:
+        del spec
+        raise AssertionError("registry construction must not run commands")
 
 
 def _setup(tmp_path: Path) -> tuple[LocalTextMutator, ToolExecutionContext, Path]:
@@ -113,7 +131,11 @@ def test_write_tool_definitions_require_write_permission_and_elevate_delete(
 def test_default_registry_requires_mutator_and_contains_all_phase_10_tools(tmp_path: Path) -> None:
     mutator, _, _ = _setup(tmp_path)
 
-    registry = create_default_tool_registry(mutator)
+    registry = create_default_tool_registry(
+        mutator,
+        UnusedCommandPolicy(),
+        UnusedCommandRunner(),
+    )
 
     assert registry.names == (
         "create_file",
@@ -123,6 +145,7 @@ def test_default_registry_requires_mutator_and_contains_all_phase_10_tools(tmp_p
         "list_files",
         "patch_file",
         "read_file",
+        "run_command_profile",
         "search_text",
         "write_file",
     )

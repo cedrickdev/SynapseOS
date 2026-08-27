@@ -192,8 +192,11 @@ class LocalCommandPolicy:
     def _executable(self, template: CommandTemplate) -> Path:
         if template.executable_name is None:
             try:
-                return Path(sys.executable).resolve(strict=True)
-            except (OSError, RuntimeError) as error:
+                executable = Path(sys.executable)
+                if not executable.is_absolute() or not executable.is_file():
+                    raise ValueError
+                return executable
+            except (OSError, RuntimeError, ValueError) as error:
                 del error
                 raise _executable_unavailable() from None
         candidate = self._resolve_executable(template.executable_name)

@@ -136,7 +136,7 @@ def test_python_profiles_require_valid_bounded_pyproject(
     (root / "pyproject.toml").write_text("[project]\nname = 'sample'\n", encoding="utf-8")
     spec = policy.resolve(profile_id, project_id, root)
 
-    assert spec.executable == Path(sys.executable).resolve(strict=True)
+    assert spec.executable == Path(sys.executable)
     assert spec.workspace_root == root
 
 

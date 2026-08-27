@@ -147,7 +147,9 @@ class WorkspaceAuditRecorder(Protocol):
 
 
 class WorkspaceManager(Protocol):
-    async def create_workspace(self, project_id: UUID, audit: WorkspaceAuditContext) -> Workspace: ...
+    async def create_workspace(
+        self, project_id: UUID, audit: WorkspaceAuditContext
+    ) -> Workspace: ...
     async def attach_existing_repository(
         self, project_id: UUID, source: Path, audit: WorkspaceAuditContext
     ) -> Workspace: ...
@@ -263,9 +265,7 @@ git commit -m "feat(workspaces): enforce managed filesystem isolation"
 Use the existing Alembic-built `db_session` fixture. Prove that exact records append:
 
 ```python
-event = db_session.scalar(
-    select(AuditEvent).where(AuditEvent.event_type == "WORKSPACE_LIFECYCLE")
-)
+event = db_session.scalar(select(AuditEvent).where(AuditEvent.event_type == "WORKSPACE_LIFECYCLE"))
 assert event is not None
 assert event.action == "create_workspace"
 assert event.resource_type == "WORKSPACE"

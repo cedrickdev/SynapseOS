@@ -52,7 +52,7 @@ def test_skill_is_immutable_and_instructions_are_bounded() -> None:
 
 - [ ] **Step 2: Run tests and verify RED**
 
-Run: `.venv/bin/pytest tests/skills/test_types.py -q`  
+Run: `.venv/bin/pytest tests/skills/test_types.py -q`
 Expected: collection fails because Phase 8 contracts do not exist.
 
 - [ ] **Step 3: Implement minimal strict frozen models and sanitized errors**
@@ -68,8 +68,8 @@ secret markers supplied as rejected data.
 
 - [ ] **Step 5: Run focused quality checks**
 
-Run: `.venv/bin/pytest tests/skills/test_types.py -q`  
-Run: `.venv/bin/ruff check core/skills tests/skills`  
+Run: `.venv/bin/pytest tests/skills/test_types.py -q`
+Run: `.venv/bin/ruff check core/skills tests/skills`
 Run: `.venv/bin/mypy core/skills tests/skills`
 
 - [ ] **Step 6: Commit**
@@ -103,7 +103,7 @@ def test_registry_returns_skills_in_stable_id_order() -> None:
 
 - [ ] **Step 2: Run the focused test and verify RED**
 
-Run: `.venv/bin/pytest tests/skills/test_registry.py -q`  
+Run: `.venv/bin/pytest tests/skills/test_registry.py -q`
 Expected: import failure because `SkillRegistry` is absent.
 
 - [ ] **Step 3: Implement a copied immutable map with no mutation API**
@@ -118,7 +118,7 @@ replace, or remove method exists.
 
 - [ ] **Step 5: Run focused tests and commit**
 
-Run: `.venv/bin/pytest tests/skills/test_registry.py tests/skills/test_types.py -q`  
+Run: `.venv/bin/pytest tests/skills/test_registry.py tests/skills/test_types.py -q`
 Commit: `feat(skills): add immutable skill registry`
 
 ---
@@ -145,7 +145,7 @@ def test_loader_reads_one_exact_skill_directory(tmp_path: Path) -> None:
 
 - [ ] **Step 2: Run the test and verify RED**
 
-Run: `.venv/bin/pytest tests/skills/test_loader.py::test_loader_reads_one_exact_skill_directory -q`  
+Run: `.venv/bin/pytest tests/skills/test_loader.py::test_loader_reads_one_exact_skill_directory -q`
 Expected: import failure because the infrastructure loader is absent.
 
 - [ ] **Step 3: Implement one no-follow, all-or-nothing load path**
@@ -168,9 +168,9 @@ snapshot, no created files, no network/subprocess calls, and every opened file i
 
 - [ ] **Step 6: Run focused quality checks and commit**
 
-Run: `.venv/bin/pytest tests/skills/test_loader.py -q`  
-Run: `.venv/bin/ruff check infrastructure/skills tests/skills/test_loader.py pyproject.toml`  
-Run: `.venv/bin/mypy infrastructure/skills tests/skills/test_loader.py`  
+Run: `.venv/bin/pytest tests/skills/test_loader.py -q`
+Run: `.venv/bin/ruff check infrastructure/skills tests/skills/test_loader.py pyproject.toml`
+Run: `.venv/bin/mypy infrastructure/skills tests/skills/test_loader.py`
 Commit: `feat(skills): load bounded local skill snapshots`
 
 ---
@@ -199,7 +199,7 @@ def test_selector_filters_permissions_then_applies_stable_weights() -> None:
 
 - [ ] **Step 2: Run the selector test and verify RED**
 
-Run: `.venv/bin/pytest tests/skills/test_selector.py -q`  
+Run: `.venv/bin/pytest tests/skills/test_selector.py -q`
 Expected: import failure because `SkillSelector` is absent.
 
 - [ ] **Step 3: Implement exact-token deterministic scoring**
@@ -215,9 +215,9 @@ LLM boundaries to fail if touched; selection must remain pure and must not mutat
 
 - [ ] **Step 5: Run focused and neighboring checks and commit**
 
-Run: `.venv/bin/pytest tests/skills -q`  
-Run: `.venv/bin/ruff check core/skills tests/skills`  
-Run: `.venv/bin/mypy core/skills tests/skills`  
+Run: `.venv/bin/pytest tests/skills -q`
+Run: `.venv/bin/ruff check core/skills tests/skills`
+Run: `.venv/bin/mypy core/skills tests/skills`
 Commit: `feat(skills): rank skills deterministically`
 
 ---
@@ -252,7 +252,7 @@ def test_builtin_skill_snapshot_is_exact_and_valid() -> None:
 
 - [ ] **Step 2: Run the test and verify RED**
 
-Run: `.venv/bin/pytest tests/skills/test_builtin_skills.py -q`  
+Run: `.venv/bin/pytest tests/skills/test_builtin_skills.py -q`
 Expected: loader rejects the absent root or returns no skills.
 
 - [ ] **Step 3: Add concise original English metadata and instructions**
@@ -270,7 +270,7 @@ failure visibility, and escalation expectations relevant to its craft.
 
 - [ ] **Step 5: Run tests and commit**
 
-Run: `.venv/bin/pytest tests/skills/test_builtin_skills.py tests/tools/test_default_registry.py -q`  
+Run: `.venv/bin/pytest tests/skills/test_builtin_skills.py tests/tools/test_default_registry.py -q`
 Commit: `feat(skills): add five built-in skill packages`
 
 ---
@@ -302,7 +302,7 @@ LLM requests, ToolExecutor, PermissionEngine, or persistence.
 
 - [ ] **Step 4: Run Phase 5-8 regressions and commit**
 
-Run: `.venv/bin/pytest tests/agents tests/skills tests/tools tests/permissions -q`  
+Run: `.venv/bin/pytest tests/agents tests/skills tests/tools tests/permissions -q`
 Commit: `test(skills): verify inert agent skill declarations`
 
 ---
@@ -332,11 +332,11 @@ tests pass. Leave Phase 9 and later unchanged.
 
 - [ ] **Step 3: Run fresh complete verification**
 
-Run: `.venv/bin/pytest` — all tests, including real PostgreSQL, pass without warnings.  
-Run: `.venv/bin/ruff check .` — no findings.  
-Run: `.venv/bin/ruff format --check .` — every file formatted.  
-Run: `.venv/bin/mypy .` — strict typing passes.  
-Run: `docker compose exec -T api alembic current` — `20260826_0003 (head)`.  
+Run: `.venv/bin/pytest` — all tests, including real PostgreSQL, pass without warnings.
+Run: `.venv/bin/ruff check .` — no findings.
+Run: `.venv/bin/ruff format --check .` — every file formatted.
+Run: `.venv/bin/mypy .` — strict typing passes.
+Run: `docker compose exec -T api alembic current` — `20260826_0003 (head)`.
 Run: `docker compose exec -T api alembic check` — no upgrade operations.
 
 - [ ] **Step 4: Verify Docker and health**

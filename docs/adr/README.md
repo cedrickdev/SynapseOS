@@ -37,3 +37,4 @@ Trade-offs, risks, follow-ups.
 - [ADR-0002 — Phase 2 fundamental data model](0002-phase-2-fundamental-data-model.md)
 - [ADR-0003 — Audited task state machine](0003-phase-3-task-state-machine.md)
 - [ADR-0004 — Provider-neutral LLM boundary](0004-provider-neutral-llm-boundary.md)
+- [ADR-0005 — Agent runtime boundary](0005-agent-runtime-boundary.md)

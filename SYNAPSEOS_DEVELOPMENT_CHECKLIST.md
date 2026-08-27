@@ -830,18 +830,18 @@ Permettre à un Developer Agent de modifier du code.
 
 ## Tools
 
-- [ ] `write_file`
-- [ ] `patch_file`
-- [ ] `create_file`
-- [ ] `delete_file` avec permission renforcée
+- [x] `write_file`
+- [x] `patch_file`
+- [x] `create_file`
+- [x] `delete_file` avec permission renforcée
 
 ## Règles
 
-- [ ] sauvegarde avant modification
-- [ ] diff généré
-- [ ] audit
-- [ ] workspace obligatoire
-- [ ] limite de taille
+- [x] sauvegarde avant modification
+- [x] diff généré
+- [x] audit
+- [x] workspace obligatoire
+- [x] limite de taille
 
 ## Prompt Claude Code — Phase 10
 

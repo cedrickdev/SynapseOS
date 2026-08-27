@@ -22,6 +22,8 @@ from infrastructure.tools.paths import ExpectedPathKind, resolve_workspace_path
 
 _SAFE_PATH_MESSAGE = "Workspace path is not allowed."
 _RESOURCE_MESSAGE = "Workspace exceeds a resource limit."
+_MAX_COMPENSATION_ENTRIES = 1_000_000
+_MAX_COMPENSATION_DEPTH = 256
 _OPERATION_DIRECTORY_PATTERN = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-[0-9a-f]{32}$"
 )
@@ -49,6 +51,11 @@ class ManagedWorkspaceFilesystem:
     def projects_root(self) -> Path:
         """Return the canonical parent of all final project roots."""
         return self._projects
+
+    @property
+    def limits(self) -> WorkspaceLimits:
+        """Return the immutable limits governing this filesystem boundary."""
+        return self._limits
 
     def acquire_lock(self, project_id: UUID) -> None:
         """Atomically acquire the cross-process operation lock for one project."""
@@ -125,6 +132,23 @@ class ManagedWorkspaceFilesystem:
         try:
             self.scan_usage(owned)
             self._remove_tree(owned, depth=0)
+        except WorkspaceError:
+            raise
+        except OSError as error:
+            del error
+            raise _error(WorkspaceErrorCode.CLEANUP_FAILED, "Workspace cleanup failed.") from None
+
+    def discard_staging_tree(self, target: Path) -> None:
+        """Discard failed staging with separate finite safety ceilings.
+
+        Provisioning limits cannot govern compensation because the failed tree may
+        already exceed them. This path is restricted to an exact manager-created
+        staging child and remains bounded by independent hard ceilings.
+        """
+        owned = self._require_staging_tree(target)
+        try:
+            self._validate_compensation_tree(owned)
+            self._remove_tree(owned, depth=0, maximum_depth=_MAX_COMPENSATION_DEPTH)
         except WorkspaceError:
             raise
         except OSError as error:
@@ -291,6 +315,13 @@ class ManagedWorkspaceFilesystem:
                 return self._require_direct_directory(target, parent)
         raise _unsafe()
 
+    def _require_staging_tree(self, target: Path) -> Path:
+        if not isinstance(target, Path) or target.parent != self._staging:
+            raise _unsafe()
+        if _OPERATION_DIRECTORY_PATTERN.fullmatch(target.name) is None:
+            raise _unsafe()
+        return self._require_direct_directory(target, self._staging)
+
     def _require_any_owned_directory(self, target: Path) -> Path:
         if not isinstance(target, Path):
             raise _unsafe()
@@ -298,14 +329,41 @@ class ManagedWorkspaceFilesystem:
             return self._require_direct_directory(target, target.parent)
         raise _unsafe()
 
-    def _remove_tree(self, directory: Path, *, depth: int) -> None:
-        if depth > self._limits.max_depth:
+    def _validate_compensation_tree(self, root: Path) -> None:
+        entries = 0
+        stack: list[tuple[Path, int]] = [(root, 0)]
+        while stack:
+            directory, depth = stack.pop()
+            if depth > _MAX_COMPENSATION_DEPTH:
+                raise _resource_limit()
+            with os.scandir(directory) as iterator:
+                for entry in iterator:
+                    entries += 1
+                    if entries > _MAX_COMPENSATION_ENTRIES:
+                        raise _resource_limit()
+                    item_stat = entry.stat(follow_symlinks=False)
+                    if stat.S_ISDIR(item_stat.st_mode) and not stat.S_ISLNK(item_stat.st_mode):
+                        stack.append((Path(entry.path), depth + 1))
+
+    def _remove_tree(
+        self,
+        directory: Path,
+        *,
+        depth: int,
+        maximum_depth: int | None = None,
+    ) -> None:
+        depth_limit = self._limits.max_depth if maximum_depth is None else maximum_depth
+        if depth > depth_limit:
             raise _resource_limit()
         with os.scandir(directory) as iterator:
             for entry in iterator:
                 item_stat = entry.stat(follow_symlinks=False)
                 if stat.S_ISDIR(item_stat.st_mode) and not stat.S_ISLNK(item_stat.st_mode):
-                    self._remove_tree(Path(entry.path), depth=depth + 1)
+                    self._remove_tree(
+                        Path(entry.path),
+                        depth=depth + 1,
+                        maximum_depth=depth_limit,
+                    )
                 else:
                     os.unlink(entry.path)
         directory.rmdir()

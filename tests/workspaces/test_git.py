@@ -233,3 +233,64 @@ def test_git_timeout_terminates_process_within_bounded_time(tmp_path: Path) -> N
 
     assert captured.value.code is WorkspaceErrorCode.TIMED_OUT
     assert time.monotonic() - started < 2.0
+
+
+def test_git_output_limit_fails_without_accumulating_response(tmp_path: Path) -> None:
+    executable = tmp_path / "noisy-git"
+    executable.write_text(
+        f"#!{sys.executable}\nimport sys\nsys.stdout.write('x' * 100_000)\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    source = validate_local_source(
+        _repository(allowed / "source"),
+        frozenset({allowed}),
+        tmp_path / "managed",
+        maximum_roots=8,
+    )
+
+    with pytest.raises(WorkspaceError) as captured:
+        asyncio.run(
+            AsyncGitWorkspaceClient(executable, _limits(output=1_024)).clone(
+                source,
+                tmp_path / "destination",
+            )
+        )
+
+    assert captured.value.code is WorkspaceErrorCode.RESOURCE_LIMIT
+
+
+def test_git_cancellation_stops_process_and_propagates_immediately(tmp_path: Path) -> None:
+    executable = tmp_path / "blocking-git"
+    executable.write_text(
+        f"#!{sys.executable}\nimport time\ntime.sleep(30)\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    source = validate_local_source(
+        _repository(allowed / "source"),
+        frozenset({allowed}),
+        tmp_path / "managed",
+        maximum_roots=8,
+    )
+
+    async def cancel_clone() -> None:
+        task = asyncio.create_task(
+            AsyncGitWorkspaceClient(executable, _limits()).clone(
+                source,
+                tmp_path / "destination",
+            )
+        )
+        await asyncio.sleep(0.1)
+        task.cancel()
+        await task
+
+    started = time.monotonic()
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(cancel_clone())
+
+    assert time.monotonic() - started < 2.0

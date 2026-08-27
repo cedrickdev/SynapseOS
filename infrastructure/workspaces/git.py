@@ -8,6 +8,7 @@ import stat
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 from core.workspaces import WorkspaceError, WorkspaceErrorCode, WorkspaceLimits
@@ -44,6 +45,16 @@ class GitCloneResult:
 
     output_bytes: int
     truncated: bool
+
+
+class GitWorkspaceClient(Protocol):
+    """Clone one already validated source into an exact destination."""
+
+    async def clone(
+        self,
+        source: GitWorkspaceSource,
+        destination: Path,
+    ) -> GitCloneResult: ...
 
 
 @dataclass(slots=True)

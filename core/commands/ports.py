@@ -12,6 +12,10 @@ from core.commands.types import CommandProfileId, CommandResult, CommandSpec
 class CommandPolicy(Protocol):
     """Resolve one approved command profile for an exact workspace."""
 
+    def acquire(self, project_id: UUID, workspace_root: Path) -> None: ...
+
+    def release(self, project_id: UUID, workspace_root: Path) -> None: ...
+
     def resolve(
         self,
         profile_id: CommandProfileId,

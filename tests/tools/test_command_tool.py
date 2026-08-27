@@ -60,6 +60,13 @@ class RecordingPolicy:
     def __init__(self, spec: CommandSpec) -> None:
         self.spec = spec
         self.calls: list[tuple[CommandProfileId, UUID, Path]] = []
+        self.lease_events: list[tuple[str, UUID, Path]] = []
+
+    def acquire(self, project_id: UUID, workspace_root: Path) -> None:
+        self.lease_events.append(("acquire", project_id, workspace_root))
+
+    def release(self, project_id: UUID, workspace_root: Path) -> None:
+        self.lease_events.append(("release", project_id, workspace_root))
 
     def resolve(
         self,
@@ -148,6 +155,10 @@ def test_tool_resolves_exact_scope_once_and_returns_bounded_non_zero_result(
     )
 
     assert policy.calls == [(CommandProfileId.PYTEST, context.project_id, context.workspace_root)]
+    assert policy.lease_events == [
+        ("acquire", context.project_id, context.workspace_root),
+        ("release", context.project_id, context.workspace_root),
+    ]
     assert runner.calls == [spec]
     assert output == {
         "profile_id": "pytest",
@@ -239,4 +250,8 @@ def test_tool_propagates_cancellation_and_never_owns_collaborators(tmp_path: Pat
 
     asyncio.run(scenario())
 
+    assert policy.lease_events == [
+        ("acquire", context.project_id, context.workspace_root),
+        ("release", context.project_id, context.workspace_root),
+    ]
     assert not hasattr(policy, "close")

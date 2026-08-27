@@ -129,3 +129,35 @@ def test_parent_environment_cannot_change_resolved_command(
     assert spec.environment["HOME"] == os.devnull
     assert "NODE_OPTIONS" not in spec.environment
     assert "NPM_CONFIG_USERCONFIG" not in spec.environment
+
+
+def test_policy_opens_profile_markers_without_following_symlinks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    filesystem, root, project_id = _setup(tmp_path)
+    executable = tmp_path / "trusted-npm"
+    executable.write_text("#!/bin/sh\n")
+    executable.chmod(0o700)
+    real_open = os.open
+    observed_flags: list[int] = []
+
+    def recording_open(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+        *args: object,
+        **kwargs: object,
+    ) -> int:
+        observed_flags.append(flags)
+        return real_open(path, flags, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("infrastructure.commands.policy.os.open", recording_open)
+
+    LocalCommandPolicy(filesystem, _limits(), lambda _: executable).resolve(
+        CommandProfileId.NPM_TEST,
+        project_id,
+        root,
+    )
+
+    assert observed_flags
+    assert all(flags & os.O_NOFOLLOW for flags in observed_flags)

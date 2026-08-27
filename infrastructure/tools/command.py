@@ -58,7 +58,10 @@ class RunCommandProfileTool(Tool[RunCommandProfileInput]):
         arguments: RunCommandProfileInput,
         context: ToolExecutionContext,
     ) -> dict[str, JsonValue]:
+        acquired = False
         try:
+            self._policy.acquire(context.project_id, context.workspace_root)
+            acquired = True
             spec = self._policy.resolve(
                 CommandProfileId(arguments.profile_id),
                 context.project_id,
@@ -70,6 +73,9 @@ class RunCommandProfileTool(Tool[RunCommandProfileInput]):
             error.__traceback__ = None
             del error
             _raise_tool_error(code)
+        finally:
+            if acquired:
+                self._policy.release(context.project_id, context.workspace_root)
         truncated = result.stdout_truncated or result.stderr_truncated
         return {
             "profile_id": result.profile_id.value,

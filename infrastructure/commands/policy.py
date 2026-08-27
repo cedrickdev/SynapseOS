@@ -30,6 +30,10 @@ class ManagedRootValidator(Protocol):
 
     def validate_project_root(self, project_id: UUID, root: Path) -> Path: ...
 
+    def acquire_lock(self, project_id: UUID) -> None: ...
+
+    def release_lock(self, project_id: UUID) -> None: ...
+
 
 _TRUSTED_EXECUTABLE_DIRECTORIES = (
     Path("/opt/homebrew/bin"),
@@ -70,6 +74,33 @@ class LocalCommandPolicy:
         self._limits = limits
         self._catalog = BuiltinCommandCatalog()
         self._resolve_executable = executable_resolver or _resolve_trusted_executable
+
+    def acquire(self, project_id: UUID, workspace_root: Path) -> None:
+        """Hold the shared workspace-operation lock for the entire command interval."""
+        try:
+            self._filesystem.validate_project_root(project_id, workspace_root)
+            self._filesystem.acquire_lock(project_id)
+            try:
+                self._filesystem.validate_project_root(project_id, workspace_root)
+            except WorkspaceError:
+                self._filesystem.release_lock(project_id)
+                raise
+        except WorkspaceError:
+            raise CommandError(
+                CommandErrorCode.WORKSPACE_INVALID,
+                "Command workspace is not allowed.",
+            ) from None
+
+    def release(self, project_id: UUID, workspace_root: Path) -> None:
+        """Release the exact project lock without trusting mutable workspace contents."""
+        del workspace_root
+        try:
+            self._filesystem.release_lock(project_id)
+        except WorkspaceError:
+            raise CommandError(
+                CommandErrorCode.WORKSPACE_INVALID,
+                "Command workspace is not allowed.",
+            ) from None
 
     def resolve(
         self,
@@ -140,13 +171,21 @@ class LocalCommandPolicy:
         return parsed
 
     def _read_marker(self, root: Path, name: str, *, required: bool) -> bytes:
-        target = root / name
+        root_descriptor = -1
+        marker_descriptor = -1
         try:
-            mode = os.lstat(target).st_mode
-            if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+            root_descriptor = os.open(
+                root,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+            )
+            marker_descriptor = os.open(
+                name,
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=root_descriptor,
+            )
+            if not stat.S_ISREG(os.fstat(marker_descriptor).st_mode):
                 raise _marker_invalid()
-            with target.open("rb") as handle:
-                data = handle.read(self._limits.marker_max_bytes + 1)
+            data = os.read(marker_descriptor, self._limits.marker_max_bytes + 1)
         except FileNotFoundError:
             if required:
                 raise _profile_unavailable() from None
@@ -156,6 +195,11 @@ class LocalCommandPolicy:
         except OSError as error:
             del error
             raise _marker_invalid() from None
+        finally:
+            if marker_descriptor >= 0:
+                os.close(marker_descriptor)
+            if root_descriptor >= 0:
+                os.close(root_descriptor)
         if len(data) > self._limits.marker_max_bytes:
             raise _marker_invalid()
         return data

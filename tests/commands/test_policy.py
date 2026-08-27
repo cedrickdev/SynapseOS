@@ -64,6 +64,13 @@ def _resolver(mapping: dict[str, Path]) -> Callable[[str], Path | None]:
     return resolve
 
 
+def _executable(tmp_path: Path, name: str) -> Path:
+    target = tmp_path / name
+    target.write_text("#!/bin/sh\n", encoding="utf-8")
+    target.chmod(0o700)
+    return target.resolve(strict=True)
+
+
 def test_catalog_resolves_exact_application_owned_vectors() -> None:
     catalog = BuiltinCommandCatalog()
 
@@ -156,7 +163,7 @@ def test_npm_profiles_require_the_exact_script_key(
     filesystem = _filesystem(tmp_path)
     project_id = uuid4()
     root = _workspace(filesystem, project_id)
-    npm = Path("/opt/homebrew/bin/npm")
+    npm = _executable(tmp_path, "npm")
     policy = LocalCommandPolicy(filesystem, _limits(), _resolver({"npm": npm}))
     (root / "package.json").write_text('{"scripts":{"other":"ignored"}}', encoding="utf-8")
 
@@ -179,7 +186,7 @@ def test_artisan_profile_requires_composer_and_regular_artisan_markers(tmp_path:
     filesystem = _filesystem(tmp_path)
     project_id = uuid4()
     root = _workspace(filesystem, project_id)
-    php = Path("/usr/bin/php")
+    php = _executable(tmp_path, "php")
     policy = LocalCommandPolicy(filesystem, _limits(), _resolver({"php": php}))
     (root / "composer.json").write_text("{}", encoding="utf-8")
 

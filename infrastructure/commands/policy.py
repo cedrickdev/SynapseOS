@@ -202,7 +202,20 @@ class LocalCommandPolicy:
         candidate = self._resolve_executable(template.executable_name)
         if candidate is None or not candidate.is_absolute():
             raise _executable_unavailable()
-        return candidate
+        try:
+            mode = os.lstat(candidate).st_mode
+            resolved = candidate.resolve(strict=True)
+            if (
+                stat.S_ISLNK(mode)
+                or not stat.S_ISREG(mode)
+                or resolved != candidate
+                or not os.access(candidate, os.X_OK)
+            ):
+                raise ValueError
+            return resolved
+        except (OSError, RuntimeError, ValueError) as error:
+            del error
+            raise _executable_unavailable() from None
 
 
 def _resolve_trusted_executable(name: str) -> Path | None:

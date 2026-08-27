@@ -496,31 +496,31 @@ Créer la représentation runtime d'un agent.
 
 ## Agent V1 doit posséder
 
-- [ ] identité
-- [ ] rôle
-- [ ] département
-- [ ] system prompt
-- [ ] autonomie
-- [ ] permissions
-- [ ] liste de tools
-- [ ] liste de skills
-- [ ] LLM provider
-- [ ] score de réputation
-- [ ] historique minimal
-- [ ] statut
+- [x] identité
+- [x] rôle
+- [x] département
+- [x] system prompt
+- [x] autonomie
+- [x] permissions
+- [x] liste de tools
+- [x] liste de skills
+- [x] LLM provider
+- [x] score de réputation
+- [x] historique minimal
+- [x] statut
 
 ## Méthodes
 
-- [ ] `observe()`
-- [ ] `plan()`
-- [ ] `decide()`
-- [ ] `report()`
+- [x] `observe()`
+- [x] `plan()`
+- [x] `decide()`
+- [x] `report()`
 
 ## À NE PAS FAIRE
 
-- [ ] Pas encore de boucle autonome complète.
-- [ ] Pas encore de modification de fichiers.
-- [ ] Pas encore de terminal.
+- [x] Pas encore de boucle autonome complète.
+- [x] Pas encore de modification de fichiers.
+- [x] Pas encore de terminal.
 
 ## Prompt Claude Code — Phase 5
 
@@ -1605,6 +1605,10 @@ Recevoir un cahier des charges et produire un cadrage structuré.
 ## Capacités
 
 - [ ] lire cahier des charges
+- [ ] accept bounded client documents through a provider-neutral document-ingestion boundary
+- [ ] convert approved PDF and Office formats to structured Markdown in an isolated worker
+- [ ] validate file type, size, conversion limits, sensitivity, and prompt-injection risk
+- [ ] preserve source provenance and require an explicit retention policy
 - [ ] identifier objectifs
 - [ ] identifier ambiguïtés
 - [ ] générer questions
@@ -2500,6 +2504,74 @@ flowchart TD
 - [ ] mémoire
 - [ ] feedback
 - [ ] clôture
+
+---
+
+# FUTURE ARCHITECTURE BACKLOG — Context Intelligence Layer
+
+## Status and scheduling
+
+This is an approved central SynapseOS capability, not a Phase 5 deliverable and not an optional
+provider plugin. Its implementation phase must be scheduled through an ADR after the Tool Registry,
+LLM Router, storage policy, and permission boundaries required by the layer are available. Until
+then, every item below remains unchecked and no production dependency is added.
+
+## Responsibilities
+
+- [ ] Context classification
+- [ ] Context budgeting with model-aware tokenizers, output reserve, and safety margin
+- [ ] Deterministic deduplication and structural compression
+- [ ] Policy-controlled extractive compression and summarization
+- [ ] Bounded chunking and retrieval
+- [ ] Provider-neutral context metrics
+- [ ] Structured, evidence-preserving agent handoffs
+
+## Core contracts
+
+- [ ] Define typed `ContextInput`, `ContextPolicy`, `TokenBudget`, and `OptimizedContext` models
+- [ ] Define injectable optimizer, tokenizer, context-store, retrieval, and metrics ports
+- [ ] Keep concrete compressors, document converters, tokenizers, and stores in infrastructure
+- [ ] Support interchangeable strategies: `NONE`, `DEDUPLICATE`, `STRUCTURAL`, `EXTRACTIVE`,
+      `SUMMARIZE`, and `HYBRID`
+- [ ] Evaluate the open-source Headroom engine as one optional infrastructure adapter
+- [ ] Evaluate MarkItDown as one optional document-conversion adapter for client intake
+
+## Mandatory invariants
+
+- [ ] Classify content and sensitivity before optimization
+- [ ] Never perform an implicit LLM call, retry, duplicate call, or provider-specific operation
+- [ ] Preserve user instructions, requirements, acceptance criteria, API contracts, architecture
+      decisions, security findings, active errors, and deterministic evidence conservatively
+- [ ] Never persist raw prompts, responses, or tool output without an explicit retention policy
+- [ ] Make raw references optional, opaque, scoped, expiring, revocable, and non-enumerable
+- [ ] Authorize, bound, audit, and redact every raw-content retrieval
+- [ ] Enforce input size, output size, token, time, memory, and retrieval limits
+- [ ] Propagate cancellation immediately through optimization, storage, and retrieval
+- [ ] Keep sensitive content out of errors, logs, metrics, and provider metadata
+- [ ] Record hashes, provenance, strategy, tokenizer, and algorithm versions without recording content
+- [ ] Ensure injected clients and stores retain caller-owned lifecycle semantics
+
+## Verification and metrics
+
+- [ ] Measure original, optimized, sent, retrieved, and avoided tokens
+- [ ] Measure latency, compression ratio, retrieval rate, truncation, failures, and estimated savings
+- [ ] Aggregate only content-free metrics by agent, project, provider, model, tool, department, and run
+- [ ] Benchmark representative SynapseOS workloads before enabling any compressor by default
+- [ ] Test critical-fact recall, requirement preservation, retrieval correctness, isolation, expiration,
+      cancellation, and prompt-injection resistance
+- [ ] Require a conservative no-op fallback when optimization cannot be proven safe
+
+## Target flow
+
+```text
+Agent / Runtime
+    -> Tool / MCP / Shell / Git / Search
+    -> bounded raw output
+    -> Context Intelligence Layer
+       (classification, budgeting, optimization, storage, retrieval, metrics)
+    -> LLM Router
+    -> provider
+```
 
 ---
 

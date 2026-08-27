@@ -12,6 +12,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from core.enums import Permission
 from core.tools import (
     JsonValue,
     Tool,
@@ -172,7 +173,7 @@ class GitStatusTool(Tool[GitStatusInput]):
     name = "git_status"
     description = "Read bounded Git branch and worktree status."
     input_type = GitStatusInput
-    required_permissions = frozenset({"git.read"})
+    required_permissions = frozenset({Permission.GIT_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 10.0
 
@@ -200,7 +201,7 @@ class GitDiffTool(Tool[GitDiffInput]):
     name = "git_diff"
     description = "Read one bounded Git worktree or staged diff."
     input_type = GitDiffInput
-    required_permissions = frozenset({"git.read"})
+    required_permissions = frozenset({Permission.GIT_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 10.0
 

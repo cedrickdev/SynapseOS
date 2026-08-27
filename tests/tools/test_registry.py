@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel
 
+from core.enums import Permission
 from core.tools import (
     ToolDefinitionError,
     ToolErrorCode,
@@ -22,7 +23,7 @@ def test_registry_exposes_one_explicit_tool(fake_tool: FakeTool) -> None:
     definition = registry.definitions[0]
     assert definition.name == "fake_read"
     assert definition.input_schema == FakeTool.input_type.model_json_schema()
-    assert definition.required_permissions == frozenset({"workspace.read"})
+    assert definition.required_permissions == frozenset({Permission.FILESYSTEM_READ})
     assert definition.risk_level is ToolRiskLevel.LOW
     assert definition.timeout_seconds == 1.0
 
@@ -59,6 +60,7 @@ def test_registry_rejects_duplicate_names_without_exposing_name(fake_tool: FakeT
         ("name", "INVALID"),
         ("description", " "),
         ("required_permissions", frozenset()),
+        ("required_permissions", frozenset({"filesystem.read"})),
         ("required_permissions", frozenset({"../escape"})),
         ("risk_level", "LOW"),
         ("timeout_seconds", 0.0),

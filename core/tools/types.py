@@ -19,15 +19,6 @@ SafeMessage = Annotated[str, Field(min_length=1, max_length=255)]
 _MAX_RESULT_BYTES = 1_048_576
 
 
-class ToolRiskLevel(StrEnum):
-    """Risk classification declared by a tool definition."""
-
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
-    CRITICAL = "CRITICAL"
-
-
 class ToolResultStatus(StrEnum):
     """Public terminal outcome of one tool invocation."""
 
@@ -43,6 +34,8 @@ class ToolErrorCode(StrEnum):
     TOOL_NOT_FOUND = "TOOL_NOT_FOUND"
     TOOL_NOT_DECLARED = "TOOL_NOT_DECLARED"
     PERMISSION_DENIED = "PERMISSION_DENIED"
+    APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+    PERMISSION_AUDIT_FAILED = "PERMISSION_AUDIT_FAILED"
     INVALID_INPUT = "INVALID_INPUT"
     WORKSPACE_VIOLATION = "WORKSPACE_VIOLATION"
     UNSUPPORTED_FILE = "UNSUPPORTED_FILE"
@@ -60,7 +53,7 @@ class _ImmutableToolModel(BaseModel):
 
 
 class ToolExecutionContext(_ImmutableToolModel):
-    """Bounded caller-supplied authority and workspace scope for one invocation."""
+    """Bounded caller identity and workspace scope for one invocation."""
 
     workspace_root: Path
     agent_id: Identifier
@@ -68,7 +61,6 @@ class ToolExecutionContext(_ImmutableToolModel):
     project_id: UUID
     task_id: UUID
     declared_tool_ids: IdentifierSet
-    permission_ids: IdentifierSet
     correlation_id: UUID
 
     @field_validator("workspace_root")
@@ -84,7 +76,7 @@ class ToolExecutionContext(_ImmutableToolModel):
             raise ValueError("workspace root must be an existing directory") from None
         return resolved
 
-    @field_validator("declared_tool_ids", "permission_ids", mode="before")
+    @field_validator("declared_tool_ids", mode="before")
     @classmethod
     def freeze_identifier_sets(cls, value: object) -> object:
         """Copy common set inputs into immutable capability declarations."""

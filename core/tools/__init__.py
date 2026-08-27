@@ -1,5 +1,6 @@
 """Public contracts for the Phase 6 tool registry."""
 
+from core.enums import ToolRiskLevel
 from core.tools.audit import (
     ToolAuditFinish,
     ToolAuditHandle,
@@ -23,7 +24,6 @@ from core.tools.types import (
     ToolExecutionContext,
     ToolResult,
     ToolResultStatus,
-    ToolRiskLevel,
 )
 
 __all__ = [

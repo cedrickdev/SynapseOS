@@ -11,6 +11,13 @@ from typing import cast
 import pytest
 from pydantic import BaseModel, ConfigDict
 
+from core.enums import Permission
+from core.permissions import (
+    PermissionDecision,
+    PermissionEngine,
+    PermissionOutcome,
+    PermissionReasonCode,
+)
 from core.tools import (
     JsonValue,
     Tool,
@@ -27,6 +34,7 @@ from core.tools import (
     ToolRiskLevel,
     ToolWorkspaceError,
 )
+from tests.permissions.fakes import RecordingPermissionAudit, RecordingPolicy
 from tests.tools.fakes import FakeTool
 
 
@@ -53,6 +61,12 @@ class RecordingAuditRecorder:
         self.finishes.append(finish)
 
 
+class _FailingPermissionAudit:
+    def record(self, decision: PermissionDecision) -> None:
+        del decision
+        raise RuntimeError("secret-permission-audit-marker")
+
+
 def _context(workspace_root: Path, **changes: object) -> ToolExecutionContext:
     values: dict[str, object] = {
         "workspace_root": workspace_root,
@@ -61,11 +75,21 @@ def _context(workspace_root: Path, **changes: object) -> ToolExecutionContext:
         "project_id": uuid.uuid4(),
         "task_id": uuid.uuid4(),
         "declared_tool_ids": {"fake_read"},
-        "permission_ids": {"workspace.read"},
         "correlation_id": uuid.uuid4(),
     }
     values.update(changes)
     return ToolExecutionContext.model_validate(values, strict=True)
+
+
+def _permission_engine(
+    outcome: PermissionOutcome = PermissionOutcome.ALLOW,
+) -> PermissionEngine:
+    reason = {
+        PermissionOutcome.ALLOW: PermissionReasonCode.GRANTED,
+        PermissionOutcome.DENY: PermissionReasonCode.MISSING_PERMISSION,
+        PermissionOutcome.ASK: PermissionReasonCode.HUMAN_APPROVAL_REQUIRED,
+    }[outcome]
+    return PermissionEngine(RecordingPolicy(outcome, reason), RecordingPermissionAudit())
 
 
 def test_executor_calls_registered_tool_once_and_audits_success(
@@ -73,12 +97,16 @@ def test_executor_calls_registered_tool_once_and_audits_success(
     fake_tool: FakeTool,
 ) -> None:
     recorder = RecordingAuditRecorder()
+    policy = RecordingPolicy(PermissionOutcome.ALLOW, PermissionReasonCode.GRANTED)
+    permission_audit = RecordingPermissionAudit()
+    permission_engine = PermissionEngine(policy, permission_audit)
+    context = _context(tmp_path)
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([fake_tool]), recorder).execute(
+        ToolExecutor(ToolRegistry([fake_tool]), recorder, permission_engine).execute(
             "fake_read",
             {"path": "README.md"},
-            _context(tmp_path),
+            context,
         )
     )
 
@@ -89,18 +117,69 @@ def test_executor_calls_registered_tool_once_and_audits_success(
     assert len(recorder.starts) == 1
     assert recorder.starts[0].argument_count == 1
     assert recorder.finishes[0].outcome is ToolAuditOutcome.SUCCEEDED
+    assert len(policy.requests) == 1
+    assert policy.requests[0].required_permissions == frozenset({Permission.FILESYSTEM_READ})
+    assert policy.requests[0].agent_run_id == context.agent_run_id
+    assert permission_audit.decisions[0].outcome is PermissionOutcome.ALLOW
+
+
+def test_executor_does_not_evaluate_permissions_for_unknown_or_undeclared_tools(
+    tmp_path: Path,
+    fake_tool: FakeTool,
+) -> None:
+    policy = RecordingPolicy(PermissionOutcome.ALLOW, PermissionReasonCode.GRANTED)
+    engine = PermissionEngine(policy, RecordingPermissionAudit())
+
+    for tool_name, context in (
+        ("unknown", _context(tmp_path)),
+        ("fake_read", _context(tmp_path, declared_tool_ids={"another_tool"})),
+    ):
+        result = asyncio.run(
+            ToolExecutor(ToolRegistry([fake_tool]), RecordingAuditRecorder(), engine).execute(
+                tool_name, {}, context
+            )
+        )
+        assert result.status is ToolResultStatus.DENIED
+
+    assert policy.requests == []
+    assert FakeTool.calls == 0
+
+
+def test_executor_fails_closed_when_permission_audit_is_unavailable(
+    tmp_path: Path,
+    fake_tool: FakeTool,
+) -> None:
+    recorder = RecordingAuditRecorder()
+    engine = PermissionEngine(
+        RecordingPolicy(PermissionOutcome.ALLOW, PermissionReasonCode.GRANTED),
+        _FailingPermissionAudit(),
+    )
+
+    result = asyncio.run(
+        ToolExecutor(ToolRegistry([fake_tool]), recorder, engine).execute(
+            "fake_read", {"path": "README.md"}, _context(tmp_path)
+        )
+    )
+
+    assert result.status is ToolResultStatus.FAILED
+    assert result.error_code is ToolErrorCode.PERMISSION_AUDIT_FAILED
+    assert "secret-permission-audit-marker" not in repr(result)
+    assert recorder.finishes[0].outcome is ToolAuditOutcome.FAILED
+    assert FakeTool.calls == 0
 
 
 @pytest.mark.parametrize(
-    ("tool_name", "context_changes", "expected_code"),
+    ("tool_name", "context_changes", "outcome", "expected_code"),
     [
-        ("unknown", {}, ToolErrorCode.TOOL_NOT_FOUND),
+        ("unknown", {}, PermissionOutcome.ALLOW, ToolErrorCode.TOOL_NOT_FOUND),
         (
             "fake_read",
             {"declared_tool_ids": {"another_tool"}},
+            PermissionOutcome.ALLOW,
             ToolErrorCode.TOOL_NOT_DECLARED,
         ),
-        ("fake_read", {"permission_ids": {"git.read"}}, ToolErrorCode.PERMISSION_DENIED),
+        ("fake_read", {}, PermissionOutcome.DENY, ToolErrorCode.PERMISSION_DENIED),
+        ("fake_read", {}, PermissionOutcome.ASK, ToolErrorCode.APPROVAL_REQUIRED),
     ],
 )
 def test_executor_denies_before_tool_execution_and_audits_attempt(
@@ -108,12 +187,13 @@ def test_executor_denies_before_tool_execution_and_audits_attempt(
     fake_tool: FakeTool,
     tool_name: str,
     context_changes: dict[str, object],
+    outcome: PermissionOutcome,
     expected_code: ToolErrorCode,
 ) -> None:
     recorder = RecordingAuditRecorder()
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([fake_tool]), recorder).execute(
+        ToolExecutor(ToolRegistry([fake_tool]), recorder, _permission_engine(outcome)).execute(
             tool_name,
             {"secret-field-marker": "secret-value-marker"},
             _context(tmp_path, **context_changes),
@@ -145,7 +225,7 @@ def test_executor_rejects_invalid_input_without_calling_tool(
     recorder = RecordingAuditRecorder()
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([fake_tool]), recorder).execute(
+        ToolExecutor(ToolRegistry([fake_tool]), recorder, _permission_engine()).execute(
             "fake_read", arguments, _context(tmp_path)
         )
     )
@@ -165,7 +245,7 @@ class _BlockingTool(Tool[_NoInput]):
     name = "blocking"
     description = "Wait until cancelled or timed out."
     input_type = _NoInput
-    required_permissions = frozenset({"workspace.read"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 0.01
 
@@ -190,7 +270,7 @@ class _FailureTool(Tool[_NoInput]):
     name = "failure"
     description = "Produce one deterministic failure."
     input_type = _NoInput
-    required_permissions = frozenset({"workspace.read"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 1.0
 
@@ -232,7 +312,9 @@ def test_executor_sanitizes_tool_and_output_failures(
     context = _context(tmp_path, declared_tool_ids={"failure"})
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([tool]), recorder).execute("failure", {}, context)
+        ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+            "failure", {}, context
+        )
     )
 
     assert result.status is ToolResultStatus.FAILED
@@ -248,11 +330,12 @@ def test_executor_times_out_once_without_retry(tmp_path: Path) -> None:
     context = _context(
         tmp_path,
         declared_tool_ids={"blocking"},
-        permission_ids={"workspace.read"},
     )
 
     result = asyncio.run(
-        ToolExecutor(ToolRegistry([tool]), recorder).execute("blocking", {}, context)
+        ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+            "blocking", {}, context
+        )
     )
 
     assert result.status is ToolResultStatus.TIMED_OUT
@@ -269,7 +352,9 @@ def test_executor_propagates_cancellation_after_audit(tmp_path: Path) -> None:
 
     async def cancel_operation() -> None:
         operation = asyncio.create_task(
-            ToolExecutor(ToolRegistry([tool]), recorder).execute("blocking", {}, context)
+            ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+                "blocking", {}, context
+            )
         )
         while tool.started is None:
             await asyncio.sleep(0)
@@ -291,7 +376,7 @@ def test_executor_fails_closed_when_audit_begin_fails(
 
     with pytest.raises(ToolAuditError, match="Tool audit is unavailable") as captured:
         asyncio.run(
-            ToolExecutor(ToolRegistry([fake_tool]), recorder).execute(
+            ToolExecutor(ToolRegistry([fake_tool]), recorder, _permission_engine()).execute(
                 "fake_read", {"path": "README.md"}, _context(tmp_path)
             )
         )
@@ -308,7 +393,7 @@ def test_executor_surfaces_sanitized_terminal_audit_failure(
 
     with pytest.raises(ToolAuditError, match="Tool audit could not be finalized") as captured:
         asyncio.run(
-            ToolExecutor(ToolRegistry([fake_tool]), recorder).execute(
+            ToolExecutor(ToolRegistry([fake_tool]), recorder, _permission_engine()).execute(
                 "fake_read", {"path": "README.md"}, _context(tmp_path)
             )
         )

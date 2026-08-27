@@ -11,6 +11,9 @@ from typing import cast
 
 from pydantic import ValidationError
 
+from core.permissions.engine import PermissionEngine
+from core.permissions.errors import PermissionError
+from core.permissions.types import PermissionOutcome, PermissionRequest
 from core.tools.audit import (
     ToolAuditFinish,
     ToolAuditHandle,
@@ -34,6 +37,8 @@ _SAFE_MESSAGES: dict[ToolErrorCode, str] = {
     ToolErrorCode.TOOL_NOT_FOUND: "Requested tool is not registered.",
     ToolErrorCode.TOOL_NOT_DECLARED: "Requested tool is not declared for this agent.",
     ToolErrorCode.PERMISSION_DENIED: "Required tool permission is missing.",
+    ToolErrorCode.APPROVAL_REQUIRED: "Human approval is required for this tool.",
+    ToolErrorCode.PERMISSION_AUDIT_FAILED: "Permission evaluation is unavailable.",
     ToolErrorCode.INVALID_INPUT: "Tool input is invalid.",
     ToolErrorCode.WORKSPACE_VIOLATION: "Requested workspace resource is not allowed.",
     ToolErrorCode.UNSUPPORTED_FILE: "Requested file type is not supported.",
@@ -48,9 +53,15 @@ _SAFE_MESSAGES: dict[ToolErrorCode, str] = {
 class ToolExecutor:
     """Apply uniform safety and audit controls around exactly one tool call."""
 
-    def __init__(self, registry: ToolRegistry, audit_recorder: ToolAuditRecorder) -> None:
+    def __init__(
+        self,
+        registry: ToolRegistry,
+        audit_recorder: ToolAuditRecorder,
+        permission_engine: PermissionEngine,
+    ) -> None:
         self._registry = registry
         self._audit_recorder = audit_recorder
+        self._permission_engine = permission_engine
 
     async def execute(
         self,
@@ -83,14 +94,43 @@ class ToolExecutor:
                 ToolAuditOutcome.DENIED,
                 ToolErrorCode.TOOL_NOT_DECLARED,
             )
-        if not tool.required_permissions.issubset(validated_context.permission_ids):
+        try:
+            permission_decision = self._permission_engine.evaluate(
+                PermissionRequest(
+                    agent_id=validated_context.agent_id,
+                    agent_run_id=validated_context.agent_run_id,
+                    project_id=validated_context.project_id,
+                    task_id=validated_context.task_id,
+                    tool_name=validated_name,
+                    risk_level=tool.risk_level,
+                    required_permission_ids=frozenset(
+                        permission.value for permission in tool.required_permissions
+                    ),
+                    correlation_id=validated_context.correlation_id,
+                )
+            )
+        except PermissionError:
+            return self._failure_result(
+                handle,
+                validated_name,
+                started_at,
+                ToolResultStatus.FAILED,
+                ToolAuditOutcome.FAILED,
+                ToolErrorCode.PERMISSION_AUDIT_FAILED,
+            )
+        if permission_decision.outcome is not PermissionOutcome.ALLOW:
+            error_code = (
+                ToolErrorCode.APPROVAL_REQUIRED
+                if permission_decision.outcome is PermissionOutcome.ASK
+                else ToolErrorCode.PERMISSION_DENIED
+            )
             return self._failure_result(
                 handle,
                 validated_name,
                 started_at,
                 ToolResultStatus.DENIED,
                 ToolAuditOutcome.DENIED,
-                ToolErrorCode.PERMISSION_DENIED,
+                error_code,
             )
 
         try:

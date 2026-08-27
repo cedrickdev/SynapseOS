@@ -12,6 +12,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from core.enums import Permission
 from core.tools import (
     JsonValue,
     Tool,
@@ -186,7 +187,7 @@ class ReadFileTool(Tool[ReadFileInput]):
     name = "read_file"
     description = "Read a bounded line range from one UTF-8 workspace file."
     input_type = ReadFileInput
-    required_permissions = frozenset({"workspace.read"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 5.0
 
@@ -228,7 +229,7 @@ class ListFilesTool(Tool[ListFilesInput]):
     name = "list_files"
     description = "List a bounded deterministic set of workspace entries."
     input_type = ListFilesInput
-    required_permissions = frozenset({"workspace.list"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 5.0
 
@@ -278,7 +279,7 @@ class SearchTextTool(Tool[SearchTextInput]):
     name = "search_text"
     description = "Search bounded UTF-8 workspace files for a literal string."
     input_type = SearchTextInput
-    required_permissions = frozenset({"workspace.search"})
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
     risk_level = ToolRiskLevel.LOW
     timeout_seconds = 10.0
 

@@ -4,9 +4,9 @@ Phase 6 provides a small, deny-by-default execution boundary for five read-only 
 
 | Tool | Permission | Timeout | Main output limit |
 |---|---|---:|---:|
-| `read_file` | `workspace.read` | 5 s | 256 KiB |
-| `list_files` | `workspace.list` | 5 s | 512 KiB |
-| `search_text` | `workspace.search` | 10 s | 512 KiB |
+| `read_file` | `filesystem.read` | 5 s | 256 KiB |
+| `list_files` | `filesystem.read` | 5 s | 512 KiB |
+| `search_text` | `filesystem.read` | 10 s | 512 KiB |
 | `git_status` | `git.read` | 10 s | 256 KiB |
 | `git_diff` | `git.read` | 10 s | 512 KiB |
 
@@ -19,8 +19,15 @@ validation, and audit lifecycle and is not an approved application path.
 
 ```python
 registry = create_default_tool_registry()
-recorder = SQLAlchemyToolAuditRecorder(caller_owned_session)
-executor = ToolExecutor(registry, recorder)
+permission_engine = PermissionEngine(
+    SQLAlchemyPermissionPolicy(caller_owned_session),
+    SQLAlchemyPermissionAuditRecorder(caller_owned_session),
+)
+executor = ToolExecutor(
+    registry,
+    SQLAlchemyToolAuditRecorder(caller_owned_session),
+    permission_engine,
+)
 
 result = await executor.execute(
     "read_file",
@@ -29,9 +36,10 @@ result = await executor.execute(
 )
 ```
 
-The execution context identifies an existing agent run and contains a canonical workspace root,
-the agent's declared tool IDs, and its effective permission IDs. The executor performs exactly one
-attempt and never retries or falls back. Cancellation is audited and immediately re-raised.
+The execution context identifies an existing agent run and contains a canonical workspace root and
+the agent's declared tool IDs. It carries no permission authority. The executor resolves current
+PostgreSQL grants through the Phase 7 Permission Engine, performs exactly one attempt, and never
+retries or falls back. Cancellation is audited and immediately re-raised.
 
 The SQLAlchemy recorder flushes a new `ToolCall` to obtain its ID, appends one terminal
 `AuditEvent`, and flushes that terminal state before returning. It never commits, rolls back, or
@@ -83,9 +91,9 @@ Public results use stable statuses (`SUCCEEDED`, `FAILED`, `DENIED`, `TIMED_OUT`
 codes. Propagated cancellation is represented as `CANCELLED` in the append-only audit event and as
 a failed tool-call record with the safe `CANCELLED` code.
 
-## Deliberate boundary
+## Permission boundary
 
-Phase 6 checks only that the requested tool was declared and that every required permission ID is
-present. Policy evaluation, `ALLOW`/`DENY`/`ASK`, approval gates, risk-dependent autonomy, and
-permission provenance belong to the Phase 7 Permission Engine. This phase also excludes write
-tools, free-form shell execution, MCP, skill loading, agent loops, retries, and dynamic discovery.
+Phase 7 checks persisted grant scope, activity, and autonomy before execution. Only `ALLOW`
+executes; `DENY` and `ASK` return stable terminal errors. See [Permission engine](permissions.md)
+for the policy and audit contract. Write tools, free-form shell execution, MCP, skill loading,
+agent loops, retries, approval continuation, and dynamic discovery remain excluded.

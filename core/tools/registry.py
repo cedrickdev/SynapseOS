@@ -10,13 +10,14 @@ from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from core.enums import Permission, ToolRiskLevel
 from core.tools.errors import ToolDefinitionError
 from core.tools.tool import Tool
-from core.tools.types import JsonValue, ToolErrorCode, ToolRiskLevel
+from core.tools.types import JsonValue, ToolErrorCode
 
 _IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,127}$")
 _MAX_DESCRIPTION_LENGTH = 1_024
-_MAX_PERMISSIONS = 128
+_MAX_PERMISSIONS = len(Permission)
 _MAX_TIMEOUT_SECONDS = 30.0
 _INVALID_DEFINITION_MESSAGE = "Tool definition is invalid."
 
@@ -29,7 +30,10 @@ class ToolDefinition(BaseModel):
     name: str
     description: str
     input_schema: dict[str, JsonValue]
-    required_permissions: frozenset[str] = Field(min_length=1, max_length=128)
+    required_permissions: frozenset[Permission] = Field(
+        min_length=1,
+        max_length=_MAX_PERMISSIONS,
+    )
     risk_level: ToolRiskLevel
     timeout_seconds: float = Field(gt=0.0, le=30.0, allow_inf_nan=False)
 
@@ -87,11 +91,7 @@ class ToolRegistry:
             if (
                 not isinstance(permissions, frozenset)
                 or not 1 <= len(permissions) <= _MAX_PERMISSIONS
-                or any(
-                    not isinstance(permission, str)
-                    or _IDENTIFIER_PATTERN.fullmatch(permission) is None
-                    for permission in permissions
-                )
+                or any(type(permission) is not Permission for permission in permissions)
             ):
                 raise ValueError
             if type(tool.risk_level) is not ToolRiskLevel:

@@ -27,13 +27,19 @@ _MAX_INSTRUCTION_BYTES = 256 * 1_024
 class _NoAliasSafeLoader(yaml.SafeLoader):
     """Safe YAML loader that also rejects aliases before object construction."""
 
+    _compose_depth = 0
+
     def compose_node(self, parent: Any, index: Any) -> yaml.Node:
-        if self.check_event(AliasEvent):
+        if self.check_event(AliasEvent) or self._compose_depth >= 32:
             raise yaml.YAMLError("aliases are not supported")
-        node = super().compose_node(parent, index)
-        if node is None:
-            raise yaml.YAMLError("empty node")
-        return node
+        self._compose_depth += 1
+        try:
+            node = super().compose_node(parent, index)
+            if node is None:
+                raise yaml.YAMLError("empty node")
+            return node
+        finally:
+            self._compose_depth -= 1
 
 
 class SkillLoader:
@@ -42,15 +48,7 @@ class SkillLoader:
     def load(self, root: Path) -> tuple[Skill, ...]:
         """Return a validated stable snapshot or one sanitized failure."""
         self._validate_root(root)
-        try:
-            with os.scandir(root) as iterator:
-                entries = list(iterator)
-        except OSError as error:
-            error.__traceback__ = None
-            del error
-            raise self._unsafe_path() from None
-        if len(entries) > _MAX_DIRECTORY_ENTRIES:
-            raise self._resource_limit()
+        entries = self._scan_root(root)
         if any(entry.is_symlink() or not entry.is_dir(follow_symlinks=False) for entry in entries):
             raise self._unsafe_path()
 
@@ -82,13 +80,7 @@ class SkillLoader:
             raise SkillLoader._unsafe_path() from None
 
     def _load_directory(self, directory: Path, directory_id: str) -> Skill:
-        try:
-            with os.scandir(directory) as iterator:
-                entries = list(iterator)
-        except OSError as error:
-            error.__traceback__ = None
-            del error
-            raise self._unsafe_path() from None
+        entries = self._scan_skill_directory(directory)
         if any(entry.is_symlink() or not entry.is_file(follow_symlinks=False) for entry in entries):
             raise self._unsafe_path()
         if {entry.name for entry in entries} != _EXPECTED_FILES:
@@ -118,6 +110,45 @@ class SkillLoader:
                 SkillErrorCode.INVALID_CONTENT,
                 "Skill instructions are invalid.",
             ) from None
+
+    @staticmethod
+    def _scan_root(directory: Path) -> list[os.DirEntry[str]]:
+        entries: list[os.DirEntry[str]] = []
+        try:
+            with os.scandir(directory) as iterator:
+                for position, entry in enumerate(iterator, start=1):
+                    if position > _MAX_DIRECTORY_ENTRIES:
+                        raise SkillLoader._resource_limit()
+                    entries.append(entry)
+            return entries
+        except SkillLoadError:
+            raise
+        except OSError as error:
+            error.__traceback__ = None
+            del error
+            raise SkillLoader._unsafe_path() from None
+
+    @staticmethod
+    def _scan_skill_directory(directory: Path) -> list[os.DirEntry[str]]:
+        entries: list[os.DirEntry[str]] = []
+        try:
+            with os.scandir(directory) as iterator:
+                for position, entry in enumerate(iterator, start=1):
+                    if position > len(_EXPECTED_FILES):
+                        if entry.is_symlink() or any(previous.is_symlink() for previous in entries):
+                            raise SkillLoader._unsafe_path()
+                        raise SkillLoadError(
+                            SkillErrorCode.INVALID_CONTENT,
+                            "Skill directory content is invalid.",
+                        )
+                    entries.append(entry)
+            return entries
+        except SkillLoadError:
+            raise
+        except OSError as error:
+            error.__traceback__ = None
+            del error
+            raise SkillLoader._unsafe_path() from None
 
     @staticmethod
     def _read_regular_file(path: Path, maximum_bytes: int) -> bytes:
@@ -163,6 +194,7 @@ class SkillLoader:
             UnicodeDecodeError,
             ValueError,
             TypeError,
+            RecursionError,
             yaml.YAMLError,
             ValidationError,
         ) as error:

@@ -156,9 +156,25 @@ def test_loader_rejects_custom_yaml_tags_and_id_mismatch(tmp_path: Path) -> None
     with pytest.raises(SkillLoadError):
         SkillLoader().load(tmp_path)
 
+
+def test_loader_rejects_directory_and_metadata_id_mismatch(tmp_path: Path) -> None:
+    directory = _write_skill(tmp_path)
     (directory / "metadata.yaml").write_text(
         _VALID_METADATA.replace("id: testing", "id: another-skill"),
         encoding="utf-8",
     )
+
     with pytest.raises(SkillLoadError):
         SkillLoader().load(tmp_path)
+
+
+def test_loader_sanitizes_deeply_nested_yaml_without_recursion_escape(tmp_path: Path) -> None:
+    directory = _write_skill(tmp_path)
+    marker = "secret-deep-yaml-marker"
+    nested = "[" * 1_000 + marker + "]" * 1_000
+    (directory / "metadata.yaml").write_text(nested, encoding="utf-8")
+
+    with pytest.raises(SkillLoadError) as captured:
+        SkillLoader().load(tmp_path)
+
+    assert marker not in str(captured.value)

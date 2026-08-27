@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy.orm import Session
 
-from core.enums import Permission
+from core.enums import Permission, ToolRiskLevel
 from core.permissions import PermissionOutcome, PermissionPolicyError, PermissionReasonCode
 from infrastructure.database.models import Project
 from infrastructure.permissions import SQLAlchemyPermissionPolicy
@@ -149,6 +149,53 @@ def test_production_permission_always_requires_human_approval(db_session: Sessio
 
     assert decision.outcome is PermissionOutcome.ASK
     assert decision.reason_code is PermissionReasonCode.HUMAN_APPROVAL_REQUIRED
+
+
+@pytest.mark.parametrize(
+    ("risk", "autonomy_level", "expected", "reason"),
+    [
+        (
+            ToolRiskLevel.MEDIUM,
+            0,
+            PermissionOutcome.ASK,
+            PermissionReasonCode.AUTONOMY_APPROVAL_REQUIRED,
+        ),
+        (ToolRiskLevel.MEDIUM, 1, PermissionOutcome.ALLOW, PermissionReasonCode.GRANTED),
+        (
+            ToolRiskLevel.HIGH,
+            1,
+            PermissionOutcome.ASK,
+            PermissionReasonCode.AUTONOMY_APPROVAL_REQUIRED,
+        ),
+        (ToolRiskLevel.HIGH, 2, PermissionOutcome.ALLOW, PermissionReasonCode.GRANTED),
+        (
+            ToolRiskLevel.CRITICAL,
+            5,
+            PermissionOutcome.ASK,
+            PermissionReasonCode.HUMAN_APPROVAL_REQUIRED,
+        ),
+    ],
+)
+def test_policy_applies_risk_autonomy_gate(
+    db_session: Session,
+    risk: ToolRiskLevel,
+    autonomy_level: int,
+    expected: PermissionOutcome,
+    reason: PermissionReasonCode,
+) -> None:
+    scope = create_permission_scope(db_session, autonomy_level=autonomy_level)
+    add_permission(db_session, scope, Permission.FILESYSTEM_WRITE)
+
+    decision = SQLAlchemyPermissionPolicy(db_session).evaluate(
+        scope.request(
+            frozenset({Permission.FILESYSTEM_WRITE}),
+            risk_level=risk,
+        ),
+        scope.now,
+    )
+
+    assert decision.outcome is expected
+    assert decision.reason_code is reason
 
 
 def test_policy_never_owns_session_lifecycle(db_session: Session) -> None:

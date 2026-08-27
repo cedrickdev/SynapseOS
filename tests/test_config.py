@@ -108,3 +108,58 @@ def test_write_settings_reject_non_positive_limits(
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
+
+
+def test_command_settings_have_finite_bounded_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.command_timeout_seconds == 30.0
+    assert settings.command_stdout_max_bytes == 262_144
+    assert settings.command_stderr_max_bytes == 131_072
+    assert settings.command_marker_max_bytes == 262_144
+    assert settings.command_read_chunk_bytes == 65_536
+    assert settings.command_termination_grace_seconds == 1.0
+
+
+def test_command_settings_are_overridden_by_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("COMMAND_TIMEOUT_SECONDS", "12.5")
+    monkeypatch.setenv("COMMAND_STDOUT_MAX_BYTES", "4096")
+    monkeypatch.setenv("COMMAND_STDERR_MAX_BYTES", "2048")
+    monkeypatch.setenv("COMMAND_MARKER_MAX_BYTES", "8192")
+    monkeypatch.setenv("COMMAND_READ_CHUNK_BYTES", "1024")
+    monkeypatch.setenv("COMMAND_TERMINATION_GRACE_SECONDS", "0.5")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.command_timeout_seconds == 12.5
+    assert settings.command_stdout_max_bytes == 4_096
+    assert settings.command_stderr_max_bytes == 2_048
+    assert settings.command_marker_max_bytes == 8_192
+    assert settings.command_read_chunk_bytes == 1_024
+    assert settings.command_termination_grace_seconds == 0.5
+
+
+@pytest.mark.parametrize(
+    ("environment_key", "value"),
+    [
+        ("COMMAND_TIMEOUT_SECONDS", "0"),
+        ("COMMAND_TIMEOUT_SECONDS", "31"),
+        ("COMMAND_TIMEOUT_SECONDS", "inf"),
+        ("COMMAND_STDOUT_MAX_BYTES", "1048577"),
+        ("COMMAND_STDERR_MAX_BYTES", "0"),
+        ("COMMAND_MARKER_MAX_BYTES", "1048577"),
+        ("COMMAND_READ_CHUNK_BYTES", "65537"),
+        ("COMMAND_TERMINATION_GRACE_SECONDS", "5.1"),
+    ],
+)
+def test_command_settings_reject_unbounded_values(
+    environment_key: str,
+    value: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(environment_key, value)
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)

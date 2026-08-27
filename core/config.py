@@ -58,6 +58,17 @@ class Settings(BaseSettings):
     write_max_patch_text_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
     write_max_diff_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
     write_timeout_seconds: float = Field(default=10.0, gt=0.0, le=60.0, allow_inf_nan=False)
+    command_timeout_seconds: float = Field(default=30.0, gt=0.0, le=30.0, allow_inf_nan=False)
+    command_stdout_max_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
+    command_stderr_max_bytes: int = Field(default=131_072, ge=1, le=1_048_576)
+    command_marker_max_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
+    command_read_chunk_bytes: int = Field(default=65_536, ge=1, le=65_536)
+    command_termination_grace_seconds: float = Field(
+        default=1.0,
+        gt=0.0,
+        le=5.0,
+        allow_inf_nan=False,
+    )
 
 
 def get_settings() -> Settings:

@@ -246,6 +246,13 @@ class ManagedWorkspaceFilesystem:
         except ToolWorkspaceError:
             raise _unsafe() from None
 
+    def validate_project_root(self, project_id: UUID, root: Path) -> Path:
+        """Require the exact canonical managed root derived from one project UUID."""
+        expected = self._project_child(self._projects, project_id)
+        if not isinstance(root, Path) or root != expected:
+            raise _unsafe()
+        return self._require_direct_directory(expected, self._projects)
+
     def _initialize_base(self, requested: Path) -> Path:
         candidate = requested if requested.is_absolute() else Path.cwd() / requested
         _reject_existing_link_components(candidate)

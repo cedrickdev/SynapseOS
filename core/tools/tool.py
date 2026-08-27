@@ -4,11 +4,29 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Protocol
 
 from pydantic import BaseModel
 
 from core.enums import Permission, ToolRiskLevel
 from core.tools.types import JsonValue, ToolExecutionContext
+
+
+class ToolTransaction(Protocol):
+    """Finalize or compensate one already-applied bounded side effect."""
+
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class TransactionalToolOutput:
+    """Bounded output coupled to one pending side-effect transaction."""
+
+    output: Mapping[str, JsonValue]
+    transaction: ToolTransaction
 
 
 class Tool[InputT: BaseModel](ABC):
@@ -26,5 +44,5 @@ class Tool[InputT: BaseModel](ABC):
         self,
         arguments: InputT,
         context: ToolExecutionContext,
-    ) -> Mapping[str, JsonValue]:
+    ) -> Mapping[str, JsonValue] | TransactionalToolOutput:
         """Execute one already-authorized invocation exactly once."""

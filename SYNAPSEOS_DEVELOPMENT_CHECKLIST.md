@@ -720,23 +720,23 @@ skills/
 
 ## Metadata
 
-- [ ] id
-- [ ] nom
-- [ ] description
-- [ ] domaines
-- [ ] technologies
-- [ ] tags
-- [ ] version
-- [ ] outils recommandés
-- [ ] permissions nécessaires
+- [x] id
+- [x] nom
+- [x] description
+- [x] domaines
+- [x] technologies
+- [x] tags
+- [x] version
+- [x] outils recommandés
+- [x] permissions nécessaires
 
 ## Skills V1
 
-- [ ] generic-backend
-- [ ] generic-frontend
-- [ ] testing
-- [ ] git-workflow
-- [ ] security-review
+- [x] generic-backend
+- [x] generic-frontend
+- [x] testing
+- [x] git-workflow
+- [x] security-review
 
 ## Prompt Claude Code — Phase 8
 

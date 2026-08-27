@@ -9,7 +9,13 @@ from uuid import uuid4
 from core.enums import AuditActorType
 from core.tools import ToolExecutionContext
 from core.workspaces import WorkspaceAuditContext, WorkspaceLimits
-from infrastructure.tools import ReadFileInput, ReadFileTool, create_default_tool_registry
+from infrastructure.tools import (
+    LocalTextMutator,
+    MutationLimits,
+    ReadFileInput,
+    ReadFileTool,
+    create_default_tool_registry,
+)
 from infrastructure.workspaces import LocalWorkspaceManager, ManagedWorkspaceFilesystem
 from tests.workspaces.fakes import RecordingWorkspaceAudit
 
@@ -24,8 +30,9 @@ def test_managed_workspace_is_accepted_by_read_only_tool_boundary(tmp_path: Path
         max_local_roots=8,
         max_remote_hosts=8,
     )
+    filesystem = ManagedWorkspaceFilesystem(tmp_path / "managed", limits)
     manager = LocalWorkspaceManager(
-        filesystem=ManagedWorkspaceFilesystem(tmp_path / "managed", limits),
+        filesystem=filesystem,
         audit_recorder=RecordingWorkspaceAudit(),
     )
     project_id = uuid4()
@@ -54,10 +61,24 @@ def test_managed_workspace_is_accepted_by_read_only_tool_boundary(tmp_path: Path
     output = asyncio.run(ReadFileTool().execute(ReadFileInput(path="README.md"), context))
 
     assert output["content"] == "managed\n"
-    assert create_default_tool_registry().names == (
+    mutator = LocalTextMutator(
+        filesystem,
+        MutationLimits(
+            max_input_bytes=1_024,
+            max_existing_bytes=2_048,
+            max_patch_operations=8,
+            max_patch_text_bytes=512,
+            max_diff_bytes=1_024,
+        ),
+    )
+    assert create_default_tool_registry(mutator).names == (
+        "create_file",
+        "delete_file",
         "git_diff",
         "git_status",
         "list_files",
+        "patch_file",
         "read_file",
         "search_text",
+        "write_file",
     )

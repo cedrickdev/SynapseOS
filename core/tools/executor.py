@@ -208,6 +208,7 @@ class ToolExecutor:
         transaction: ToolTransaction | None = None
         try:
             raw_mapping, transaction = self._unwrap_output(raw_output)
+            await asyncio.sleep(0)
             output = self._validated_output(raw_mapping)
             duration_ms = self._duration_ms(started_at)
             truncated = output.get("truncated") is True
@@ -220,6 +221,22 @@ class ToolExecutor:
                 truncated=truncated,
                 tool_call_id=handle.tool_call_id,
             )
+        except asyncio.CancelledError:
+            self._rollback(transaction)
+            try:
+                self._finish_audit(
+                    handle,
+                    ToolAuditFinish(
+                        outcome=ToolAuditOutcome.CANCELLED,
+                        duration_ms=self._duration_ms(started_at),
+                        truncated=False,
+                        output_field_count=0,
+                        output_bytes=0,
+                        error_code=ToolErrorCode.CANCELLED,
+                    ),
+                )
+            finally:
+                raise
         except (TypeError, ValueError, ValidationError) as error:
             error.__traceback__ = None
             del error, raw_output

@@ -1,0 +1,9 @@
+id: security-review
+name: Independent Security Review
+description: Review code and architecture for exploitable risk with independent veto authority.
+domains: [engineering, security]
+technologies: [generic]
+tags: [review, security, testing]
+version: 1.0.0
+recommended_tool_ids: [git_diff, git_status, list_files, read_file, search_text]
+required_permissions: [filesystem.read, git.read]

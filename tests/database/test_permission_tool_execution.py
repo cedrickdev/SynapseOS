@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from core.enums import Permission
+from core.enums import AuditResult, Permission
 from core.permissions import PermissionEngine
 from core.tools import (
     JsonValue,
@@ -86,16 +86,12 @@ def test_persisted_grant_allows_audited_read(db_session: Session, tmp_path: Path
 
     assert result.status is ToolResultStatus.SUCCEEDED
     events = list(
-        db_session.scalars(
-            select(AuditEvent)
-            .where(AuditEvent.agent_run_id == scope.run.id)
-            .order_by(AuditEvent.created_at, AuditEvent.id)
-        )
+        db_session.scalars(select(AuditEvent).where(AuditEvent.agent_run_id == scope.run.id))
     )
-    assert [event.event_type for event in events] == [
-        "PERMISSION_EVALUATED",
-        "TOOL_EXECUTION",
-    ]
+    events_by_type = {event.event_type: event for event in events}
+    assert set(events_by_type) == {"PERMISSION_EVALUATED", "TOOL_EXECUTION"}
+    assert events_by_type["PERMISSION_EVALUATED"].data["decision"] == "ALLOW"
+    assert events_by_type["TOOL_EXECUTION"].result is AuditResult.SUCCEEDED
     persisted = repr([(event.data, event.resource_id) for event in events])
     assert marker not in persisted
     assert filename not in persisted

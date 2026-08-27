@@ -40,3 +40,4 @@ Trade-offs, risks, follow-ups.
 - [ADR-0005 — Agent runtime boundary](0005-agent-runtime-boundary.md)
 - [ADR-0006 — Tool registry execution boundary](0006-tool-registry-execution-boundary.md)
 - [ADR-0007 — Database-backed permission authority](0007-database-backed-permission-authority.md)
+- [ADR-0008 — Local versioned Skills Registry](0008-local-versioned-skills-registry.md)

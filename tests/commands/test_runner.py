@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, cast
 
@@ -158,6 +159,33 @@ def test_timeout_terminates_and_reaps_the_process_without_retry(tmp_path: Path) 
     pid = int(pid_file.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(pid, 0)
+
+
+def test_timeout_kills_descendant_after_process_group_leader_exits(tmp_path: Path) -> None:
+    identity_file = tmp_path / "descendant.json"
+    code = (
+        "import json, os, pathlib, signal; "
+        "child = os.fork(); "
+        f"path = pathlib.Path({str(identity_file)!r}); "
+        "(os._exit(0) if child else "
+        "(path.write_text(json.dumps({'pid': os.getpid(), 'pgid': os.getpgrp()})), "
+        "signal.pause()))"
+    )
+    descendant_pid = 0
+    process_group_id = 0
+    try:
+        with pytest.raises(CommandError) as captured:
+            asyncio.run(LocalCommandRunner().run(_spec(tmp_path, code, timeout=0.2)))
+        assert captured.value.code is CommandErrorCode.TIMED_OUT
+        identity = json.loads(identity_file.read_text())
+        descendant_pid = int(identity["pid"])
+        process_group_id = int(identity["pgid"])
+        with pytest.raises(ProcessLookupError):
+            os.kill(descendant_pid, 0)
+    finally:
+        if process_group_id:
+            with suppress(ProcessLookupError):
+                os.killpg(process_group_id, 9)
 
 
 def test_cancellation_terminates_process_and_propagates_immediately(tmp_path: Path) -> None:

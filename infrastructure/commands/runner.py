@@ -147,16 +147,12 @@ async def _stop_process(
     process: asyncio.subprocess.Process,
     grace_seconds: float,
 ) -> None:
-    if process.returncode is not None:
-        return
     try:
         with suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGTERM)
-        async with asyncio.timeout(grace_seconds):
+        if await _wait_process_group_gone(process.pid, grace_seconds):
             await process.wait()
             return
-    except TimeoutError:
-        pass
     except (OSError, RuntimeError) as error:
         del error
     try:
@@ -167,14 +163,27 @@ async def _stop_process(
         with suppress(ProcessLookupError):
             process.kill()
     try:
-        async with asyncio.timeout(grace_seconds):
+        if await _wait_process_group_gone(process.pid, grace_seconds):
             await process.wait()
-    except (TimeoutError, OSError, RuntimeError) as error:
+            return
+    except (OSError, RuntimeError) as error:
         del error
-        raise CommandError(
-            CommandErrorCode.TERMINATION_FAILED,
-            "Command process could not be terminated safely.",
-        ) from None
+    raise CommandError(
+        CommandErrorCode.TERMINATION_FAILED,
+        "Command process could not be terminated safely.",
+    )
+
+
+async def _wait_process_group_gone(process_group_id: int, timeout_seconds: float) -> bool:
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+    while True:
+        try:
+            os.killpg(process_group_id, 0)
+        except ProcessLookupError:
+            return True
+        if asyncio.get_running_loop().time() >= deadline:
+            return False
+        await asyncio.sleep(0.01)
 
 
 async def _cancel_readers(

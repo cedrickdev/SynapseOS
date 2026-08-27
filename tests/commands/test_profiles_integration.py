@@ -81,3 +81,25 @@ def test_real_git_status_profile_is_read_only_and_bounded(tmp_path: Path) -> Non
     assert result.status is CommandTerminalStatus.SUCCEEDED
     assert "?? untracked.txt" in result.stdout
     assert (root / "untracked.txt").read_text() == "content"
+
+
+def test_git_status_does_not_execute_repository_configured_fsmonitor(tmp_path: Path) -> None:
+    filesystem, project_id, root = _managed_root(tmp_path)
+    subprocess.run(["/usr/bin/git", "init", "--quiet"], cwd=root, check=True)
+    marker = tmp_path / "fsmonitor-executed"
+    fsmonitor = root / "fsmonitor.sh"
+    fsmonitor.write_text(f"#!/bin/sh\ntouch {marker}\nprintf '0\\n'\n")
+    fsmonitor.chmod(0o700)
+    subprocess.run(
+        ["/usr/bin/git", "config", "core.fsmonitor", str(fsmonitor)],
+        cwd=root,
+        check=True,
+    )
+    policy = LocalCommandPolicy(filesystem, _limits())
+
+    result = asyncio.run(
+        LocalCommandRunner().run(policy.resolve(CommandProfileId.GIT_STATUS, project_id, root))
+    )
+
+    assert result.status is CommandTerminalStatus.SUCCEEDED
+    assert not marker.exists()

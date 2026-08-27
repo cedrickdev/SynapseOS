@@ -87,18 +87,30 @@ def test_catalog_resolves_exact_application_owned_vectors() -> None:
         "test",
     )
     assert catalog.template(CommandProfileId.GIT_STATUS).arguments == (
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
         "status",
         "--short",
         "--branch",
         "--untracked-files=all",
     )
     assert catalog.template(CommandProfileId.GIT_DIFF).arguments == (
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
         "diff",
         "--no-ext-diff",
         "--no-textconv",
         "--no-color",
     )
     assert catalog.template(CommandProfileId.GIT_DIFF_STAGED).arguments == (
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
         "diff",
         "--cached",
         "--no-ext-diff",
@@ -106,6 +118,10 @@ def test_catalog_resolves_exact_application_owned_vectors() -> None:
         "--no-color",
     )
     assert catalog.template(CommandProfileId.GIT_LOG).arguments == (
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
         "log",
         "-n",
         "50",

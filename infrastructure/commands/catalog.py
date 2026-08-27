@@ -7,6 +7,8 @@ from types import MappingProxyType
 
 from core.commands import CommandCategory, CommandProfileId
 
+_GIT_SAFE_CONFIG = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null")
+
 
 @dataclass(frozen=True, slots=True)
 class CommandTemplate:
@@ -44,25 +46,25 @@ _TEMPLATES = (
         CommandProfileId.GIT_STATUS,
         CommandCategory.GIT_READ,
         "git",
-        ("status", "--short", "--branch", "--untracked-files=all"),
+        (*_GIT_SAFE_CONFIG, "status", "--short", "--branch", "--untracked-files=all"),
     ),
     CommandTemplate(
         CommandProfileId.GIT_DIFF,
         CommandCategory.GIT_READ,
         "git",
-        ("diff", "--no-ext-diff", "--no-textconv", "--no-color"),
+        (*_GIT_SAFE_CONFIG, "diff", "--no-ext-diff", "--no-textconv", "--no-color"),
     ),
     CommandTemplate(
         CommandProfileId.GIT_DIFF_STAGED,
         CommandCategory.GIT_READ,
         "git",
-        ("diff", "--cached", "--no-ext-diff", "--no-textconv", "--no-color"),
+        (*_GIT_SAFE_CONFIG, "diff", "--cached", "--no-ext-diff", "--no-textconv", "--no-color"),
     ),
     CommandTemplate(
         CommandProfileId.GIT_LOG,
         CommandCategory.GIT_READ,
         "git",
-        ("log", "-n", "50", "--format=%H%x09%aI%x09%s", "--no-decorate"),
+        (*_GIT_SAFE_CONFIG, "log", "-n", "50", "--format=%H%x09%aI%x09%s", "--no-decorate"),
     ),
 )
 

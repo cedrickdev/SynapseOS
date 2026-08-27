@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_8-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_9-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,10 +48,10 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 8 — Skills Registry completed.** The repository now provides the persistence foundation, an
+**Phase 9 — Workspace and isolation completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, and a
-bounded deterministic registry of versioned skills. Write tools, shell access, MCP, autonomous loops, multi-agent coordination, QA and security
+bounded deterministic registry of versioned skills, and isolated audited project workspaces. Write tools, shell access, MCP, autonomous loops, multi-agent coordination, QA and security
 engines, and the frontend remain intentionally unimplemented.
 
 What exists today:
@@ -77,6 +77,9 @@ What exists today:
   `ALLOW`/`DENY`/`ASK` decisions, autonomy gates, and mandatory append-only permission audits.
 - A secure local loader, immutable registry, explainable deterministic selector, and five original
   V1 skill packages. Skill declarations remain inert and do not grant authority or execute content.
+- A backend-neutral workspace contract and local manager with deterministic per-project roots,
+  bounded local Git import and HTTPS clone, path containment, atomic staging, cleanup, cancellation,
+  deny-by-default source allowlists, and append-only lifecycle audits.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -123,13 +126,14 @@ make dev         # run the API with autoreload on http://localhost:8000
 ```text
 apps/api/                 # FastAPI application (Platform API)
 core/                     # Domain layer (placeholders filled in later phases)
-  agents/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/
+  agents/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
   llm/                    # Ollama and deterministic fake LLM adapters
   skills/                 # Secure bounded local skill loader
   tools/                  # Bounded filesystem, Git, path, and audit adapters
+  workspaces/             # Audited isolated local workspace lifecycle
 skills/                   # Five versioned built-in V1 skill packages
 alembic/                  # Versioned PostgreSQL migrations
 tests/                    # Unit and real-PostgreSQL integration tests
@@ -156,10 +160,10 @@ The complete suite uses the Docker PostgreSQL service when it is exposed on the 
 TEST_POSTGRES_PORT=55432 make test
 ```
 
-The focused Phase 8 suite covers skills plus the neighboring agent/tool/permission boundaries:
+The focused Phase 9 suite covers workspaces and neighboring read-only tool boundaries:
 
 ```bash
-.venv/bin/pytest tests/skills tests/agents tests/tools tests/permissions -q
+.venv/bin/pytest tests/workspaces tests/tools -q
 ```
 
 Run `make help` to list every available target.
@@ -180,7 +184,8 @@ validated pull request. The near-term sequence is:
 6. **Tool registry** — completed
 7. **Permission engine** — completed
 8. **Skills registry** — completed
-9. Workspace and isolation — not started
+9. **Workspace and isolation** — completed
+10. Write tools — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -194,6 +199,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Tool registry:** [`docs/tools.md`](docs/tools.md)
 - **Permission engine:** [`docs/permissions.md`](docs/permissions.md)
 - **Skills Registry:** [`docs/skills.md`](docs/skills.md)
+- **Managed project workspaces:** [`docs/workspaces.md`](docs/workspaces.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

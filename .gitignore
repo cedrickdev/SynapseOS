@@ -19,6 +19,7 @@ env/
 .coverage
 htmlcov/
 .superpowers/sdd/
+.synapseos/
 
 # Environment / secrets (never commit real secrets)
 .env

@@ -786,14 +786,14 @@ Donner à chaque projet un espace de travail contrôlé.
 
 ## Checklist
 
-- [ ] `Workspace`
-- [ ] workspace par projet
-- [ ] clonage Git
-- [ ] racine immutable côté runtime
-- [ ] validation chemins
-- [ ] répertoire temporaire
-- [ ] nettoyage
-- [ ] limites d'accès
+- [x] `Workspace`
+- [x] workspace par projet
+- [x] clonage Git
+- [x] racine immutable côté runtime
+- [x] validation chemins
+- [x] répertoire temporaire
+- [x] nettoyage
+- [x] limites d'accès
 
 ## Prompt Claude Code — Phase 9
 

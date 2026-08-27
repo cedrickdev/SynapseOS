@@ -43,3 +43,36 @@ def test_ollama_settings_reject_non_positive_limits(
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
+
+
+def test_workspace_settings_default_to_bounded_disabled_sources() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.workspace_base_root.as_posix() == ".synapseos/workspaces"
+    assert settings.workspace_git_timeout_seconds == 120.0
+    assert settings.workspace_git_output_bytes == 65_536
+    assert settings.workspace_max_entries == 100_000
+    assert settings.workspace_max_total_bytes == 1_073_741_824
+    assert settings.workspace_max_depth == 64
+    assert settings.workspace_local_import_roots == ()
+    assert settings.workspace_remote_hosts == ()
+
+
+@pytest.mark.parametrize(
+    "environment_key",
+    [
+        "WORKSPACE_GIT_TIMEOUT_SECONDS",
+        "WORKSPACE_GIT_OUTPUT_BYTES",
+        "WORKSPACE_MAX_ENTRIES",
+        "WORKSPACE_MAX_TOTAL_BYTES",
+        "WORKSPACE_MAX_DEPTH",
+    ],
+)
+def test_workspace_settings_reject_non_positive_limits(
+    environment_key: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(environment_key, "0")
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)

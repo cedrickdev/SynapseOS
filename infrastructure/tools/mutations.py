@@ -7,6 +7,7 @@ import hashlib
 import os
 import secrets
 import stat
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -53,6 +54,9 @@ class MutationOperation(StrEnum):
 
 @dataclass(slots=True)
 class _LocalMutationTransaction:
+    filesystem: ManagedWorkspaceFilesystem
+    project_id: UUID
+    area: Path
     target: Path
     backup: Path | None
     created: bool
@@ -62,17 +66,25 @@ class _LocalMutationTransaction:
     def commit(self) -> None:
         if self.finished:
             return
+        failed = False
         try:
             if self.backup is not None:
                 self.backup.unlink(missing_ok=True)
-            self.finished = True
-        except OSError as error:
-            del error
+            self.filesystem.remove_transaction_area(self.project_id, self.area)
+        except (OSError, WorkspaceError):
+            failed = True
+        try:
+            self.filesystem.release_lock(self.project_id)
+        except WorkspaceError:
+            failed = True
+        self.finished = True
+        if failed:
             raise ToolError(ToolErrorCode.COMPENSATION_FAILED, _SAFE_MUTATION_MESSAGE) from None
 
     def rollback(self) -> None:
         if self.finished:
             return
+        failed = False
         try:
             if self.created:
                 self.target.unlink(missing_ok=True)
@@ -80,9 +92,15 @@ class _LocalMutationTransaction:
                 if self.original_mode is not None:
                     os.chmod(self.backup, self.original_mode)
                 os.replace(self.backup, self.target)
-            self.finished = True
-        except OSError as error:
-            del error
+            self.filesystem.remove_transaction_area(self.project_id, self.area)
+        except (OSError, WorkspaceError):
+            failed = True
+        try:
+            self.filesystem.release_lock(self.project_id)
+        except WorkspaceError:
+            failed = True
+        self.finished = True
+        if failed:
             raise ToolError(ToolErrorCode.COMPENSATION_FAILED, _SAFE_MUTATION_MESSAGE) from None
 
 
@@ -106,11 +124,24 @@ class LocalTextMutator:
         relative_path: str,
         content: str,
     ) -> TransactionalToolOutput:
+        return self._locked(
+            project_id,
+            lambda: self._replace_unlocked(project_id, workspace_root, relative_path, content),
+        )
+
+    def _replace_unlocked(
+        self,
+        project_id: UUID,
+        workspace_root: Path,
+        relative_path: str,
+        content: str,
+    ) -> TransactionalToolOutput:
         original, target, target_stat = self._read_existing(
             project_id, workspace_root, relative_path
         )
         replacement = self._encode_input(content)
         return self._replace_bytes(
+            project_id,
             workspace_root,
             target,
             target_stat,
@@ -120,6 +151,18 @@ class LocalTextMutator:
         )
 
     def create(
+        self,
+        project_id: UUID,
+        workspace_root: Path,
+        relative_path: str,
+        content: str,
+    ) -> TransactionalToolOutput:
+        return self._locked(
+            project_id,
+            lambda: self._create_unlocked(project_id, workspace_root, relative_path, content),
+        )
+
+    def _create_unlocked(
         self,
         project_id: UUID,
         workspace_root: Path,
@@ -142,26 +185,54 @@ class LocalTextMutator:
         if target.parent != parent or target.exists():
             raise ToolError(ToolErrorCode.TARGET_CONFLICT, "Requested file already exists.")
         replacement = self._encode_input(content)
-        temporary = self._write_artifact(parent, replacement, 0o600)
+        area = self._transaction_area(project_id)
+        temporary = self._write_artifact(area, replacement, 0o600)
         try:
             os.link(temporary, target, follow_symlinks=False)
             temporary.unlink()
         except FileExistsError:
             temporary.unlink(missing_ok=True)
+            self._remove_area(project_id, area)
             raise ToolError(
                 ToolErrorCode.TARGET_CONFLICT, "Requested file already exists."
             ) from None
         except OSError as error:
             temporary.unlink(missing_ok=True)
+            self._remove_area(project_id, area)
             del error
             raise ToolError(ToolErrorCode.MUTATION_FAILED, _SAFE_MUTATION_MESSAGE) from None
-        transaction = _LocalMutationTransaction(target, None, True, None)
+        transaction = _LocalMutationTransaction(
+            self._filesystem,
+            project_id,
+            area,
+            target,
+            None,
+            True,
+            None,
+        )
         return TransactionalToolOutput(
             output=self._summary(root, target, b"", replacement, MutationOperation.CREATE),
             transaction=transaction,
         )
 
     def patch(
+        self,
+        project_id: UUID,
+        workspace_root: Path,
+        relative_path: str,
+        replacements: tuple[TextReplacement, ...],
+    ) -> TransactionalToolOutput:
+        return self._locked(
+            project_id,
+            lambda: self._patch_unlocked(
+                project_id,
+                workspace_root,
+                relative_path,
+                replacements,
+            ),
+        )
+
+    def _patch_unlocked(
         self,
         project_id: UUID,
         workspace_root: Path,
@@ -199,6 +270,7 @@ class LocalTextMutator:
         if updated == original:
             raise ToolError(ToolErrorCode.PATCH_MISMATCH, "Requested patch makes no change.")
         return self._replace_bytes(
+            project_id,
             workspace_root,
             target,
             target_stat,
@@ -213,15 +285,28 @@ class LocalTextMutator:
         workspace_root: Path,
         relative_path: str,
     ) -> TransactionalToolOutput:
+        return self._locked(
+            project_id,
+            lambda: self._delete_unlocked(project_id, workspace_root, relative_path),
+        )
+
+    def _delete_unlocked(
+        self,
+        project_id: UUID,
+        workspace_root: Path,
+        relative_path: str,
+    ) -> TransactionalToolOutput:
         original, target, target_stat = self._read_existing(
             project_id, workspace_root, relative_path
         )
-        backup = self._write_artifact(target.parent, original, 0o600)
+        area = self._transaction_area(project_id)
+        backup = self._write_artifact(area, original, 0o600)
         try:
             self._require_same_target(target, target_stat)
             target.unlink()
         except (OSError, ToolError):
             backup.unlink(missing_ok=True)
+            self._remove_area(project_id, area)
             raise
         return TransactionalToolOutput(
             output=self._summary(
@@ -232,12 +317,36 @@ class LocalTextMutator:
                 MutationOperation.DELETE,
             ),
             transaction=_LocalMutationTransaction(
+                self._filesystem,
+                project_id,
+                area,
                 target,
                 backup,
                 False,
                 stat.S_IMODE(target_stat.st_mode),
             ),
         )
+
+    def _locked(
+        self,
+        project_id: UUID,
+        operation: Callable[[], TransactionalToolOutput],
+    ) -> TransactionalToolOutput:
+        try:
+            self._filesystem.acquire_lock(project_id)
+        except WorkspaceError:
+            raise ToolError(ToolErrorCode.MUTATION_FAILED, _SAFE_MUTATION_MESSAGE) from None
+        try:
+            return operation()
+        except BaseException:
+            try:
+                self._filesystem.release_lock(project_id)
+            except WorkspaceError:
+                raise ToolError(
+                    ToolErrorCode.COMPENSATION_FAILED,
+                    _SAFE_MUTATION_MESSAGE,
+                ) from None
+            raise
 
     def _managed_root(self, project_id: UUID, workspace_root: Path) -> Path:
         try:
@@ -304,6 +413,7 @@ class LocalTextMutator:
 
     def _replace_bytes(
         self,
+        project_id: UUID,
         workspace_root: Path,
         target: Path,
         target_stat: os.stat_result,
@@ -311,9 +421,10 @@ class LocalTextMutator:
         replacement: bytes,
         operation: MutationOperation,
     ) -> TransactionalToolOutput:
-        backup = self._write_artifact(target.parent, original, 0o600)
+        area = self._transaction_area(project_id)
+        backup = self._write_artifact(area, original, 0o600)
         temporary = self._write_artifact(
-            target.parent,
+            area,
             replacement,
             stat.S_IMODE(target_stat.st_mode),
         )
@@ -323,16 +434,32 @@ class LocalTextMutator:
         except (OSError, ToolError):
             backup.unlink(missing_ok=True)
             temporary.unlink(missing_ok=True)
+            self._remove_area(project_id, area)
             raise
         return TransactionalToolOutput(
             output=self._summary(workspace_root, target, original, replacement, operation),
             transaction=_LocalMutationTransaction(
+                self._filesystem,
+                project_id,
+                area,
                 target,
                 backup,
                 False,
                 stat.S_IMODE(target_stat.st_mode),
             ),
         )
+
+    def _transaction_area(self, project_id: UUID) -> Path:
+        try:
+            return self._filesystem.create_transaction_area(project_id)
+        except WorkspaceError:
+            raise ToolError(ToolErrorCode.MUTATION_FAILED, _SAFE_MUTATION_MESSAGE) from None
+
+    def _remove_area(self, project_id: UUID, area: Path) -> None:
+        try:
+            self._filesystem.remove_transaction_area(project_id, area)
+        except WorkspaceError:
+            raise ToolError(ToolErrorCode.COMPENSATION_FAILED, _SAFE_MUTATION_MESSAGE) from None
 
     def _encode_input(self, content: str) -> bytes:
         if not isinstance(content, str):

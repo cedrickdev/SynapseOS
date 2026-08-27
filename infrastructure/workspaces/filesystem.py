@@ -40,6 +40,7 @@ class ManagedWorkspaceFilesystem:
         self._staging = self._initialize_child(".staging")
         self._locks = self._initialize_child(".locks")
         self._trash = self._initialize_child(".trash")
+        self._transactions = self._initialize_child(".transactions")
         self._projects = self._initialize_child("projects")
 
     @property
@@ -91,6 +92,28 @@ class ManagedWorkspaceFilesystem:
         except OSError as error:
             del error
             raise _unsafe() from None
+
+    def create_transaction_area(self, project_id: UUID) -> Path:
+        """Create one private operation directory outside agent-visible roots."""
+        project = _exact_uuid(project_id)
+        try:
+            target = self._transactions / f"{project}-{secrets.token_hex(16)}"
+            target.mkdir(mode=0o700)
+            return target.resolve(strict=True)
+        except OSError as error:
+            del error
+            raise _unsafe() from None
+
+    def remove_transaction_area(self, project_id: UUID, target: Path) -> None:
+        """Remove one exact private transaction directory without following links."""
+        owned = self._require_operation_directory(target, self._transactions, project_id)
+        try:
+            self._remove_tree(owned, depth=0, maximum_depth=2)
+        except WorkspaceError:
+            raise
+        except OSError as error:
+            del error
+            raise _error(WorkspaceErrorCode.CLEANUP_FAILED, "Workspace cleanup failed.") from None
 
     def promote(self, project_id: UUID, staging: Path) -> Path:
         """Atomically expose one exact staging tree as the final project root."""

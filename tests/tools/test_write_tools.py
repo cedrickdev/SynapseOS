@@ -134,40 +134,47 @@ def test_write_tools_delegate_to_managed_transaction_boundary(tmp_path: Path) ->
     (root / "patch.py").write_text("old\n", encoding="utf-8")
     (root / "delete.py").write_text("remove\n", encoding="utf-8")
 
-    results = (
-        asyncio.run(
-            WriteFileTool(mutator).execute(
-                WriteFileInput(path="existing.py", content="after\n"), context
-            )
-        ),
-        asyncio.run(
-            CreateFileTool(mutator).execute(
-                CreateFileInput(path="created.py", content="created\n"), context
-            )
-        ),
-        asyncio.run(
-            PatchFileTool(mutator).execute(
-                PatchFileInput.model_validate(
-                    {
-                        "path": "patch.py",
-                        "operations": ({"old_text": "old", "new_text": "new"},),
-                    },
-                    strict=True,
-                ),
-                context,
-            )
-        ),
-        asyncio.run(DeleteFileTool(mutator).execute(DeleteFileInput(path="delete.py"), context)),
+    observed: list[object] = []
+    write_result = asyncio.run(
+        WriteFileTool(mutator).execute(
+            WriteFileInput(path="existing.py", content="after\n"), context
+        )
     )
+    observed.append(write_result.output["operation"])
+    write_result.transaction.commit()
+    create_result = asyncio.run(
+        CreateFileTool(mutator).execute(
+            CreateFileInput(path="created.py", content="created\n"), context
+        )
+    )
+    observed.append(create_result.output["operation"])
+    create_result.transaction.commit()
+    patch_result = asyncio.run(
+        PatchFileTool(mutator).execute(
+            PatchFileInput.model_validate(
+                {
+                    "path": "patch.py",
+                    "operations": ({"old_text": "old", "new_text": "new"},),
+                },
+                strict=True,
+            ),
+            context,
+        )
+    )
+    observed.append(patch_result.output["operation"])
+    patch_result.transaction.commit()
+    delete_result = asyncio.run(
+        DeleteFileTool(mutator).execute(DeleteFileInput(path="delete.py"), context)
+    )
+    observed.append(delete_result.output["operation"])
+    delete_result.transaction.commit()
 
-    assert [result.output["operation"] for result in results] == [
+    assert observed == [
         "write",
         "create",
         "patch",
         "delete",
     ]
-    for result in results:
-        result.transaction.commit()
     assert (root / "existing.py").read_text(encoding="utf-8") == "after\n"
     assert (root / "created.py").read_text(encoding="utf-8") == "created\n"
     assert (root / "patch.py").read_text(encoding="utf-8") == "new\n"

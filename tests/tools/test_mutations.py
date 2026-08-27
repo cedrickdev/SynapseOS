@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from core.tools import ToolError, ToolErrorCode
-from core.workspaces import WorkspaceLimits
+from core.workspaces import WorkspaceError, WorkspaceErrorCode, WorkspaceLimits
 from infrastructure.tools.mutations import LocalTextMutator, MutationLimits, TextReplacement
 from infrastructure.workspaces import ManagedWorkspaceFilesystem
 
@@ -44,8 +44,8 @@ def _mutator(filesystem: ManagedWorkspaceFilesystem) -> LocalTextMutator:
     )
 
 
-def _artifacts(root: Path) -> list[Path]:
-    return sorted(root.rglob(".synapseos-write-*"))
+def _artifacts(filesystem: ManagedWorkspaceFilesystem) -> list[Path]:
+    return sorted((filesystem.base_root / ".transactions").rglob("*"))
 
 
 def test_replace_mutates_immediately_and_rollback_restores_exact_file(tmp_path: Path) -> None:
@@ -57,14 +57,15 @@ def test_replace_mutates_immediately_and_rollback_restores_exact_file(tmp_path: 
     result = mutator.replace(project_id, root, "module.py", "after\n")
 
     assert target.read_text(encoding="utf-8") == "after\n"
-    assert len(_artifacts(root)) == 1
+    assert list(root.rglob(".synapseos-write-*")) == []
+    assert len(_artifacts(filesystem)) >= 1
     assert result.output["path"] == "module.py"
     assert result.output["operation"] == "write"
     assert result.output["before_bytes"] == 7
     assert result.output["after_bytes"] == 6
     result.transaction.rollback()
     assert target.read_text(encoding="utf-8") == "before\n"
-    assert _artifacts(root) == []
+    assert _artifacts(filesystem) == []
 
 
 def test_create_is_exclusive_and_commit_removes_transaction_artifacts(tmp_path: Path) -> None:
@@ -76,7 +77,7 @@ def test_create_is_exclusive_and_commit_removes_transaction_artifacts(tmp_path: 
     assert (root / "new.py").read_text(encoding="utf-8") == "created\n"
     result.transaction.commit()
     assert (root / "new.py").read_text(encoding="utf-8") == "created\n"
-    assert _artifacts(root) == []
+    assert _artifacts(filesystem) == []
 
 
 def test_patch_applies_ordered_exact_replacements_atomically(tmp_path: Path) -> None:
@@ -97,7 +98,7 @@ def test_patch_applies_ordered_exact_replacements_atomically(tmp_path: Path) -> 
     assert target.read_text(encoding="utf-8") == "gamma delta\n"
     assert result.output["operation"] == "patch"
     result.transaction.commit()
-    assert _artifacts(root) == []
+    assert _artifacts(filesystem) == []
 
 
 def test_delete_rollback_restores_file_before_returning_control(tmp_path: Path) -> None:
@@ -108,10 +109,11 @@ def test_delete_rollback_restores_file_before_returning_control(tmp_path: Path) 
     result = _mutator(filesystem).delete(project_id, root, "obsolete.py")
 
     assert not target.exists()
-    assert len(_artifacts(root)) == 1
+    assert list(root.rglob(".synapseos-write-*")) == []
+    assert len(_artifacts(filesystem)) >= 1
     result.transaction.rollback()
     assert target.read_text(encoding="utf-8") == "restore me\n"
-    assert _artifacts(root) == []
+    assert _artifacts(filesystem) == []
 
 
 @pytest.mark.parametrize("path", ["../outside.py", "/tmp/outside.py"])
@@ -207,4 +209,51 @@ def test_patch_rejects_non_unique_match_without_mutation(tmp_path: Path, old_tex
 
     assert captured.value.code is ToolErrorCode.PATCH_MISMATCH
     assert target.read_text(encoding="utf-8") == "repeat repeat\n"
-    assert _artifacts(root) == []
+    assert _artifacts(filesystem) == []
+
+
+def test_project_mutations_cannot_overlap_and_lock_releases_on_commit(tmp_path: Path) -> None:
+    filesystem, project_id, root = _workspace(tmp_path)
+    first = root / "first.py"
+    second = root / "second.py"
+    first.write_text("before one\n", encoding="utf-8")
+    second.write_text("before two\n", encoding="utf-8")
+    mutator = _mutator(filesystem)
+
+    pending = mutator.replace(project_id, root, "first.py", "after one\n")
+    with pytest.raises(ToolError) as captured:
+        mutator.replace(project_id, root, "second.py", "after two\n")
+
+    assert captured.value.code is ToolErrorCode.MUTATION_FAILED
+    assert second.read_text(encoding="utf-8") == "before two\n"
+    pending.transaction.commit()
+    following = mutator.replace(project_id, root, "second.py", "after two\n")
+    following.transaction.commit()
+    assert second.read_text(encoding="utf-8") == "after two\n"
+
+
+def test_transaction_cleanup_failure_does_not_leave_project_lock_stuck(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    filesystem, project_id, root = _workspace(tmp_path)
+    target = root / "module.py"
+    target.write_text("before\n", encoding="utf-8")
+    mutator = _mutator(filesystem)
+    pending = mutator.replace(project_id, root, "module.py", "after\n")
+    real_remove = filesystem.remove_transaction_area
+    monkeypatch.setattr(
+        filesystem,
+        "remove_transaction_area",
+        lambda project, area: (_ for _ in ()).throw(
+            WorkspaceError(WorkspaceErrorCode.CLEANUP_FAILED, "safe failure")
+        ),
+    )
+
+    with pytest.raises(ToolError) as captured:
+        pending.transaction.commit()
+
+    assert captured.value.code is ToolErrorCode.COMPENSATION_FAILED
+    monkeypatch.setattr(filesystem, "remove_transaction_area", real_remove)
+    filesystem.acquire_lock(project_id)
+    filesystem.release_lock(project_id)

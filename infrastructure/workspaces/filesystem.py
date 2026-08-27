@@ -18,7 +18,7 @@ from core.workspaces import (
     WorkspaceProvenance,
     WorkspaceResourceUsage,
 )
-from infrastructure.tools.paths import ExpectedPathKind, resolve_workspace_path
+from infrastructure.workspaces.paths import ExpectedPathKind, resolve_workspace_path
 
 _SAFE_PATH_MESSAGE = "Workspace path is not allowed."
 _RESOURCE_MESSAGE = "Workspace exceeds a resource limit."

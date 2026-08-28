@@ -145,14 +145,18 @@ def _limits() -> RuntimeLimits:
 
 
 @pytest.mark.parametrize(
-    ("provider_script", "expected_calls"),
-    [(_provider_script(), 3), (_correction_script(), 5)],
+    ("provider_script", "expected_calls", "expected_check_statuses"),
+    [
+        (_provider_script(), 3, ("SUCCEEDED",)),
+        (_correction_script(), 5, ("FAILED", "SUCCEEDED")),
+    ],
     ids=("direct-fix", "failed-test-then-correction"),
 )
 def test_developer_fixes_and_verifies_bug_with_real_repository_tools(
     tmp_path: Path,
     provider_script: list[LLMResponse],
     expected_calls: int,
+    expected_check_statuses: tuple[str, ...],
 ) -> None:
     filesystem = ManagedWorkspaceFilesystem(
         tmp_path / "managed",
@@ -275,6 +279,7 @@ def test_developer_fixes_and_verifies_bug_with_real_repository_tools(
     assert result.report.outcome is AgentReportOutcome.SUCCEEDED
     assert result.changed_paths == ("calc.py",)
     assert result.checks[0].profile_id is CommandProfileId.PYTEST
+    assert tuple(check.status.value for check in result.checks) == expected_check_statuses
     assert len(provider.requests) == len(provider_script)
     assert len(permission_policy.requests) == expected_calls
     assert len(permission_audit.decisions) == expected_calls

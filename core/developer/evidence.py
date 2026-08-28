@@ -44,10 +44,9 @@ class EvidenceCollectingToolExecutor:
     def __init__(self, delegate: RuntimeToolExecutor) -> None:
         self._delegate = delegate
         self._changed_paths: list[str] = []
-        self._checks: dict[
-            CommandProfileId,
+        self._checks: list[
             tuple[CommandProfileId, CommandCategory, CommandTerminalStatus, int, bool],
-        ] = {}
+        ] = []
         self._failures: list[tuple[str, ToolErrorCode]] = []
         self._record_count = 0
 
@@ -64,7 +63,7 @@ class EvidenceCollectingToolExecutor:
     def snapshot(self) -> DeveloperEvidenceSnapshot:
         return DeveloperEvidenceSnapshot(
             changed_paths=tuple(self._changed_paths),
-            checks=tuple(self._checks.values()),
+            checks=tuple(self._checks),
             failures=tuple(self._failures),
         )
 
@@ -120,5 +119,5 @@ class EvidenceCollectingToolExecutor:
             error.__traceback__ = None
             del error
             return
-        self._checks[profile_id] = (profile_id, category, status, exit_code, truncated)
+        self._checks.append((profile_id, category, status, exit_code, truncated))
         self._record_count += 1

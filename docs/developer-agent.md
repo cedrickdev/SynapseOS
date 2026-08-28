@@ -76,8 +76,8 @@ The evidence wrapper delegates each call once and retains at most 128 records. I
 - tool name and stable error code for failed or denied calls.
 
 It discards file content, patches, command stdout/stderr, prompts, responses, rationale, absolute
-paths, environment values, and raw exceptions. For repeated command profiles, the latest result is
-authoritative.
+paths, environment values, and raw exceptions. Repeated command profiles retain a bounded sequence
+so failures are not hidden; the latest result is authoritative for the final outcome.
 
 The final `AgentReport` is application-generated, not model-generated:
 

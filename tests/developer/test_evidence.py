@@ -114,6 +114,13 @@ def test_wrapper_retains_latest_allowlisted_command_metadata_only(tmp_path: Path
         (
             CommandProfileId.PYTEST,
             CommandCategory.TEST,
+            CommandTerminalStatus.FAILED,
+            1,
+            True,
+        ),
+        (
+            CommandProfileId.PYTEST,
+            CommandCategory.TEST,
             CommandTerminalStatus.SUCCEEDED,
             0,
             False,

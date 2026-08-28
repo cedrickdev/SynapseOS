@@ -3,6 +3,7 @@
 from core.runtime.audit import RuntimeAuditOutcome, RuntimeAuditRecord, RuntimeAuditRecorder
 from core.runtime.errors import RuntimeError, RuntimeErrorCode
 from core.runtime.reasoner import LLMLoopReasoner, LoopReasoner
+from core.runtime.stagnation import StagnationDetector
 from core.runtime.types import (
     ReasonerOutput,
     RuntimeAction,
@@ -44,4 +45,5 @@ __all__ = [
     "RuntimeTerminalStatus",
     "RuntimeVerification",
     "RuntimeVerificationOutcome",
+    "StagnationDetector",
 ]

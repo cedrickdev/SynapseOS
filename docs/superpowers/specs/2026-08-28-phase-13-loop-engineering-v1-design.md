@@ -123,9 +123,10 @@ The entire run executes under one monotonic `asyncio.timeout`. Existing provider
 remain narrower inner boundaries.
 
 On global timeout, the runtime records one terminal `TIMED_OUT` audit step and returns a bounded
-`TIMED_OUT` result. On `asyncio.CancelledError`, it records `CANCELLED` using cancellation-resistant
-audit cleanup and immediately re-raises cancellation. It never converts cancellation into a
-normal failure and never closes injected providers, executors, sessions, or network clients.
+`TIMED_OUT` result. On `asyncio.CancelledError`, it stages `CANCELLED` through a dedicated
+prevalidated recorder method that performs no query, flush, network I/O, or thread handoff, then
+immediately re-raises cancellation. It never converts cancellation into a normal failure and never
+closes injected providers, executors, sessions, or network clients.
 
 ## Audit model
 

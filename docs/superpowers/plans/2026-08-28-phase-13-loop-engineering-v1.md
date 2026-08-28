@@ -325,9 +325,10 @@ Expected: intended timeout/cancellation/audit assertions fail before hardening.
 
 - [ ] **Step 3: Implement cancellation-resistant terminal audit**
 
-Run the finite cleanup audit in a separate task awaited through `asyncio.shield`; tolerate repeated
-cancellation until that task finishes, then re-raise the original cancellation. Keep global timeout
-distinct from inner tool/provider failures. Do not add sleeps, retries, or resource ownership.
+Stage the finite cancellation audit through a dedicated prevalidated recorder method that performs
+no query, flush, network I/O, or thread handoff, then re-raise the original cancellation. Keep
+global timeout distinct from inner tool/provider failures. Do not add sleeps, retries, or resource
+ownership.
 
 - [ ] **Step 4: Add data-leak and finite-history assertions**
 

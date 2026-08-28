@@ -346,4 +346,3 @@
 - [ ] **Step 6: Push and open the stacked pull request**
 
   Push `phase-14/developer-agent`, open a PR against `phase-13/loop-engineering-v1`, and include scope, safeguards, tests, Docker/PostgreSQL evidence, decisions, known limitations, and explicit Phase 15 exclusion.
-

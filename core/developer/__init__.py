@@ -1,6 +1,7 @@
 """Bounded Developer Agent composition for Phase 14."""
 
 from core.developer.errors import DeveloperError, DeveloperErrorCode
+from core.developer.skills import DeveloperSkillContext, build_skill_context
 from core.developer.types import (
     ChangedPath,
     DeveloperCheckResult,
@@ -16,6 +17,8 @@ __all__ = [
     "DeveloperErrorCode",
     "DeveloperRequest",
     "DeveloperResult",
+    "DeveloperSkillContext",
     "ValidatedDeveloperRequest",
+    "build_skill_context",
     "validate_developer_request",
 ]

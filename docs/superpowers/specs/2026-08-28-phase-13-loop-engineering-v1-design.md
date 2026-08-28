@@ -53,13 +53,15 @@ new iteration.
 ## Structured LLM protocol
 
 The concrete `LLMLoopReasoner` sends bounded provider-neutral `LLMRequest` values and decodes each
-response with the existing strict structured-output decoder. It exposes five operations:
+response with the existing strict structured-output decoder. Every operation returns an immutable
+`ReasonerOutput[T]` containing the typed value, reported token count, and usage-availability flag.
+It exposes five operations:
 
-- `observe(task, bounded_history) -> RuntimeObservation`
-- `plan(task, observation, bounded_history) -> RuntimePlan`
-- `decide(task, observation, plan, bounded_history) -> RuntimeDecision`
-- `verify(task, decision, tool_result, bounded_history) -> RuntimeVerification`
-- `report(task, terminal_state, bounded_history) -> RuntimeReport`
+- `observe(task, bounded_history) -> ReasonerOutput[RuntimeObservation]`
+- `plan(task, observation, bounded_history) -> ReasonerOutput[RuntimePlan]`
+- `decide(task, observation, plan, bounded_history) -> ReasonerOutput[RuntimeDecision]`
+- `verify(task, decision, tool_result, bounded_history) -> ReasonerOutput[RuntimeVerification]`
+- `report(task, terminal_state, bounded_history) -> ReasonerOutput[RuntimeReport]`
 
 Every response is one exact JSON object. Unknown fields, invalid enums, blank text, non-finite
 numbers, oversized collections, malformed JSON, and unbounded tool arguments fail closed.

@@ -152,9 +152,9 @@ class LocalWorkspaceManager:
             self._filesystem.acquire_lock(project_id)
             acquired = True
             self._filesystem.load_workspace(project_id, WorkspaceProvenance.EMPTY)
+            self._filesystem.remove_managed_git_directory(project_id)
             trash = self._filesystem.move_to_trash(project_id)
             self._filesystem.remove_owned_tree(trash)
-            self._filesystem.remove_managed_git_directory(project_id)
             self._audit.record(
                 WorkspaceAuditRecord(
                     context=audit,

@@ -189,6 +189,23 @@ def test_timeout_kills_descendant_after_process_group_leader_exits(tmp_path: Pat
                 os.killpg(process_group_id, 9)
 
 
+def test_timeout_cleanup_is_stable_across_repeated_short_lived_groups(tmp_path: Path) -> None:
+    for index in range(10):
+        pid_file = tmp_path / f"stress-{index}.pid"
+        code = (
+            "import os, pathlib, signal; "
+            f"pathlib.Path({str(pid_file)!r}).write_text(str(os.getpid())); "
+            "signal.pause()"
+        )
+
+        with pytest.raises(CommandError) as captured:
+            asyncio.run(LocalCommandRunner().run(_spec(tmp_path, code, timeout=0.05)))
+
+        assert captured.value.code is CommandErrorCode.TIMED_OUT
+        with pytest.raises(ProcessLookupError):
+            os.kill(int(pid_file.read_text()), 0)
+
+
 def test_cancellation_terminates_process_and_propagates_immediately(tmp_path: Path) -> None:
     async def scenario() -> int:
         pid_file = tmp_path / "cancelled.pid"

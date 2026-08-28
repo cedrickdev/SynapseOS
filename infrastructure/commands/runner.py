@@ -155,11 +155,12 @@ async def _stop_process(
     process: asyncio.subprocess.Process,
     grace_seconds: float,
 ) -> None:
+    reap_task = asyncio.create_task(process.wait())
     try:
         with suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGTERM)
         if await _wait_process_group_gone(process.pid, grace_seconds):
-            await process.wait()
+            await reap_task
             return
     except (OSError, RuntimeError) as error:
         del error
@@ -171,15 +172,19 @@ async def _stop_process(
         with suppress(ProcessLookupError):
             process.kill()
     try:
-        if await _wait_process_group_gone(process.pid, grace_seconds):
-            await process.wait()
-            return
-    except (OSError, RuntimeError) as error:
+        async with asyncio.timeout(grace_seconds):
+            await asyncio.shield(reap_task)
+    except (TimeoutError, OSError, RuntimeError) as error:
         del error
-    raise CommandError(
-        CommandErrorCode.TERMINATION_FAILED,
-        "Command process could not be terminated safely.",
-    )
+        if not reap_task.done():
+            reap_task.cancel()
+            await asyncio.gather(reap_task, return_exceptions=True)
+        raise CommandError(
+            CommandErrorCode.TERMINATION_FAILED,
+            "Command process could not be terminated safely.",
+        ) from None
+    with suppress(OSError, RuntimeError):
+        await _wait_process_group_gone(process.pid, grace_seconds)
 
 
 async def _wait_process_group_gone(process_group_id: int, timeout_seconds: float) -> bool:

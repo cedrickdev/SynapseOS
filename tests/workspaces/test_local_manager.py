@@ -374,3 +374,32 @@ def test_cleanup_missing_workspace_fails_and_audits(tmp_path: Path) -> None:
     assert captured.value.code is WorkspaceErrorCode.WORKSPACE_NOT_FOUND
     assert audit.records[-1].operation is WorkspaceOperation.CLEANUP
     assert audit.records[-1].result is AuditResult.FAILED
+
+
+def test_metadata_cleanup_failure_preserves_workspace_for_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    audit = RecordingWorkspaceAudit()
+    manager, filesystem = _manager(tmp_path, audit)
+    project_id = uuid4()
+    workspace = asyncio.run(manager.create_workspace(project_id, _context(project_id)))
+    (workspace.root / ".git").mkdir()
+    managed = filesystem.ensure_managed_git_directory(project_id, workspace.root)
+    remove_metadata = filesystem.remove_managed_git_directory
+
+    def fail_metadata_cleanup(requested_project_id: UUID) -> None:
+        del requested_project_id
+        raise WorkspaceError(WorkspaceErrorCode.CLEANUP_FAILED, "Workspace cleanup failed.")
+
+    monkeypatch.setattr(filesystem, "remove_managed_git_directory", fail_metadata_cleanup)
+
+    with pytest.raises(WorkspaceError):
+        asyncio.run(manager.cleanup_workspace(project_id, _context(project_id)))
+
+    assert workspace.root.exists()
+    assert managed.exists()
+    monkeypatch.setattr(filesystem, "remove_managed_git_directory", remove_metadata)
+    asyncio.run(manager.cleanup_workspace(project_id, _context(project_id)))
+    assert not workspace.root.exists()
+    assert not managed.exists()

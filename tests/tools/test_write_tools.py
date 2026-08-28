@@ -29,6 +29,14 @@ from infrastructure.workspaces import ManagedWorkspaceFilesystem
 
 
 class UnusedCommandPolicy:
+    def acquire(self, project_id: UUID, workspace_root: Path) -> None:
+        del project_id, workspace_root
+        raise AssertionError("registry construction must not acquire command workspaces")
+
+    def release(self, project_id: UUID, workspace_root: Path) -> None:
+        del project_id, workspace_root
+        raise AssertionError("registry construction must not release command workspaces")
+
     def resolve(
         self,
         profile_id: CommandProfileId,

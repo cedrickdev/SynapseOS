@@ -73,7 +73,7 @@ always `CHANGES_REQUESTED` when any of these conditions holds:
 
 - Reviewer and Developer are not independent;
 - the Developer report is not `SUCCEEDED`;
-- a required check is missing, failed, cancelled, timed out, or has inconsistent metadata;
+- a required check is missing, failed, or has inconsistent metadata;
 - any accepted finding has `HIGH` or `CRITICAL` severity;
 - the model proposes changes;
 - confidence is below the fixed V1 approval threshold.

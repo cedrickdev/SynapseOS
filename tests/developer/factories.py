@@ -16,7 +16,7 @@ DEVELOPER_TOOLS = frozenset(
     {
         "read_file",
         "list_files",
-        "search_literal",
+        "search_text",
         "write_file",
         "patch_file",
         "run_command_profile",
@@ -38,6 +38,7 @@ def developer_profile(**overrides: object) -> AgentProfile:
             {
                 Permission.FILESYSTEM_READ.value,
                 Permission.FILESYSTEM_WRITE.value,
+                Permission.SHELL_EXECUTE.value,
                 Permission.TESTS_EXECUTE.value,
             }
         ),

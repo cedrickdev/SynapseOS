@@ -13,7 +13,7 @@ DEVELOPER_TOOL_IDS = frozenset(
     {
         "read_file",
         "list_files",
-        "search_literal",
+        "search_text",
         "git_status",
         "git_diff",
         "write_file",
@@ -23,7 +23,7 @@ DEVELOPER_TOOL_IDS = frozenset(
         "run_command_profile",
     }
 )
-_READ_TOOLS = frozenset({"read_file", "list_files", "search_literal"})
+_READ_TOOLS = frozenset({"read_file", "list_files", "search_text"})
 _WRITE_TOOLS = frozenset({"write_file", "create_file", "patch_file", "delete_file"})
 _CHECK_PROFILES = frozenset(
     {
@@ -36,6 +36,14 @@ _CHECK_PROFILES = frozenset(
     }
 )
 _ACTIVE_STATUSES = frozenset({AgentStatus.ASSIGNED, AgentStatus.WORKING})
+_REQUIRED_PERMISSIONS = frozenset(
+    {
+        Permission.FILESYSTEM_READ,
+        Permission.FILESYSTEM_WRITE,
+        Permission.SHELL_EXECUTE,
+        Permission.TESTS_EXECUTE,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +71,11 @@ def validate_developer_request(request: DeveloperRequest) -> ValidatedDeveloperR
     ):
         raise DeveloperError(DeveloperErrorCode.INVALID_SCOPE, "Developer scope is inconsistent.")
     permissions = _canonical_permissions(profile.permission_ids)
+    if not _REQUIRED_PERMISSIONS.issubset(permissions):
+        raise DeveloperError(
+            DeveloperErrorCode.INVALID_PERMISSION,
+            "Developer permissions are incomplete.",
+        )
     if (
         not profile.tool_ids.issubset(DEVELOPER_TOOL_IDS)
         or not profile.tool_ids.intersection(_READ_TOOLS)

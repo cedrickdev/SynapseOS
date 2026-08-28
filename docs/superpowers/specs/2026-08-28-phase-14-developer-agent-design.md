@@ -42,7 +42,7 @@ The request is rejected before any LLM, tool, audit, or filesystem action when:
 - a required check is a Git profile or unknown profile;
 - canonical profile permissions cannot be resolved.
 
-The closed developer tool set is `read_file`, `list_files`, `search_literal`, `git_status`,
+The closed developer tool set is `read_file`, `list_files`, `search_text`, `git_status`,
 `git_diff`, `write_file`, `create_file`, `patch_file`, `delete_file`, and
 `run_command_profile`. This allowlist grants no authority: every tool must also be registered,
 declared in `ToolExecutionContext`, and authorized by the existing persisted permission engine.

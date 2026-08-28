@@ -112,5 +112,21 @@ def test_valid_request_returns_canonical_permissions(tmp_path: Path) -> None:
     assert {permission.value for permission in validated.permissions} == {
         "filesystem.read",
         "filesystem.write",
+        "shell.execute",
         "tests.execute",
     }
+
+
+def test_validation_rejects_missing_permission_for_declared_capabilities(tmp_path: Path) -> None:
+    profile = developer_profile(
+        permission_ids=frozenset({"filesystem.read", "filesystem.write", "tests.execute"})
+    )
+    values = request_values(tmp_path)
+    task = values["task"]
+    values["profile"] = profile
+    values["execution_context"] = execution_context(tmp_path, task=task, profile=profile)  # type: ignore[arg-type]
+
+    with pytest.raises(DeveloperError) as raised:
+        validate_developer_request(DeveloperRequest.model_validate(values))
+
+    assert raised.value.code is DeveloperErrorCode.INVALID_PERMISSION

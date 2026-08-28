@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_13-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_14-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,13 +48,13 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 13 — Loop Engineering V1 completed.** The repository now provides the persistence foundation, an
+**Phase 14 — Developer Agent completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
 free-form shell, MCP, multi-agent coordination, QA and security
-engines, and the frontend remain intentionally unimplemented.
+  engines, ReviewerAgent, and the frontend remain intentionally unimplemented.
 
 What exists today:
 
@@ -90,6 +90,9 @@ What exists today:
 - A provider-neutral single-agent loop with finite iteration, timeout, failure, tool-call, token,
   history, and stagnation limits, sanitized append-only runtime audit, immediate permission
   escalation, and cancellation propagation.
+- A bounded Developer role that validates scope and authority before work, selects complete
+  subordinate skills, composes the single-agent loop, uses real repository tools and fixed checks,
+  and derives a metadata-only report that cannot hide missing or failed tests.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -135,8 +138,8 @@ make dev         # run the API with autoreload on http://localhost:8000
 
 ```text
 apps/api/                 # FastAPI application (Platform API)
-core/                     # Domain layer (placeholders filled in later phases)
-  agents/ commands/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
+core/                     # Domain and application boundaries
+  agents/ commands/ developer/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
@@ -177,6 +180,12 @@ The focused Phase 13 suite covers bounded runtime behavior and PostgreSQL audit:
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/runtime tests/database/test_runtime_audit.py -q
 ```
 
+The focused Phase 14 suite covers the Developer role and real repository-tool workflows:
+
+```bash
+.venv/bin/pytest tests/developer -q
+```
+
 Run `make help` to list every available target.
 
 **Working agreement:** changes are test-driven (write the failing test first), and `make check`
@@ -200,7 +209,8 @@ validated pull request. The near-term sequence is:
 11. **Secure command runner** — completed
 12. MCP client — deliberately not started
 13. **Loop Engineering V1** — completed
-14. Developer Agent — not started
+14. **Developer Agent** — completed
+15. Reviewer Agent — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -218,6 +228,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Transactional write tools:** [`docs/write-tools.md`](docs/write-tools.md)
 - **Secure command profiles:** [`docs/commands.md`](docs/commands.md)
 - **Loop Engineering V1:** [`docs/runtime.md`](docs/runtime.md)
+- **Developer Agent:** [`docs/developer-agent.md`](docs/developer-agent.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

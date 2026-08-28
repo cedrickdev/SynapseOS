@@ -1065,15 +1065,15 @@ Créer le premier véritable rôle métier.
 
 Responsabilités :
 
-- [ ] comprendre une tâche
-- [ ] inspecter repository
-- [ ] sélectionner skills
-- [ ] planifier
-- [ ] modifier code
-- [ ] exécuter tests
-- [ ] analyser erreurs
-- [ ] corriger
-- [ ] produire rapport
+- [x] comprendre une tâche
+- [x] inspecter repository
+- [x] sélectionner skills
+- [x] planifier
+- [x] modifier code
+- [x] exécuter tests
+- [x] analyser erreurs
+- [x] corriger
+- [x] produire rapport
 
 ## Prompt Claude Code — Phase 14
 

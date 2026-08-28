@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
+from functools import partial
 from time import perf_counter
 from typing import Protocol
 
@@ -66,6 +67,9 @@ class AgentRuntime:
         try:
             async with asyncio.timeout(self._limits.timeout_seconds):
                 status, reason, report = await self._execute(task, context, state)
+        except asyncio.CancelledError:
+            await self._audit_cancellation(context, state)
+            raise
         except TimeoutError:
             status = RuntimeTerminalStatus.TIMED_OUT
             reason = RuntimeTerminalReason.GLOBAL_TIMEOUT
@@ -94,7 +98,7 @@ class AgentRuntime:
                     iteration,
                     context,
                     state,
-                    self._reasoner.observe(task, state.history),
+                    partial(self._reasoner.observe, task, state.history),
                 )
                 if self._token_budget_reached(state):
                     return self._token_terminal(context, state)
@@ -103,7 +107,7 @@ class AgentRuntime:
                     iteration,
                     context,
                     state,
-                    self._reasoner.plan(task, observation, state.history),
+                    partial(self._reasoner.plan, task, observation, state.history),
                 )
                 if self._token_budget_reached(state):
                     return self._token_terminal(context, state)
@@ -112,7 +116,7 @@ class AgentRuntime:
                     iteration,
                     context,
                     state,
-                    self._reasoner.decide(task, observation, plan, state.history),
+                    partial(self._reasoner.decide, task, observation, plan, state.history),
                 )
                 if self._token_budget_reached(state):
                     return self._token_terminal(context, state)
@@ -212,7 +216,7 @@ class AgentRuntime:
                 iteration,
                 context,
                 state,
-                self._reasoner.verify(task, decision, tool_result, state.history),
+                partial(self._reasoner.verify, task, decision, tool_result, state.history),
                 decision,
             )
             if self._token_budget_reached(state):
@@ -263,12 +267,12 @@ class AgentRuntime:
         iteration: int,
         context: ToolExecutionContext,
         state: _RunState,
-        operation: Awaitable[ReasonerOutput[ValueT]],
+        operation: Callable[[], Awaitable[ReasonerOutput[ValueT]]],
         decision: object | None = None,
     ) -> ValueT:
         self._audit_step(context, state, step, RuntimeAuditOutcome.STARTED, decision)
         try:
-            output = await operation
+            output = await operation()
         except RuntimeError:
             self._audit_step(context, state, step, RuntimeAuditOutcome.FAILED, decision)
             raise
@@ -305,15 +309,35 @@ class AgentRuntime:
                 RuntimeTerminalStatus.LIMIT_REACHED,
                 RuntimeTerminalReason.TOKEN_BUDGET_REACHED,
             )
-        report = await self._reason(
+        await self._reason(
             RuntimeStep.REPORT,
             state.iterations,
             context,
             state,
-            self._reasoner.report(task, status, reason, state.history),
+            partial(self._reasoner.report, task, status, reason, state.history),
         )
         self._terminal_audit(context, state, RuntimeAuditOutcome.SUCCEEDED, reason)
-        return status, reason, report
+        return status, reason, None
+
+    async def _audit_cancellation(
+        self, context: ToolExecutionContext, state: _RunState
+    ) -> None:
+        async def cleanup() -> None:
+            await asyncio.sleep(0)
+            self._terminal_audit(
+                context,
+                state,
+                RuntimeAuditOutcome.CANCELLED,
+                RuntimeTerminalReason.CANCELLED,
+            )
+
+        cleanup_task = asyncio.create_task(cleanup())
+        while not cleanup_task.done():
+            try:
+                await asyncio.shield(cleanup_task)
+            except asyncio.CancelledError:
+                continue
+        cleanup_task.result()
 
     def _terminal(
         self,

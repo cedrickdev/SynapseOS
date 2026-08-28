@@ -3,6 +3,7 @@
 from core.runtime.audit import RuntimeAuditOutcome, RuntimeAuditRecord, RuntimeAuditRecorder
 from core.runtime.errors import RuntimeError, RuntimeErrorCode
 from core.runtime.reasoner import LLMLoopReasoner, LoopReasoner
+from core.runtime.runtime import AgentRuntime, RuntimeToolExecutor
 from core.runtime.stagnation import StagnationDetector
 from core.runtime.types import (
     ReasonerOutput,
@@ -24,6 +25,7 @@ from core.runtime.types import (
 
 __all__ = [
     "ReasonerOutput",
+    "AgentRuntime",
     "LLMLoopReasoner",
     "LoopReasoner",
     "RuntimeAuditOutcome",
@@ -43,6 +45,7 @@ __all__ = [
     "RuntimeTask",
     "RuntimeTerminalReason",
     "RuntimeTerminalStatus",
+    "RuntimeToolExecutor",
     "RuntimeVerification",
     "RuntimeVerificationOutcome",
     "StagnationDetector",

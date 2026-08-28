@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable, Mapping
 from functools import partial
 from time import perf_counter
@@ -27,7 +28,15 @@ from core.runtime.types import (
     RuntimeTerminalStatus,
     RuntimeVerificationOutcome,
 )
-from core.tools import ToolErrorCode, ToolExecutionContext, ToolResult, ToolResultStatus
+from core.tools import (
+    ToolAuditError,
+    ToolErrorCode,
+    ToolExecutionContext,
+    ToolResult,
+    ToolResultStatus,
+)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class RuntimeToolExecutor(Protocol):
@@ -53,15 +62,16 @@ class AgentRuntime:
         self._tool_executor = tool_executor
         self._audit = audit_recorder
         self._limits = limits
+        if reasoner.max_step_tokens > limits.max_step_tokens:
+            raise ValueError("reasoner step token limit exceeds runtime limit")
 
     async def run(self, task: RuntimeTask, context: ToolExecutionContext) -> RuntimeResult:
         """Run one bounded task; injected collaborators remain caller-owned."""
         started = perf_counter()
         if task.task_id != context.task_id:
-            return self._result(
-                RuntimeTerminalStatus.FAILED,
-                RuntimeTerminalReason.INVALID_LLM_OUTPUT,
-                started,
+            raise RuntimeError(
+                RuntimeErrorCode.INVALID_REQUEST,
+                "Runtime task scope is invalid.",
             )
         state = _RunState(self._limits)
         try:
@@ -170,9 +180,37 @@ class AgentRuntime:
 
             self._audit_step(context, state, RuntimeStep.ACT, RuntimeAuditOutcome.STARTED, decision)
             state.tool_calls += 1
-            tool_result = await self._tool_executor.execute(
-                decision.tool_name or "invalid", decision.arguments, context
-            )
+            try:
+                tool_result = await self._tool_executor.execute(
+                    decision.tool_name or "invalid", decision.arguments, context
+                )
+            except ToolAuditError as error:
+                error.__traceback__ = None
+                del error
+                self._audit_step(
+                    context,
+                    state,
+                    RuntimeStep.ACT,
+                    RuntimeAuditOutcome.FAILED,
+                    decision,
+                    ToolErrorCode.AUDIT_FAILED,
+                )
+                self._audit_step(
+                    context,
+                    state,
+                    RuntimeStep.OBSERVE_RESULT,
+                    RuntimeAuditOutcome.STARTED,
+                    decision,
+                )
+                self._audit_step(
+                    context,
+                    state,
+                    RuntimeStep.OBSERVE_RESULT,
+                    RuntimeAuditOutcome.FAILED,
+                    decision,
+                    ToolErrorCode.AUDIT_FAILED,
+                )
+                return self._terminal_failure(context, state, RuntimeTerminalReason.AUDIT_FAILED)
             tool_outcome = (
                 RuntimeAuditOutcome.SUCCEEDED
                 if tool_result.status is ToolResultStatus.SUCCEEDED
@@ -184,6 +222,21 @@ class AgentRuntime:
                 context,
                 state,
                 RuntimeStep.ACT,
+                tool_outcome,
+                decision,
+                tool_result.error_code,
+            )
+            self._audit_step(
+                context,
+                state,
+                RuntimeStep.OBSERVE_RESULT,
+                RuntimeAuditOutcome.STARTED,
+                decision,
+            )
+            self._audit_step(
+                context,
+                state,
+                RuntimeStep.OBSERVE_RESULT,
                 tool_outcome,
                 decision,
                 tool_result.error_code,
@@ -211,14 +264,28 @@ class AgentRuntime:
                         RuntimeTerminalReason.MAX_FAILURES_REACHED,
                     )
 
-            verification = await self._reason(
-                RuntimeStep.VERIFY,
-                iteration,
-                context,
-                state,
-                partial(self._reasoner.verify, task, decision, tool_result, state.history),
-                decision,
-            )
+            try:
+                verification = await self._reason(
+                    RuntimeStep.VERIFY,
+                    iteration,
+                    context,
+                    state,
+                    partial(self._reasoner.verify, task, decision, tool_result, state.history),
+                    decision,
+                )
+            except RuntimeError as error:
+                if error.code is RuntimeErrorCode.AUDIT_FAILED:
+                    raise
+                state.failures += 1
+                if state.failures >= self._limits.max_failures:
+                    return await self._finish(
+                        task,
+                        context,
+                        state,
+                        RuntimeTerminalStatus.FAILED,
+                        RuntimeTerminalReason.MAX_FAILURES_REACHED,
+                    )
+                continue
             if self._token_budget_reached(state):
                 return self._token_terminal(context, state)
             state.append(
@@ -309,35 +376,39 @@ class AgentRuntime:
                 RuntimeTerminalStatus.LIMIT_REACHED,
                 RuntimeTerminalReason.TOKEN_BUDGET_REACHED,
             )
-        await self._reason(
-            RuntimeStep.REPORT,
-            state.iterations,
-            context,
-            state,
-            partial(self._reasoner.report, task, status, reason, state.history),
-        )
+        try:
+            await self._reason(
+                RuntimeStep.REPORT,
+                state.iterations,
+                context,
+                state,
+                partial(self._reasoner.report, task, status, reason, state.history),
+            )
+        except RuntimeError as error:
+            if error.code is RuntimeErrorCode.AUDIT_FAILED:
+                raise
+            state.failures += 1
+            failed_reason = RuntimeTerminalReason.INVALID_LLM_OUTPUT
+            self._terminal_audit(context, state, RuntimeAuditOutcome.FAILED, failed_reason)
+            return RuntimeTerminalStatus.FAILED, failed_reason, None
+        if self._token_budget_reached(state):
+            return self._token_terminal(context, state)
         self._terminal_audit(context, state, RuntimeAuditOutcome.SUCCEEDED, reason)
         return status, reason, None
 
-    async def _audit_cancellation(
-        self, context: ToolExecutionContext, state: _RunState
-    ) -> None:
-        async def cleanup() -> None:
-            await asyncio.sleep(0)
-            self._terminal_audit(
-                context,
-                state,
-                RuntimeAuditOutcome.CANCELLED,
-                RuntimeTerminalReason.CANCELLED,
+    async def _audit_cancellation(self, context: ToolExecutionContext, state: _RunState) -> None:
+        try:
+            self._audit.record_cancellation(
+                self._build_terminal_audit_record(
+                    context,
+                    state,
+                    RuntimeAuditOutcome.CANCELLED,
+                    RuntimeTerminalReason.CANCELLED,
+                )
             )
-
-        cleanup_task = asyncio.create_task(cleanup())
-        while not cleanup_task.done():
-            try:
-                await asyncio.shield(cleanup_task)
-            except asyncio.CancelledError:
-                continue
-        cleanup_task.result()
+        except RuntimeError:
+            _LOGGER.warning("Runtime cancellation audit failed.")
+        await asyncio.sleep(0)
 
     def _terminal(
         self,
@@ -354,6 +425,15 @@ class AgentRuntime:
         self._terminal_audit(context, state, outcome, reason)
         return status, reason, None
 
+    def _terminal_failure(
+        self,
+        context: ToolExecutionContext,
+        state: _RunState,
+        reason: RuntimeTerminalReason,
+    ) -> tuple[RuntimeTerminalStatus, RuntimeTerminalReason, None]:
+        self._terminal_audit(context, state, RuntimeAuditOutcome.FAILED, reason)
+        return RuntimeTerminalStatus.FAILED, reason, None
+
     def _audit_step(
         self,
         context: ToolExecutionContext,
@@ -363,6 +443,16 @@ class AgentRuntime:
         decision: object | None = None,
         error_code: ToolErrorCode | None = None,
     ) -> None:
+        if outcome is RuntimeAuditOutcome.STARTED:
+            state.step_started[step] = perf_counter()
+            duration_ms = 0
+        else:
+            step_started = state.step_started.pop(step, None)
+            duration_ms = (
+                min(round((perf_counter() - step_started) * 1000), 3_600_000)
+                if step_started is not None
+                else 0
+            )
         action = decision.action if hasattr(decision, "action") else None
         tool_name = decision.tool_name if hasattr(decision, "tool_name") else None
         self._audit.record(
@@ -375,15 +465,13 @@ class AgentRuntime:
                 iteration=state.iterations,
                 step=step,
                 outcome=outcome,
-                duration_ms=0,
+                duration_ms=duration_ms,
                 tool_calls=state.tool_calls,
                 failures=state.failures,
                 reported_tokens=state.reported_tokens,
                 action=action,
                 tool_name=tool_name,
-                error_code=(
-                    RuntimeErrorCode.TOOL_FAILED if error_code is not None else None
-                ),
+                error_code=error_code,
             )
         )
 
@@ -394,22 +482,29 @@ class AgentRuntime:
         outcome: RuntimeAuditOutcome,
         reason: RuntimeTerminalReason,
     ) -> None:
-        self._audit.record(
-            RuntimeAuditRecord(
-                agent_id=context.agent_id,
-                agent_run_id=context.agent_run_id,
-                project_id=context.project_id,
-                task_id=context.task_id,
-                correlation_id=context.correlation_id,
-                iteration=state.iterations,
-                step=RuntimeStep.REPORT,
-                outcome=outcome,
-                duration_ms=0,
-                tool_calls=state.tool_calls,
-                failures=state.failures,
-                reported_tokens=state.reported_tokens,
-                reason=reason,
-            )
+        self._audit.record(self._build_terminal_audit_record(context, state, outcome, reason))
+
+    @staticmethod
+    def _build_terminal_audit_record(
+        context: ToolExecutionContext,
+        state: _RunState,
+        outcome: RuntimeAuditOutcome,
+        reason: RuntimeTerminalReason,
+    ) -> RuntimeAuditRecord:
+        return RuntimeAuditRecord(
+            agent_id=context.agent_id,
+            agent_run_id=context.agent_run_id,
+            project_id=context.project_id,
+            task_id=context.task_id,
+            correlation_id=context.correlation_id,
+            iteration=state.iterations,
+            step=RuntimeStep.REPORT,
+            outcome=outcome,
+            duration_ms=min(round((perf_counter() - state.started) * 1000), 3_600_000),
+            tool_calls=state.tool_calls,
+            failures=state.failures,
+            reported_tokens=state.reported_tokens,
+            reason=reason,
         )
 
     def _result(
@@ -438,6 +533,7 @@ class AgentRuntime:
 
 class _RunState:
     def __init__(self, limits: RuntimeLimits) -> None:
+        self.started = perf_counter()
         self._max_history = limits.max_history_entries
         self.iterations = 0
         self.tool_calls = 0
@@ -445,6 +541,7 @@ class _RunState:
         self.reported_tokens = 0
         self.usage_available = True
         self.history: tuple[RuntimeHistoryEntry, ...] = ()
+        self.step_started: dict[RuntimeStep, float] = {}
 
     def append(self, entry: RuntimeHistoryEntry) -> None:
         self.history = (*self.history, entry)[-self._max_history :]

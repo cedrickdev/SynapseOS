@@ -69,19 +69,31 @@ def test_verification_outcome_and_error_code_are_fingerprinted() -> None:
     detector = StagnationDetector(window=2)
     decision = _decision()
 
-    assert detector.observe(
-        decision, _verification(RuntimeVerificationOutcome.CONTINUE), ToolErrorCode.TOOL_FAILED
-    ) is False
-    assert detector.observe(
-        decision, _verification(RuntimeVerificationOutcome.COMPLETE), ToolErrorCode.TOOL_FAILED
-    ) is False
-    assert detector.observe(
-        decision,
-        _verification(RuntimeVerificationOutcome.COMPLETE),
-        ToolErrorCode.INVALID_INPUT,
-    ) is False
-    assert detector.observe(
-        decision,
-        _verification(RuntimeVerificationOutcome.COMPLETE),
-        ToolErrorCode.INVALID_INPUT,
-    ) is True
+    assert (
+        detector.observe(
+            decision, _verification(RuntimeVerificationOutcome.CONTINUE), ToolErrorCode.TOOL_FAILED
+        )
+        is False
+    )
+    assert (
+        detector.observe(
+            decision, _verification(RuntimeVerificationOutcome.COMPLETE), ToolErrorCode.TOOL_FAILED
+        )
+        is False
+    )
+    assert (
+        detector.observe(
+            decision,
+            _verification(RuntimeVerificationOutcome.COMPLETE),
+            ToolErrorCode.INVALID_INPUT,
+        )
+        is False
+    )
+    assert (
+        detector.observe(
+            decision,
+            _verification(RuntimeVerificationOutcome.COMPLETE),
+            ToolErrorCode.INVALID_INPUT,
+        )
+        is True
+    )

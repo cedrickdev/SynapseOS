@@ -208,7 +208,7 @@ class ReasonerOutput[ValueT: BaseModel](_ImmutableRuntimeModel):
     """Typed structured value plus authoritative provider token metadata."""
 
     value: ValueT
-    reported_tokens: Annotated[int, Field(ge=0)]
+    reported_tokens: Annotated[int, Field(ge=0, le=10_000_000)]
     usage_available: bool
 
     @model_validator(mode="after")

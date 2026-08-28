@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from core.runtime.errors import RuntimeErrorCode
 from core.runtime.types import Identifier, RuntimeAction, RuntimeStep, RuntimeTerminalReason
+from core.tools import ToolErrorCode
 
 
 class RuntimeAuditOutcome(StrEnum):
@@ -45,7 +46,7 @@ class RuntimeAuditRecord(BaseModel):
     reason: RuntimeTerminalReason | None = None
     action: RuntimeAction | None = None
     tool_name: Identifier | None = None
-    error_code: RuntimeErrorCode | None = None
+    error_code: RuntimeErrorCode | ToolErrorCode | None = None
 
 
 class RuntimeAuditRecorder(Protocol):
@@ -53,4 +54,8 @@ class RuntimeAuditRecorder(Protocol):
 
     def record(self, record: RuntimeAuditRecord) -> None:
         """Persist one sanitized audit record or fail closed."""
+        ...
+
+    def record_cancellation(self, record: RuntimeAuditRecord) -> None:
+        """Stage one cancellation record without blocking I/O."""
         ...

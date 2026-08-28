@@ -6,6 +6,8 @@ import asyncio
 import uuid
 from pathlib import Path
 
+import pytest
+
 from core.runtime import (
     AgentRuntime,
     RuntimeAction,
@@ -141,6 +143,36 @@ def test_successful_tool_is_verified_once_then_completed(tmp_path: Path) -> None
     assert reasoner.calls == ["observe", "plan", "decide", "verify", "report"]
 
 
+def test_tool_result_is_audited_before_verification(tmp_path: Path) -> None:
+    task = _task()
+    reasoner = ScriptedReasoner(
+        [
+            _observation(),
+            _plan(),
+            _decision(RuntimeAction.TOOL_CALL),
+            RuntimeVerification(
+                outcome=RuntimeVerificationOutcome.COMPLETE,
+                summary="Verified",
+                progress_made=True,
+            ),
+            _report(),
+        ]
+    )
+    audit = RecordingRuntimeAudit()
+
+    asyncio.run(
+        AgentRuntime(reasoner, RecordingExecutor([_tool_result()]), audit, _limits()).run(
+            task, _context(tmp_path, task)
+        )
+    )
+
+    terminal_steps = [
+        record.step.value for record in audit.records if record.outcome.value != "STARTED"
+    ]
+    assert "OBSERVE_RESULT" in terminal_steps
+    assert terminal_steps.index("OBSERVE_RESULT") < terminal_steps.index("VERIFY")
+
+
 def test_tool_budget_stops_before_external_tool_call(tmp_path: Path) -> None:
     task = _task()
     reasoner = ScriptedReasoner([_observation(), _plan(), _decision(RuntimeAction.TOOL_CALL)])
@@ -173,6 +205,28 @@ def test_reported_token_budget_stops_before_next_call(tmp_path: Path) -> None:
     assert result.status is RuntimeTerminalStatus.LIMIT_REACHED
     assert result.reason is RuntimeTerminalReason.TOKEN_BUDGET_REACHED
     assert reasoner.calls == ["observe"]
+
+
+def test_runtime_rejects_reasoner_with_larger_step_budget() -> None:
+    reasoner = ScriptedReasoner([], max_step_tokens=21)
+
+    with pytest.raises(ValueError, match="step token limit"):
+        AgentRuntime(reasoner, RecordingExecutor([]), RecordingRuntimeAudit(), _limits())
+
+
+def test_mismatched_task_scope_fails_before_audit_or_external_call(tmp_path: Path) -> None:
+    task = _task()
+    context = _context(tmp_path, task).model_copy(update={"task_id": uuid.uuid4()})
+    reasoner = ScriptedReasoner([])
+    audit = RecordingRuntimeAudit()
+
+    with pytest.raises(RuntimeError) as error:
+        asyncio.run(
+            AgentRuntime(reasoner, RecordingExecutor([]), audit, _limits()).run(task, context)
+        )
+    assert error.value.code is RuntimeErrorCode.INVALID_REQUEST
+    assert reasoner.calls == []
+    assert audit.records == []
 
 
 def test_permission_denial_escalates_without_verification(tmp_path: Path) -> None:
@@ -225,16 +279,21 @@ def test_failed_tool_can_be_corrected_only_by_a_new_iteration(tmp_path: Path) ->
         [_tool_result(ToolResultStatus.FAILED, ToolErrorCode.TOOL_FAILED), _tool_result()]
     )
 
+    audit = RecordingRuntimeAudit()
     result = asyncio.run(
-        AgentRuntime(reasoner, executor, RecordingRuntimeAudit(), _limits()).run(
-            task, _context(tmp_path, task)
-        )
+        AgentRuntime(reasoner, executor, audit, _limits()).run(task, _context(tmp_path, task))
     )
 
     assert result.status is RuntimeTerminalStatus.COMPLETED
     assert result.iterations == 2
     assert result.failures == 1
     assert executor.calls == 2
+    failed_action = next(
+        record
+        for record in audit.records
+        if record.step.value == "ACT" and record.outcome.value == "FAILED"
+    )
+    assert failed_action.error_code is ToolErrorCode.TOOL_FAILED
 
 
 def test_malformed_reasoning_is_bounded_by_failure_limit(tmp_path: Path) -> None:
@@ -259,6 +318,70 @@ def test_malformed_reasoning_is_bounded_by_failure_limit(tmp_path: Path) -> None
     assert result.reason is RuntimeTerminalReason.MAX_FAILURES_REACHED
     assert result.failures == 1
     assert reasoner.calls == ["observe", "report"]
+
+
+def test_malformed_verification_is_bounded_by_failure_limit(tmp_path: Path) -> None:
+    task = _task()
+    reasoner = ScriptedReasoner(
+        [
+            _observation(),
+            _plan(),
+            _decision(RuntimeAction.TOOL_CALL),
+            RuntimeError(RuntimeErrorCode.LLM_OUTPUT_INVALID, "safe"),
+            _report(),
+        ]
+    )
+
+    result = asyncio.run(
+        AgentRuntime(
+            reasoner,
+            RecordingExecutor([_tool_result()]),
+            RecordingRuntimeAudit(),
+            _limits(max_failures=1),
+        ).run(task, _context(tmp_path, task))
+    )
+
+    assert result.status is RuntimeTerminalStatus.FAILED
+    assert result.reason is RuntimeTerminalReason.MAX_FAILURES_REACHED
+    assert result.failures == 1
+
+
+def test_report_failure_returns_sanitized_terminal_failure(tmp_path: Path) -> None:
+    task = _task()
+    reasoner = ScriptedReasoner(
+        [
+            _observation(),
+            _plan(),
+            _decision(),
+            RuntimeError(RuntimeErrorCode.LLM_OUTPUT_INVALID, "secret-report-marker"),
+        ]
+    )
+    audit = RecordingRuntimeAudit()
+
+    result = asyncio.run(
+        AgentRuntime(reasoner, RecordingExecutor([]), audit, _limits()).run(
+            task, _context(tmp_path, task)
+        )
+    )
+
+    assert result.status is RuntimeTerminalStatus.FAILED
+    assert result.reason is RuntimeTerminalReason.INVALID_LLM_OUTPUT
+    assert "secret-report-marker" not in repr(result)
+    assert audit.records[-1].reason is RuntimeTerminalReason.INVALID_LLM_OUTPUT
+
+
+def test_report_cannot_cross_known_token_budget(tmp_path: Path) -> None:
+    task = _task()
+    reasoner = ScriptedReasoner([_observation(), _plan(), _decision(), _report()], tokens=1)
+
+    result = asyncio.run(
+        AgentRuntime(
+            reasoner, RecordingExecutor([]), RecordingRuntimeAudit(), _limits(max_tokens=4)
+        ).run(task, _context(tmp_path, task))
+    )
+
+    assert result.status is RuntimeTerminalStatus.LIMIT_REACHED
+    assert result.reason is RuntimeTerminalReason.TOKEN_BUDGET_REACHED
 
 
 def test_repeated_progress_shape_escalates_as_stagnation(tmp_path: Path) -> None:

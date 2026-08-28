@@ -115,6 +115,8 @@ def test_reasoner_output_requires_consistent_reported_usage() -> None:
     assert output.reported_tokens == 42
     with pytest.raises(ValidationError):
         ReasonerOutput(value=decision, reported_tokens=1, usage_available=False)
+    with pytest.raises(ValidationError):
+        ReasonerOutput(value=decision, reported_tokens=10_000_001, usage_available=True)
 
 
 @pytest.mark.parametrize(

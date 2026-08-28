@@ -16,6 +16,7 @@ from core.runtime import (
     RuntimeError,
     RuntimeErrorCode,
     RuntimeStep,
+    RuntimeTerminalReason,
 )
 from infrastructure.database.models import AuditEvent
 from infrastructure.runtime import SQLAlchemyRuntimeAuditRecorder
@@ -102,3 +103,22 @@ def test_runtime_audit_failure_is_sanitized(db_session: Session) -> None:
     ):
         SQLAlchemyRuntimeAuditRecorder(db_session).record(_record(scope))
     assert marker not in str(error.value)
+
+
+def test_cancellation_is_staged_without_database_io(db_session: Session) -> None:
+    scope = create_permission_scope(db_session)
+    recorder = SQLAlchemyRuntimeAuditRecorder(db_session)
+    recorder.record(_record(scope))
+    cancellation = _record(
+        scope,
+        step=RuntimeStep.REPORT,
+        outcome=RuntimeAuditOutcome.CANCELLED,
+        reason=RuntimeTerminalReason.CANCELLED,
+    )
+
+    with patch.object(db_session, "flush", side_effect=AssertionError("flush called")):
+        recorder.record_cancellation(cancellation)
+
+    staged = [event for event in db_session.new if isinstance(event, AuditEvent)]
+    assert len(staged) == 1
+    assert staged[0].result is AuditResult.CANCELLED

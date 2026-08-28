@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Mapping
 from typing import cast
+from uuid import uuid4
 
 from pydantic import BaseModel
 
@@ -21,16 +22,23 @@ from core.runtime import (
     RuntimeTerminalStatus,
     RuntimeVerification,
 )
-from core.tools import ToolExecutionContext, ToolResult
+from core.tools import (
+    ToolAuditFinish,
+    ToolAuditHandle,
+    ToolAuditStart,
+    ToolExecutionContext,
+    ToolResult,
+)
 
 
 class ScriptedReasoner:
     """Return a finite script and count every requested operation."""
 
-    def __init__(self, script: list[object], *, tokens: int = 1) -> None:
+    def __init__(self, script: list[object], *, tokens: int = 1, max_step_tokens: int = 20) -> None:
         self.script = deque(script)
         self.tokens = tokens
         self.calls: list[str] = []
+        self.max_step_tokens = max_step_tokens
 
     def _next[ValueT: BaseModel](self, name: str) -> ReasonerOutput[ValueT]:
         self.calls.append(name)
@@ -100,3 +108,20 @@ class RecordingRuntimeAudit:
 
     def record(self, record: RuntimeAuditRecord) -> None:
         self.records.append(record)
+
+    def record_cancellation(self, record: RuntimeAuditRecord) -> None:
+        self.records.append(record)
+
+
+class RecordingToolAudit:
+    def __init__(self) -> None:
+        self.starts: list[ToolAuditStart] = []
+        self.finishes: list[ToolAuditFinish] = []
+
+    def begin(self, start: ToolAuditStart) -> ToolAuditHandle:
+        self.starts.append(start)
+        return ToolAuditHandle(tool_call_id=uuid4())
+
+    def finish(self, handle: ToolAuditHandle, finish: ToolAuditFinish) -> None:
+        del handle
+        self.finishes.append(finish)

@@ -110,6 +110,24 @@ def test_missing_usage_is_explicitly_unavailable_and_not_estimated() -> None:
     assert output.usage_available is False
 
 
+def test_oversized_provider_usage_fails_closed_without_retry() -> None:
+    provider = FakeLLMProvider(
+        responses=[
+            _response(
+                '{"summary":"Repository observed.","facts":[],"uncertainties":[]}',
+                LLMUsage(total_tokens=10_000_001),
+            )
+        ]
+    )
+    reasoner = LLMLoopReasoner(provider, system_prompt="Observe safely.", max_step_tokens=128)
+
+    with pytest.raises(RuntimeError) as captured:
+        asyncio.run(reasoner.observe(_task(), ()))
+
+    assert captured.value.code is RuntimeErrorCode.LLM_OUTPUT_INVALID
+    assert len(provider.requests) == 1
+
+
 @pytest.mark.parametrize(
     "content",
     [

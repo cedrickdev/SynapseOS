@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Never, cast
 
@@ -20,7 +21,7 @@ from core.runtime import (
     RuntimeTerminalReason,
     RuntimeTerminalStatus,
 )
-from core.tools import ToolExecutionContext
+from core.tools import ToolAuditError, ToolErrorCode, ToolExecutionContext, ToolResult
 from tests.runtime.fakes import RecordingExecutor, RecordingRuntimeAudit, ScriptedReasoner
 
 
@@ -29,6 +30,7 @@ class BlockingReasoner:
         self.started = asyncio.Event()
         self.cancelled = False
         self.close_calls = 0
+        self.max_step_tokens = 20
 
     async def observe(self, task: object, history: object) -> Never:
         self.started.set()
@@ -50,6 +52,20 @@ class FailingAudit:
     def record(self, record: RuntimeAuditRecord) -> None:
         self.calls += 1
         raise RuntimeError(RuntimeErrorCode.AUDIT_FAILED, "Runtime audit is unavailable.")
+
+    def record_cancellation(self, record: RuntimeAuditRecord) -> None:
+        self.record(record)
+
+
+class FailingToolAuditExecutor(RecordingExecutor):
+    async def execute(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, object],
+        context: ToolExecutionContext,
+    ) -> ToolResult:
+        del tool_name, arguments, context
+        raise ToolAuditError(ToolErrorCode.AUDIT_FAILED, "secret-tool-audit-marker")
 
 
 def _limits(timeout: float = 1.0) -> RuntimeLimits:
@@ -112,9 +128,9 @@ def test_cancellation_is_propagated_after_terminal_audit(tmp_path: Path) -> None
         reasoner = BlockingReasoner()
         audit = RecordingRuntimeAudit()
         running = asyncio.create_task(
-            AgentRuntime(
-                cast(LoopReasoner, reasoner), RecordingExecutor([]), audit, _limits()
-            ).run(task, context)
+            AgentRuntime(cast(LoopReasoner, reasoner), RecordingExecutor([]), audit, _limits()).run(
+                task, context
+            )
         )
         await reasoner.started.wait()
         running.cancel()
@@ -139,9 +155,9 @@ def test_audit_start_failure_prevents_reasoner_call(tmp_path: Path) -> None:
     audit = FailingAudit()
 
     result = asyncio.run(
-        AgentRuntime(
-            cast(LoopReasoner, reasoner), RecordingExecutor([]), audit, _limits()
-        ).run(task, context)
+        AgentRuntime(cast(LoopReasoner, reasoner), RecordingExecutor([]), audit, _limits()).run(
+            task, context
+        )
     )
 
     assert result.status is RuntimeTerminalStatus.FAILED
@@ -175,3 +191,43 @@ def test_failure_history_and_audit_are_bounded_and_secret_free(tmp_path: Path) -
     assert result.report is None
     assert marker not in repr(result)
     assert marker not in repr(audit.records)
+
+
+def test_tool_audit_failure_returns_sanitized_runtime_failure(tmp_path: Path) -> None:
+    from core.runtime import RuntimeAction, RuntimeDecision, RuntimeObservation, RuntimePlan
+
+    task, context = _scope(tmp_path)
+    reasoner = ScriptedReasoner(
+        [
+            RuntimeObservation(summary="Observed"),
+            RuntimePlan(objective="Act", steps=("Act",), success_criteria=("Done",)),
+            RuntimeDecision(
+                action=RuntimeAction.TOOL_CALL,
+                tool_name="read_file",
+                arguments={"path": "README.md"},
+                rationale="Act once",
+                confidence=0.8,
+            ),
+        ]
+    )
+
+    audit = RecordingRuntimeAudit()
+    result = asyncio.run(
+        AgentRuntime(
+            reasoner,
+            FailingToolAuditExecutor([]),
+            audit,
+            _limits(),
+        ).run(task, context)
+    )
+
+    assert result.status is RuntimeTerminalStatus.FAILED
+    assert result.reason is RuntimeTerminalReason.AUDIT_FAILED
+    assert "secret-tool-audit-marker" not in repr(result)
+    failed_steps = [
+        (record.step.value, record.outcome.value, record.error_code)
+        for record in audit.records
+        if record.outcome is RuntimeAuditOutcome.FAILED
+    ]
+    assert ("ACT", "FAILED", ToolErrorCode.AUDIT_FAILED) in failed_steps
+    assert ("OBSERVE_RESULT", "FAILED", ToolErrorCode.AUDIT_FAILED) in failed_steps

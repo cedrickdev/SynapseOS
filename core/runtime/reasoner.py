@@ -50,6 +50,9 @@ _REPORT = (
 class LoopReasoner(Protocol):
     """Provider-neutral structured reasoning operations consumed by AgentRuntime."""
 
+    @property
+    def max_step_tokens(self) -> int: ...
+
     async def observe(
         self,
         task: RuntimeTask,
@@ -99,6 +102,11 @@ class LLMLoopReasoner:
         self._provider = provider
         self._system_prompt = system_prompt
         self._max_step_tokens = max_step_tokens
+
+    @property
+    def max_step_tokens(self) -> int:
+        """Return the authoritative per-call generation ceiling."""
+        return self._max_step_tokens
 
     async def observe(
         self,

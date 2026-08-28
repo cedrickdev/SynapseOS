@@ -17,12 +17,14 @@ class SQLAlchemyRuntimeAuditRecorder:
 
     def __init__(self, session: Session) -> None:
         self._session = session
+        self._validated_scopes: set[tuple[str, object, object, object]] = set()
 
     def record(self, record: RuntimeAuditRecord) -> None:
         """Validate scope and append exactly one allowlisted audit event."""
         validated = self._validate(record)
         if not self._scope_exists(validated):
             raise self._unavailable()
+        self._validated_scopes.add(self._scope_key(validated))
 
         data: dict[str, object] = {
             "iteration": validated.iteration,
@@ -61,6 +63,48 @@ class SQLAlchemyRuntimeAuditRecorder:
             error.__traceback__ = None
             del error
             raise self._unavailable() from None
+
+    def record_cancellation(self, record: RuntimeAuditRecord) -> None:
+        """Stage cancellation after prior scope validation, without database I/O."""
+        validated = self._validate(record)
+        if (
+            validated.outcome is not RuntimeAuditOutcome.CANCELLED
+            or self._scope_key(validated) not in self._validated_scopes
+        ):
+            raise self._unavailable()
+        event = AuditEvent(
+            actor_type=AuditActorType.AGENT,
+            actor_id=validated.agent_id,
+            project_id=validated.project_id,
+            task_id=validated.task_id,
+            agent_run_id=validated.agent_run_id,
+            event_type="AGENT_RUNTIME_STEP",
+            action="execute_agent_loop",
+            resource_type="AGENT_RUNTIME",
+            resource_id=validated.step.value,
+            result=AuditResult.CANCELLED,
+            data={
+                "iteration": validated.iteration,
+                "step": validated.step.value,
+                "outcome": validated.outcome.value,
+                "duration_ms": validated.duration_ms,
+                "tool_calls": validated.tool_calls,
+                "failures": validated.failures,
+                "reported_tokens": validated.reported_tokens,
+                "reason": validated.reason.value if validated.reason is not None else None,
+            },
+            correlation_id=validated.correlation_id,
+        )
+        try:
+            self._session.add(event)
+        except Exception as error:
+            error.__traceback__ = None
+            del error
+            raise self._unavailable() from None
+
+    @staticmethod
+    def _scope_key(record: RuntimeAuditRecord) -> tuple[str, object, object, object]:
+        return (record.agent_id, record.agent_run_id, record.project_id, record.task_id)
 
     def _scope_exists(self, record: RuntimeAuditRecord) -> bool:
         statement = (

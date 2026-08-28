@@ -1,5 +1,6 @@
 """Bounded Developer Agent composition for Phase 14."""
 
+from core.developer.agent import DeveloperAgent
 from core.developer.errors import DeveloperError, DeveloperErrorCode
 from core.developer.evidence import (
     DeveloperEvidenceSnapshot,
@@ -17,6 +18,7 @@ from core.developer.validation import ValidatedDeveloperRequest, validate_develo
 
 __all__ = [
     "ChangedPath",
+    "DeveloperAgent",
     "DeveloperCheckResult",
     "DeveloperError",
     "DeveloperErrorCode",

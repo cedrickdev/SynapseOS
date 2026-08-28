@@ -113,7 +113,7 @@ Assert Linux/macOS approved directories are deterministic, parent secret/proxy/P
 
 - [ ] **Step 7: Verify GREEN and commit**
 
-Run: `.venv/bin/pytest tests/commands/test_policy.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_policy.py -q`
 Expected: PASS without warnings.
 
 Commit: `feat(commands): add immutable command profiles`
@@ -161,7 +161,7 @@ Wrap the complete wait/drain lifecycle in `asyncio.timeout(spec.timeout_seconds)
 
 - [ ] **Step 8: Verify GREEN and commit**
 
-Run: `.venv/bin/pytest tests/commands/test_runner.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_runner.py -q`
 Expected: PASS without warnings and no surviving child process.
 
 Commit: `feat(commands): add bounded local process runner`

@@ -1,7 +1,7 @@
 # Phase 11 Secure Command Runner Design
 
-**Date:** 2026-08-27  
-**Status:** Approved  
+**Date:** 2026-08-27
+**Status:** Approved
 **Scope:** Phase 11 only
 
 ## Objective

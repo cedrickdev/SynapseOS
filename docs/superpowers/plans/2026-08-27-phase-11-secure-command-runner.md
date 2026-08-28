@@ -49,7 +49,7 @@ Assert exact profile values `pytest`, `ruff`, `mypy`, `npm-test`, `npm-build`, `
 
 - [ ] **Step 2: Run RED tests**
 
-Run: `.venv/bin/pytest tests/commands/test_types.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_types.py -q`
 Expected: collection fails because `core.commands` does not exist.
 
 - [ ] **Step 3: Implement minimal contracts**
@@ -66,7 +66,7 @@ Add `command_timeout_seconds` `(0, 30]`, retained stream limits `(0, 1 MiB]`, ma
 
 - [ ] **Step 6: Verify GREEN and commit**
 
-Run: `.venv/bin/pytest tests/commands/test_types.py tests/test_config.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_types.py tests/test_config.py -q`
 Expected: PASS without warnings.
 
 Commit: `feat(commands): define bounded runner contracts`
@@ -92,7 +92,7 @@ Assert the exact ten profile IDs, categories, fixed argv, no mutation API, no du
 
 - [ ] **Step 2: Run RED catalog tests**
 
-Run: `.venv/bin/pytest tests/commands/test_policy.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_policy.py -q`
 Expected: FAIL because infrastructure command policy is missing.
 
 - [ ] **Step 3: Implement the immutable catalog**
@@ -136,7 +136,7 @@ Using fixed test-owned Python scripts as already-resolved vectors, assert exact 
 
 - [ ] **Step 2: Run RED result tests**
 
-Run: `.venv/bin/pytest tests/commands/test_runner.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_runner.py -q`
 Expected: FAIL because `LocalCommandRunner` is missing.
 
 - [ ] **Step 3: Implement one no-shell launch**
@@ -187,7 +187,7 @@ Assert only `profile_id` is accepted; command, args, cwd, environment, timeout, 
 
 - [ ] **Step 2: Run RED declaration tests**
 
-Run: `.venv/bin/pytest tests/tools/test_command_tool.py tests/tools/test_registry.py -q`  
+Run: `.venv/bin/pytest tests/tools/test_command_tool.py tests/tools/test_registry.py -q`
 Expected: FAIL because the command tool is absent.
 
 - [ ] **Step 3: Implement the thin adapter and explicit registry injection**
@@ -200,7 +200,7 @@ Assert policy rejection prevents runner invocation; valid resolution passes the 
 
 - [ ] **Step 5: Verify GREEN and commit**
 
-Run: `.venv/bin/pytest tests/tools/test_command_tool.py tests/tools/test_registry.py tests/skills/test_builtin_skills.py -q`  
+Run: `.venv/bin/pytest tests/tools/test_command_tool.py tests/tools/test_registry.py tests/skills/test_builtin_skills.py -q`
 Expected: PASS without warnings.
 
 Commit: `feat(tools): register secure command profiles`
@@ -224,7 +224,7 @@ Create real Agent/Project/Task/AgentRun rows through migrated PostgreSQL. Assert
 
 - [ ] **Step 2: Run RED integration tests**
 
-Run: `TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/database/test_command_tool_execution.py -q`  
+Run: `TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/database/test_command_tool_execution.py -q`
 Expected: FAIL because command execution is not wired into the audited tool path.
 
 - [ ] **Step 3: Implement only required audit allowlisting**
@@ -237,7 +237,7 @@ Place unique secret markers in stdout, stderr, environment, workspace path, mark
 
 - [ ] **Step 5: Verify GREEN and commit**
 
-Run: `TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/database/test_command_tool_execution.py tests/database/test_permission_tool_execution.py tests/database/test_tool_execution.py -q`  
+Run: `TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/database/test_command_tool_execution.py tests/database/test_permission_tool_execution.py tests/database/test_tool_execution.py -q`
 Expected: PASS without warnings.
 
 Commit: `test(commands): verify audited profile execution`
@@ -261,7 +261,7 @@ Attempt shell metacharacters, newline injection, option injection, executable re
 
 - [ ] **Step 2: Run RED security tests**
 
-Run: `.venv/bin/pytest tests/commands/test_security.py -q`  
+Run: `.venv/bin/pytest tests/commands/test_security.py -q`
 Expected: at least one intended security assertion fails before hardening.
 
 - [ ] **Step 3: Apply minimal hardening**
@@ -274,7 +274,7 @@ Run available Python and Git profiles in disposable managed repositories and ass
 
 - [ ] **Step 5: Verify focused Phase 11 suite and commit**
 
-Run: `.venv/bin/pytest tests/commands tests/tools/test_command_tool.py tests/database/test_command_tool_execution.py -q`  
+Run: `.venv/bin/pytest tests/commands tests/tools/test_command_tool.py tests/database/test_command_tool_execution.py -q`
 Expected: PASS without warnings.
 
 Commit: `test(commands): harden runner isolation`

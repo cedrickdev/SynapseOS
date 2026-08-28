@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 import stat
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -41,6 +42,7 @@ class ManagedWorkspaceFilesystem:
         self._locks = self._initialize_child(".locks")
         self._trash = self._initialize_child(".trash")
         self._transactions = self._initialize_child(".transactions")
+        self._git_metadata = self._initialize_child(".git-metadata")
         self._projects = self._initialize_child("projects")
 
     @property
@@ -275,6 +277,103 @@ class ManagedWorkspaceFilesystem:
         if not isinstance(root, Path) or root != expected:
             raise _unsafe()
         return self._require_direct_directory(expected, self._projects)
+
+    def ensure_managed_git_directory(self, project_id: UUID, root: Path) -> Path:
+        """Atomically separate Git metadata from the agent-visible worktree."""
+        workspace = self.validate_project_root(project_id, root)
+        marker = workspace / ".git"
+        managed = self._project_child(self._git_metadata, project_id)
+        try:
+            marker_mode = os.lstat(marker).st_mode
+        except FileNotFoundError:
+            if managed.exists():
+                self._write_git_pointer(marker, managed)
+                return self._require_direct_directory(managed, self._git_metadata)
+            raise _unsafe() from None
+        except OSError as error:
+            del error
+            raise _unsafe() from None
+        if stat.S_ISLNK(marker_mode):
+            raise _unsafe()
+        if stat.S_ISDIR(marker_mode):
+            try:
+                os.lstat(managed)
+            except FileNotFoundError:
+                pass
+            except OSError as error:
+                del error
+                raise _unsafe() from None
+            else:
+                raise _unsafe()
+            try:
+                marker.rename(managed)
+                self._write_git_pointer(marker, managed)
+            except WorkspaceError:
+                if not marker.exists() and managed.exists():
+                    managed.rename(marker)
+                raise
+            except OSError as error:
+                del error
+                if not marker.exists() and managed.exists():
+                    managed.rename(marker)
+                raise _unsafe() from None
+            return self._require_direct_directory(managed, self._git_metadata)
+        if not stat.S_ISREG(marker_mode):
+            raise _unsafe()
+        canonical = self._require_direct_directory(managed, self._git_metadata)
+        try:
+            if marker.read_text(encoding="utf-8").strip() != f"gitdir: {canonical}":
+                raise ValueError
+        except (OSError, UnicodeError, ValueError) as error:
+            del error
+            raise _unsafe() from None
+        return canonical
+
+    def remove_managed_git_directory(self, project_id: UUID) -> None:
+        """Remove separated metadata during explicit workspace cleanup."""
+        target = self._project_child(self._git_metadata, project_id)
+        try:
+            os.lstat(target)
+        except FileNotFoundError:
+            return
+        except OSError as error:
+            del error
+            raise _unsafe() from None
+        owned = self._require_direct_directory(target, self._git_metadata)
+        try:
+            self._validate_compensation_tree(owned)
+            self._remove_tree(owned, depth=0, maximum_depth=_MAX_COMPENSATION_DEPTH)
+        except WorkspaceError:
+            raise
+        except OSError as error:
+            del error
+            raise _error(WorkspaceErrorCode.CLEANUP_FAILED, "Workspace cleanup failed.") from None
+
+    @staticmethod
+    def _write_git_pointer(marker: Path, managed: Path) -> None:
+        temporary = marker.parent / f".git-pointer-{secrets.token_hex(16)}"
+        descriptor = -1
+        try:
+            descriptor = os.open(
+                temporary,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                0o600,
+            )
+            payload = f"gitdir: {managed}\n".encode()
+            if os.write(descriptor, payload) != len(payload):
+                raise OSError
+            os.fsync(descriptor)
+            os.close(descriptor)
+            descriptor = -1
+            temporary.replace(marker)
+        except OSError as error:
+            del error
+            raise _unsafe() from None
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            with suppress(FileNotFoundError):
+                temporary.unlink()
 
     def _initialize_base(self, requested: Path) -> Path:
         candidate = requested if requested.is_absolute() else Path.cwd() / requested

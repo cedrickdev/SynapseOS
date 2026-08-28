@@ -19,6 +19,12 @@ staging directory and is promoted atomically. Cleanup first moves the root to pr
 then removes it without following symbolic links. Per-project lock directories prevent concurrent
 lifecycle changes.
 
+Phase 11 extends this lifecycle with private `.git-metadata/<project_uuid>` directories. Git
+metadata is separated atomically before read-only command execution, remains outside the
+agent-visible worktree, and is removed by explicit workspace cleanup. The worktree contains only a
+standard gitfile pointer; command execution uses the validated managed path directly rather than
+re-reading that mutable pointer.
+
 Every terminal lifecycle result is appended to PostgreSQL as `WORKSPACE_LIFECYCLE`. A successful
 workspace is not returned if its audit record cannot be written. Failed provisioning is
 compensated, including trees that exceed normal workspace limits; compensation has separate finite

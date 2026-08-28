@@ -163,35 +163,22 @@ def test_policy_opens_profile_markers_without_following_symlinks(
     assert all(flags & os.O_NOFOLLOW for flags in observed_flags)
 
 
-def test_policy_opens_git_directory_without_following_symlinks(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_policy_separates_git_metadata_from_the_agent_visible_workspace(tmp_path: Path) -> None:
     filesystem, root, project_id = _setup(tmp_path)
     (root / ".git").mkdir()
     executable = tmp_path / "trusted-git"
     executable.write_text("#!/bin/sh\n")
     executable.chmod(0o700)
-    real_open = os.open
-    git_flags: list[int] = []
 
-    def recording_open(
-        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
-        flags: int,
-        *args: object,
-        **kwargs: object,
-    ) -> int:
-        if path == ".git":
-            git_flags.append(flags)
-        return real_open(path, flags, *args, **kwargs)  # type: ignore[arg-type]
-
-    monkeypatch.setattr("infrastructure.commands.policy.os.open", recording_open)
-
-    LocalCommandPolicy(filesystem, _limits(), lambda _: executable).resolve(
+    spec = LocalCommandPolicy(filesystem, _limits(), lambda _: executable).resolve(
         CommandProfileId.GIT_STATUS,
         project_id,
         root,
     )
 
-    assert git_flags
-    assert all(flags & os.O_NOFOLLOW and flags & os.O_DIRECTORY for flags in git_flags)
+    managed = filesystem.base_root / ".git-metadata" / str(project_id)
+    assert managed.is_dir()
+    assert not managed.is_relative_to(root)
+    assert (root / ".git").read_text().strip() == f"gitdir: {managed}"
+    assert f"--git-dir={managed}" in spec.arguments
+    assert f"--work-tree={root}" in spec.arguments

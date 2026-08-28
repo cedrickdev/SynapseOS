@@ -14,14 +14,20 @@ owns the executable, arguments, working directory, environment, timeout, and out
 | `npm-test` | test | trusted npm `test --ignore-scripts=false` | bounded `package.json` with `scripts.test` |
 | `npm-build` | build | trusted npm `run build` | bounded `package.json` with `scripts.build` |
 | `php-artisan-test` | test | trusted PHP `artisan test` | bounded `composer.json` and regular `artisan` |
-| `git-status` | Git read | fixed porcelain status | direct `.git` marker |
-| `git-diff` | Git read | fixed hardened worktree diff | direct `.git` marker |
-| `git-diff-staged` | Git read | fixed hardened staged diff | direct `.git` marker |
-| `git-log` | Git read | fixed format and maximum 50 records | direct `.git` marker |
+| `git-status` | Git read | fixed porcelain status | separated managed Git metadata |
+| `git-diff` | Git read | fixed hardened worktree diff | separated managed Git metadata |
+| `git-diff-staged` | Git read | fixed hardened staged diff | separated managed Git metadata |
+| `git-log` | Git read | fixed format and maximum 50 records | separated managed Git metadata |
 
 Repository marker values never become arguments or environment values. Missing, malformed,
 oversized, symlinked, or incompatible markers fail closed. Non-Python executables resolve only from
 fixed application directories and must be canonical executable regular files.
+
+Before the first Git profile runs, SynapseOS atomically moves a direct `.git` directory to the
+private manager-owned `.git-metadata/<project_uuid>` area and replaces it with a standard gitfile.
+Every Git vector receives the fixed managed metadata path and exact worktree path explicitly.
+Replacing the workspace `.git` marker after resolution therefore cannot redirect the command to a
+different repository. Explicit workspace cleanup removes both the worktree and separated metadata.
 
 ## Authorization
 

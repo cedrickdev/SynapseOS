@@ -349,12 +349,15 @@ def test_cleanup_removes_exact_workspace_and_audits_terminal_result(tmp_path: Pa
     manager, filesystem = _manager(tmp_path, audit)
     project_id = uuid4()
     workspace = asyncio.run(manager.create_workspace(project_id, _context(project_id)))
+    (workspace.root / ".git").mkdir()
+    managed_git = filesystem.ensure_managed_git_directory(project_id, workspace.root)
     sibling = tmp_path / "survives"
     sibling.mkdir()
 
     asyncio.run(manager.cleanup_workspace(project_id, _context(project_id)))
 
     assert not workspace.root.exists()
+    assert not managed_git.exists()
     assert sibling.exists()
     assert audit.records[-1].operation is WorkspaceOperation.CLEANUP
     assert audit.records[-1].result is AuditResult.SUCCEEDED

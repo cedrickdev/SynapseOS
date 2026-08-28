@@ -103,3 +103,44 @@ def test_git_status_does_not_execute_repository_configured_fsmonitor(tmp_path: P
 
     assert result.status is CommandTerminalStatus.SUCCEEDED
     assert not marker.exists()
+
+
+def test_git_profile_remains_bound_to_managed_metadata_after_marker_swap(tmp_path: Path) -> None:
+    filesystem, project_id, root = _managed_root(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    for repository, message in ((root, "inside-commit"), (outside, "outside-secret")):
+        subprocess.run(["/usr/bin/git", "init", "--quiet"], cwd=repository, check=True)
+        (repository / "tracked.txt").write_text(message)
+        subprocess.run(["/usr/bin/git", "add", "tracked.txt"], cwd=repository, check=True)
+        subprocess.run(
+            [
+                "/usr/bin/git",
+                "-c",
+                "user.name=SynapseOS Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "commit",
+                "--quiet",
+                "-m",
+                message,
+            ],
+            cwd=repository,
+            check=True,
+        )
+    policy = LocalCommandPolicy(filesystem, _limits())
+    policy.acquire(project_id, root)
+    try:
+        spec = policy.resolve(CommandProfileId.GIT_LOG, project_id, root)
+        marker = root / ".git"
+        original = root / ".git-original"
+        marker.rename(original)
+        marker.symlink_to(outside / ".git")
+
+        result = asyncio.run(LocalCommandRunner().run(spec))
+    finally:
+        policy.release(project_id, root)
+
+    assert result.status is CommandTerminalStatus.SUCCEEDED
+    assert "inside-commit" in result.stdout
+    assert "outside-secret" not in result.stdout

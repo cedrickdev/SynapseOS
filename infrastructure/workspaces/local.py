@@ -154,6 +154,7 @@ class LocalWorkspaceManager:
             self._filesystem.load_workspace(project_id, WorkspaceProvenance.EMPTY)
             trash = self._filesystem.move_to_trash(project_id)
             self._filesystem.remove_owned_tree(trash)
+            self._filesystem.remove_managed_git_directory(project_id)
             self._audit.record(
                 WorkspaceAuditRecord(
                     context=audit,

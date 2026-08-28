@@ -34,6 +34,8 @@ class ManagedRootValidator(Protocol):
 
     def release_lock(self, project_id: UUID) -> None: ...
 
+    def ensure_managed_git_directory(self, project_id: UUID, root: Path) -> Path: ...
+
 
 _TRUSTED_EXECUTABLE_DIRECTORIES = (
     Path("/opt/homebrew/bin"),
@@ -118,19 +120,32 @@ class LocalCommandPolicy:
                 "Command workspace is not allowed.",
             ) from None
         template = self._catalog.template(profile_id)
-        self._require_profile_evidence(template, root)
+        git_directory = self._require_profile_evidence(template, project_id, root)
         executable = self._executable(template)
+        arguments = template.arguments
+        if git_directory is not None:
+            arguments = (
+                *arguments[:4],
+                f"--git-dir={git_directory}",
+                f"--work-tree={root}",
+                *arguments[4:],
+            )
         return CommandSpec(
             profile_id=profile_id,
             category=template.category,
             executable=executable,
-            arguments=template.arguments,
+            arguments=arguments,
             workspace_root=root,
             environment=_ENVIRONMENT,
             limits=self._limits,
         )
 
-    def _require_profile_evidence(self, template: CommandTemplate, root: Path) -> None:
+    def _require_profile_evidence(
+        self,
+        template: CommandTemplate,
+        project_id: UUID,
+        root: Path,
+    ) -> Path | None:
         profile_id = template.profile_id
         if profile_id in {
             CommandProfileId.PYTEST,
@@ -145,19 +160,19 @@ class LocalCommandPolicy:
                 raise _marker_invalid() from None
             if not isinstance(parsed, dict):
                 raise _marker_invalid()
-            return
+            return None
         if profile_id in {CommandProfileId.NPM_TEST, CommandProfileId.NPM_BUILD}:
             parsed = self._read_json_object(root, "package.json")
             scripts = parsed.get("scripts")
             key = "test" if profile_id is CommandProfileId.NPM_TEST else "build"
             if not isinstance(scripts, dict) or not isinstance(scripts.get(key), str):
                 raise _profile_unavailable()
-            return
+            return None
         if profile_id is CommandProfileId.PHP_ARTISAN_TEST:
             self._read_json_object(root, "composer.json")
             self._require_regular_marker(root, "artisan")
-            return
-        self._require_git_marker(root)
+            return None
+        return self._require_git_marker(project_id, root)
 
     def _read_json_object(self, root: Path, name: str) -> dict[str, object]:
         raw = self._read_marker(root, name, required=True)
@@ -207,44 +222,18 @@ class LocalCommandPolicy:
     def _require_regular_marker(self, root: Path, name: str) -> None:
         self._read_marker(root, name, required=True)
 
-    def _require_git_marker(self, root: Path) -> None:
-        root_descriptor = -1
-        git_descriptor = -1
+    def _require_git_marker(self, project_id: UUID, root: Path) -> Path:
         try:
-            root_descriptor = os.open(
-                root,
-                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-            )
-            git_descriptor = os.open(
-                ".git",
-                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                dir_fd=root_descriptor,
-            )
-            if not stat.S_ISDIR(os.fstat(git_descriptor).st_mode):
-                raise _marker_invalid()
-            return
+            os.lstat(root / ".git")
         except FileNotFoundError:
             raise _profile_unavailable() from None
-        except NotADirectoryError:
-            pass
-        except CommandError:
-            raise
         except OSError as error:
             del error
             raise _marker_invalid() from None
-        finally:
-            if git_descriptor >= 0:
-                os.close(git_descriptor)
-            if root_descriptor >= 0:
-                os.close(root_descriptor)
-        data = self._read_marker(root, ".git", required=True)
         try:
-            pointer = data.decode("utf-8").strip()
-        except UnicodeDecodeError as error:
-            del error
+            return self._filesystem.ensure_managed_git_directory(project_id, root)
+        except WorkspaceError:
             raise _marker_invalid() from None
-        if not pointer.startswith("gitdir: ") or not pointer.removeprefix("gitdir: ").strip():
-            raise _marker_invalid()
 
     def _executable(self, template: CommandTemplate) -> Path:
         if template.executable_name is None:

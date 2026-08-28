@@ -53,8 +53,8 @@ audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a 
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
-free-form shell, MCP, multi-agent coordination, QA and security
-  engines, ReviewerAgent, and the frontend remain intentionally unimplemented.
+free-form shell, MCP, multi-agent coordination, QA and security engines, ReviewerAgent, and the
+frontend remain intentionally unimplemented.
 
 What exists today:
 
@@ -86,7 +86,8 @@ What exists today:
   backups, atomic replacement, bounded diffs, risk-aware authorization, audit, and rollback.
 - Ten immutable command profiles with deterministic stack detection, exact managed cwd, sanitized
   environment, bounded concurrent output capture, timeout/cancellation cleanup, and audited
-  `shell.execute` authorization. No arbitrary shell or model-controlled arguments are exposed.
+  persisted `shell.execute` plus `tests.execute` authorization. No arbitrary shell or
+  model-controlled arguments are exposed.
 - A provider-neutral single-agent loop with finite iteration, timeout, failure, tool-call, token,
   history, and stagnation limits, sanitized append-only runtime audit, immediate permission
   escalation, and cancellation propagation.

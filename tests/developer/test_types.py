@@ -74,6 +74,30 @@ def test_check_result_retains_only_deterministic_metadata() -> None:
 
 
 @pytest.mark.parametrize(
+    "changes",
+    [
+        {"category": CommandCategory.BUILD},
+        {"status": CommandTerminalStatus.SUCCEEDED, "exit_code": 1},
+        {"status": CommandTerminalStatus.FAILED, "exit_code": 0},
+    ],
+)
+def test_check_result_rejects_false_or_inconsistent_metadata(
+    changes: dict[str, object],
+) -> None:
+    values: dict[str, object] = {
+        "profile_id": CommandProfileId.PYTEST,
+        "category": CommandCategory.TEST,
+        "status": CommandTerminalStatus.FAILED,
+        "exit_code": 1,
+        "truncated": False,
+    }
+    values.update(changes)
+
+    with pytest.raises(ValidationError):
+        DeveloperCheckResult.model_validate(values)
+
+
+@pytest.mark.parametrize(
     "path", ["/private/repository/file.py", "../secret.py", "src/../secret.py"]
 )
 def test_changed_path_validator_rejects_non_relative_scope(path: str) -> None:

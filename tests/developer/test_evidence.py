@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
 from core.developer.evidence import EvidenceCollectingToolExecutor
 from core.tools import ToolErrorCode, ToolExecutionContext, ToolResult, ToolResultStatus
@@ -156,3 +158,38 @@ def test_wrapper_caps_records_and_retains_only_stable_failure_codes(tmp_path: Pa
     assert snapshot.failures[0] == ("read_file", ToolErrorCode.TOOL_FAILED)
     assert "secret.txt" not in repr(snapshot)
     assert delegate.closed is False
+
+
+@pytest.mark.parametrize(
+    ("returned_tool_name", "arguments", "output_changes"),
+    [
+        ("read_file", {"profile_id": "pytest"}, {}),
+        ("run_command_profile", {"profile_id": "ruff"}, {}),
+        ("run_command_profile", {"profile_id": "pytest"}, {"category": "BUILD"}),
+        (
+            "run_command_profile",
+            {"profile_id": "pytest"},
+            {"terminal_status": "SUCCEEDED", "exit_code": 1},
+        ),
+    ],
+)
+def test_wrapper_discards_unbound_or_inconsistent_command_metadata(
+    tmp_path: Path,
+    returned_tool_name: str,
+    arguments: dict[str, object],
+    output_changes: dict[str, object],
+) -> None:
+    output: dict[str, object] = {
+        "profile_id": "pytest",
+        "category": "TEST",
+        "exit_code": 0,
+        "terminal_status": "SUCCEEDED",
+        "truncated": False,
+    }
+    output.update(output_changes)
+    delegate = _Executor([_result(returned_tool_name, output=output)])
+    wrapper = EvidenceCollectingToolExecutor(delegate)
+
+    asyncio.run(wrapper.execute("run_command_profile", arguments, _context(tmp_path)))
+
+    assert wrapper.snapshot().checks == ()

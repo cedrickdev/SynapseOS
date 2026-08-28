@@ -31,8 +31,10 @@ different repository. Explicit workspace cleanup removes both the worktree and s
 
 ## Authorization
 
-The tool requires an active persisted `shell.execute` grant in the exact project scope. It is
-`HIGH` risk and requires autonomy level 3. Existing cumulative permission rules may impose a
+The tool requires active persisted `shell.execute` and `tests.execute` grants in the exact project
+scope. Requiring both closes the execution boundary for test, lint, and build profiles; read-only
+Git remains available through the dedicated `git_status` and `git_diff` tools with `git.read`.
+The command tool is `HIGH` risk and requires autonomy level 3. Existing cumulative rules may impose a
 stronger decision. `DENY` and `ASK` stop before profile detection or process creation.
 
 ## Process boundary

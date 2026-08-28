@@ -46,7 +46,7 @@ class RunCommandProfileTool(Tool[RunCommandProfileInput]):
     name = "run_command_profile"
     description = "Run one bounded built-in command profile in the managed project workspace."
     input_type = RunCommandProfileInput
-    required_permissions = frozenset({Permission.SHELL_EXECUTE})
+    required_permissions = frozenset({Permission.SHELL_EXECUTE, Permission.TESTS_EXECUTE})
     risk_level = ToolRiskLevel.HIGH
     timeout_seconds = 30.0
 

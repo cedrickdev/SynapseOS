@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from pathlib import PurePosixPath
-from typing import Annotated
+from typing import Annotated, Self
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from core.agents import AgentProfile, AgentReport
 from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
@@ -79,6 +79,27 @@ class DeveloperCheckResult(_ImmutableDeveloperModel):
     status: CommandTerminalStatus
     exit_code: Annotated[int, Field(ge=-255, le=255)]
     truncated: bool
+
+    @model_validator(mode="after")
+    def require_truthful_canonical_metadata(self) -> Self:
+        categories = {
+            CommandProfileId.PYTEST: CommandCategory.TEST,
+            CommandProfileId.NPM_TEST: CommandCategory.TEST,
+            CommandProfileId.PHP_ARTISAN_TEST: CommandCategory.TEST,
+            CommandProfileId.RUFF: CommandCategory.LINT,
+            CommandProfileId.MYPY: CommandCategory.LINT,
+            CommandProfileId.NPM_BUILD: CommandCategory.BUILD,
+            CommandProfileId.GIT_STATUS: CommandCategory.GIT_READ,
+            CommandProfileId.GIT_DIFF: CommandCategory.GIT_READ,
+            CommandProfileId.GIT_DIFF_STAGED: CommandCategory.GIT_READ,
+            CommandProfileId.GIT_LOG: CommandCategory.GIT_READ,
+        }
+        expected_status = (
+            CommandTerminalStatus.SUCCEEDED if self.exit_code == 0 else CommandTerminalStatus.FAILED
+        )
+        if self.category is not categories[self.profile_id] or self.status is not expected_status:
+            raise ValueError("command check metadata is inconsistent")
+        return self
 
 
 class DeveloperResult(_ImmutableDeveloperModel):

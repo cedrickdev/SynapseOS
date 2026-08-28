@@ -42,7 +42,8 @@ A request is rejected before any model, tool, audit, or filesystem work unless:
 The allowlist contains `read_file`, `list_files`, `search_text`, `git_status`, `git_diff`,
 `write_file`, `create_file`, `patch_file`, `delete_file`, and `run_command_profile`. The allowlist
 does not grant authority: tools must still be registered, declared for the run, and allowed by the
-existing permission engine.
+existing permission engine from active persisted grants. Test, lint, and build execution requires
+both persisted `shell.execute` and `tests.execute` grants.
 
 ## Skill context
 
@@ -63,7 +64,9 @@ transaction, audit, and compensation behavior. Tests, linting, and builds run on
 Phase 11 fixed command profiles; the model cannot choose an executable, arguments, working
 directory, environment, timeout, or output limits.
 
-The command runner is an application-level safety boundary, not a hostile-code sandbox. Test and
+Command evidence is bound to the requested profile and validated for canonical profile/category,
+exit-code/status, and returned-tool consistency before it can affect the report. The command runner
+is an application-level safety boundary, not a hostile-code sandbox. Test and
 build profiles execute code from the managed repository. Production use with untrusted source
 still requires a stronger isolated execution backend in its designated future phase.
 

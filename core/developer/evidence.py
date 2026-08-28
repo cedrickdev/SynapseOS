@@ -70,6 +70,8 @@ class EvidenceCollectingToolExecutor:
     def _observe(self, tool_name: str, arguments: Mapping[str, object], result: ToolResult) -> None:
         if self._record_count >= _MAX_EVIDENCE_RECORDS:
             return
+        if result.tool_name != tool_name:
+            return
         if result.status is not ToolResultStatus.SUCCEEDED:
             if result.error_code is not None:
                 self._failures.append((result.tool_name, result.error_code))
@@ -79,7 +81,7 @@ class EvidenceCollectingToolExecutor:
             self._observe_write(arguments)
             return
         if tool_name == "run_command_profile":
-            self._observe_command(result.output)
+            self._observe_command(arguments, result.output)
 
     def _observe_write(self, arguments: Mapping[str, object]) -> None:
         raw_path = arguments.get("path")
@@ -95,7 +97,9 @@ class EvidenceCollectingToolExecutor:
             self._changed_paths.append(path)
         self._record_count += 1
 
-    def _observe_command(self, output: Mapping[str, object]) -> None:
+    def _observe_command(
+        self, arguments: Mapping[str, object], output: Mapping[str, object]
+    ) -> None:
         try:
             raw_profile_id = output["profile_id"]
             raw_category = output["category"]
@@ -115,9 +119,21 @@ class EvidenceCollectingToolExecutor:
                 raise ValueError
             if type(truncated) is not bool:
                 raise ValueError
-        except (KeyError, TypeError, ValueError) as error:
+            requested_profile = arguments["profile_id"]
+            if not isinstance(requested_profile, str) or requested_profile != profile_id.value:
+                raise ValueError
+            check = DeveloperCheckResult(
+                profile_id=profile_id,
+                category=category,
+                status=status,
+                exit_code=exit_code,
+                truncated=truncated,
+            )
+        except (KeyError, TypeError, ValueError, ValidationError) as error:
             error.__traceback__ = None
             del error
             return
-        self._checks.append((profile_id, category, status, exit_code, truncated))
+        self._checks.append(
+            (check.profile_id, check.category, check.status, check.exit_code, check.truncated)
+        )
         self._record_count += 1

@@ -1,6 +1,7 @@
 """Bounded single-agent runtime contracts."""
 
 from core.runtime.errors import RuntimeError, RuntimeErrorCode
+from core.runtime.reasoner import LLMLoopReasoner, LoopReasoner
 from core.runtime.types import (
     ReasonerOutput,
     RuntimeAction,
@@ -21,6 +22,8 @@ from core.runtime.types import (
 
 __all__ = [
     "ReasonerOutput",
+    "LLMLoopReasoner",
+    "LoopReasoner",
     "RuntimeAction",
     "RuntimeDecision",
     "RuntimeError",

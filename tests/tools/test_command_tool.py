@@ -21,7 +21,14 @@ from core.commands import (
     CommandTerminalStatus,
 )
 from core.enums import Permission, ToolRiskLevel
-from core.tools import ToolErrorCode, ToolExecutionContext, ToolInputError, ToolWorkspaceError
+from core.tools import (
+    ToolErrorCode,
+    ToolExecutionContext,
+    ToolInputError,
+    ToolResult,
+    ToolResultStatus,
+    ToolWorkspaceError,
+)
 from infrastructure.tools.command import RunCommandProfileInput, RunCommandProfileTool
 
 
@@ -255,3 +262,57 @@ def test_tool_propagates_cancellation_and_never_owns_collaborators(tmp_path: Pat
         ("release", context.project_id, context.workspace_root),
     ]
     assert not hasattr(policy, "close")
+
+
+def test_release_failure_cannot_replace_runner_cancellation(tmp_path: Path) -> None:
+    context = _context(tmp_path.resolve())
+    spec = _spec(CommandProfileId.PYTEST, context.workspace_root)
+
+    class ReleaseFailingPolicy(RecordingPolicy):
+        def release(self, project_id: UUID, workspace_root: Path) -> None:
+            super().release(project_id, workspace_root)
+            raise CommandError(CommandErrorCode.WORKSPACE_INVALID, "safe release failure")
+
+    class CancellingRunner:
+        async def run(self, requested: CommandSpec) -> CommandResult:
+            assert requested is spec
+            raise asyncio.CancelledError
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(
+            RunCommandProfileTool(ReleaseFailingPolicy(spec), CancellingRunner()).execute(
+                RunCommandProfileInput(profile_id="pytest"),
+                context,
+            )
+        )
+
+
+def test_maximum_command_output_fits_the_global_serialized_result_budget(tmp_path: Path) -> None:
+    context = _context(tmp_path.resolve())
+    spec = _spec(CommandProfileId.PYTEST, context.workspace_root)
+    result = CommandResult(
+        profile_id=CommandProfileId.PYTEST,
+        category=CommandCategory.TEST,
+        exit_code=0,
+        stdout="\0" * 98_304,
+        stderr="\0" * 32_768,
+        stdout_truncated=True,
+        stderr_truncated=True,
+        duration_ms=1.0,
+        status=CommandTerminalStatus.SUCCEEDED,
+    )
+    output = asyncio.run(
+        RunCommandProfileTool(RecordingPolicy(spec), RecordingRunner(result)).execute(
+            RunCommandProfileInput(profile_id="pytest"),
+            context,
+        )
+    )
+
+    ToolResult(
+        tool_name="run_command_profile",
+        status=ToolResultStatus.SUCCEEDED,
+        output=output,
+        duration_ms=1.0,
+        truncated=True,
+        tool_call_id=uuid4(),
+    )

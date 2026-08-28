@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import signal
 import sys
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
@@ -214,6 +215,40 @@ def test_cancellation_terminates_process_and_propagates_immediately(tmp_path: Pa
 
     with pytest.raises(ProcessLookupError):
         os.kill(pid, 0)
+
+
+def test_repeated_cancellation_cannot_interrupt_process_cleanup(tmp_path: Path) -> None:
+    async def scenario() -> int:
+        pid_file = tmp_path / "repeated-cancel.pid"
+        spec = _spec(
+            tmp_path,
+            (
+                "import os, pathlib, signal; "
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                f"pathlib.Path({str(pid_file)!r}).write_text(str(os.getpid())); "
+                "signal.pause()"
+            ),
+            timeout=2.0,
+        )
+        task = asyncio.create_task(LocalCommandRunner().run(spec))
+        async with asyncio.timeout(1.0):
+            while not pid_file.exists():
+                await asyncio.sleep(0.001)
+        task.cancel()
+        await asyncio.sleep(0.02)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        return int(pid_file.read_text())
+
+    pid = asyncio.run(scenario())
+
+    try:
+        with pytest.raises(ProcessLookupError):
+            os.kill(pid, 0)
+    finally:
+        with suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
 
 
 def test_spawn_failure_is_sanitized_and_never_retried(tmp_path: Path) -> None:

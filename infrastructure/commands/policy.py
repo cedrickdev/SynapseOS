@@ -208,22 +208,35 @@ class LocalCommandPolicy:
         self._read_marker(root, name, required=True)
 
     def _require_git_marker(self, root: Path) -> None:
-        target = root / ".git"
+        root_descriptor = -1
+        git_descriptor = -1
         try:
-            mode = os.lstat(target).st_mode
-            if stat.S_ISLNK(mode):
+            root_descriptor = os.open(
+                root,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+            )
+            git_descriptor = os.open(
+                ".git",
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=root_descriptor,
+            )
+            if not stat.S_ISDIR(os.fstat(git_descriptor).st_mode):
                 raise _marker_invalid()
-            if stat.S_ISDIR(mode):
-                return
-            if not stat.S_ISREG(mode):
-                raise _marker_invalid()
+            return
         except FileNotFoundError:
             raise _profile_unavailable() from None
+        except NotADirectoryError:
+            pass
         except CommandError:
             raise
         except OSError as error:
             del error
             raise _marker_invalid() from None
+        finally:
+            if git_descriptor >= 0:
+                os.close(git_descriptor)
+            if root_descriptor >= 0:
+                os.close(root_descriptor)
         data = self._read_marker(root, ".git", required=True)
         try:
             pointer = data.decode("utf-8").strip()

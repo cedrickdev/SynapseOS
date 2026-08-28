@@ -103,9 +103,17 @@ class LocalCommandRunner:
                 ) from None
         except asyncio.CancelledError:
             if process is not None:
-                with suppress(CommandError):
-                    await _stop_process(process, spec.limits.termination_grace_seconds)
-            await _cancel_readers(stdout_task, stderr_task)
+                cleanup_task = asyncio.create_task(
+                    _cleanup_cancelled_process(
+                        process,
+                        spec.limits.termination_grace_seconds,
+                        stdout_task,
+                        stderr_task,
+                    )
+                )
+                await _await_cleanup_despite_cancellation(cleanup_task)
+            else:
+                await _cancel_readers(stdout_task, stderr_task)
             raise
         except CommandError:
             if process is not None and process.returncode is None:
@@ -194,3 +202,26 @@ async def _cancel_readers(
         task.cancel()
     if pending:
         await asyncio.gather(*pending, return_exceptions=True)
+
+
+async def _cleanup_cancelled_process(
+    process: asyncio.subprocess.Process,
+    grace_seconds: float,
+    stdout_task: asyncio.Task[tuple[bytes, bool]] | None,
+    stderr_task: asyncio.Task[tuple[bytes, bool]] | None,
+) -> None:
+    try:
+        with suppress(CommandError):
+            await _stop_process(process, grace_seconds)
+    finally:
+        await _cancel_readers(stdout_task, stderr_task)
+
+
+async def _await_cleanup_despite_cancellation(cleanup_task: asyncio.Task[None]) -> None:
+    while not cleanup_task.done():
+        try:
+            await asyncio.shield(cleanup_task)
+        except asyncio.CancelledError:
+            continue
+    with suppress(CommandError):
+        cleanup_task.result()

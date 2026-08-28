@@ -114,8 +114,8 @@ def test_command_settings_have_finite_bounded_defaults() -> None:
     settings = Settings(_env_file=None)
 
     assert settings.command_timeout_seconds == 30.0
-    assert settings.command_stdout_max_bytes == 196_608
-    assert settings.command_stderr_max_bytes == 65_536
+    assert settings.command_stdout_max_bytes == 98_304
+    assert settings.command_stderr_max_bytes == 32_768
     assert settings.command_marker_max_bytes == 262_144
     assert settings.command_read_chunk_bytes == 65_536
     assert settings.command_termination_grace_seconds == 1.0
@@ -144,8 +144,8 @@ def test_command_settings_are_overridden_by_environment(
 def test_command_settings_reject_an_oversized_combined_stream_budget(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("COMMAND_STDOUT_MAX_BYTES", "196609")
-    monkeypatch.setenv("COMMAND_STDERR_MAX_BYTES", "65536")
+    monkeypatch.setenv("COMMAND_STDOUT_MAX_BYTES", "98305")
+    monkeypatch.setenv("COMMAND_STDERR_MAX_BYTES", "32768")
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None)

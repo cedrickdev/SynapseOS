@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -75,7 +76,15 @@ class RunCommandProfileTool(Tool[RunCommandProfileInput]):
             _raise_tool_error(code)
         finally:
             if acquired:
-                self._policy.release(context.project_id, context.workspace_root)
+                active_exception = sys.exception()
+                try:
+                    self._policy.release(context.project_id, context.workspace_root)
+                except CommandError as error:
+                    code = error.code
+                    error.__traceback__ = None
+                    del error
+                    if active_exception is None:
+                        _raise_tool_error(code)
         truncated = result.stdout_truncated or result.stderr_truncated
         return {
             "profile_id": result.profile_id.value,

@@ -161,3 +161,37 @@ def test_policy_opens_profile_markers_without_following_symlinks(
 
     assert observed_flags
     assert all(flags & os.O_NOFOLLOW for flags in observed_flags)
+
+
+def test_policy_opens_git_directory_without_following_symlinks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    filesystem, root, project_id = _setup(tmp_path)
+    (root / ".git").mkdir()
+    executable = tmp_path / "trusted-git"
+    executable.write_text("#!/bin/sh\n")
+    executable.chmod(0o700)
+    real_open = os.open
+    git_flags: list[int] = []
+
+    def recording_open(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+        *args: object,
+        **kwargs: object,
+    ) -> int:
+        if path == ".git":
+            git_flags.append(flags)
+        return real_open(path, flags, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("infrastructure.commands.policy.os.open", recording_open)
+
+    LocalCommandPolicy(filesystem, _limits(), lambda _: executable).resolve(
+        CommandProfileId.GIT_STATUS,
+        project_id,
+        root,
+    )
+
+    assert git_flags
+    assert all(flags & os.O_NOFOLLOW and flags & os.O_DIRECTORY for flags in git_flags)

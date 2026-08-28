@@ -68,15 +68,15 @@ OS errors, prompts, responses, or automatic command history.
 | Variable | Default | Hard maximum |
 | --- | ---: | ---: |
 | `COMMAND_TIMEOUT_SECONDS` | 30 s | 30 s |
-| `COMMAND_STDOUT_MAX_BYTES` | 192 KiB | 256 KiB |
-| `COMMAND_STDERR_MAX_BYTES` | 64 KiB | 256 KiB |
+| `COMMAND_STDOUT_MAX_BYTES` | 96 KiB | 128 KiB |
+| `COMMAND_STDERR_MAX_BYTES` | 32 KiB | 128 KiB |
 | `COMMAND_MARKER_MAX_BYTES` | 256 KiB | 1 MiB |
 | `COMMAND_READ_CHUNK_BYTES` | 64 KiB | 64 KiB |
 | `COMMAND_TERMINATION_GRACE_SECONDS` | 1 s | 5 s |
 
 All values must be finite and positive. The combined stdout and stderr retention budget cannot
-exceed 256 KiB, keeping the serialized tool result below the platform-wide 1 MiB ceiling even for
-invalid UTF-8 and JSON escaping overhead.
+exceed 128 KiB, keeping the serialized tool result below the platform-wide 1 MiB ceiling even for
+six-byte JSON control-character escaping, invalid UTF-8, and fixed metadata overhead.
 
 ## Security boundary
 

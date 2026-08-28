@@ -72,7 +72,7 @@ def test_limits_reject_unbounded_resources(field: str, value: float | int) -> No
 
 def test_limits_reject_a_combined_stream_budget_above_tool_result_capacity() -> None:
     with pytest.raises(ValidationError):
-        _limits(stdout_max_bytes=196_609, stderr_max_bytes=65_536)
+        _limits(stdout_max_bytes=98_305, stderr_max_bytes=32_768)
 
 
 def test_spec_copies_mutable_inputs_and_exposes_immutable_values(tmp_path: Path) -> None:

@@ -49,8 +49,8 @@ class CommandLimits(_ImmutableCommandModel):
     """Finite resource limits applied to one command invocation."""
 
     timeout_seconds: Annotated[float, Field(gt=0.0, le=30.0, allow_inf_nan=False)]
-    stdout_max_bytes: Annotated[int, Field(ge=1, le=262_144)]
-    stderr_max_bytes: Annotated[int, Field(ge=1, le=262_144)]
+    stdout_max_bytes: Annotated[int, Field(ge=1, le=131_072)]
+    stderr_max_bytes: Annotated[int, Field(ge=1, le=131_072)]
     marker_max_bytes: Annotated[int, Field(ge=1, le=1_048_576)]
     read_chunk_bytes: Annotated[int, Field(ge=1, le=65_536)]
     termination_grace_seconds: Annotated[
@@ -60,7 +60,7 @@ class CommandLimits(_ImmutableCommandModel):
 
     @model_validator(mode="after")
     def require_bounded_combined_streams(self) -> Self:
-        if self.stdout_max_bytes + self.stderr_max_bytes > 262_144:
+        if self.stdout_max_bytes + self.stderr_max_bytes > 131_072:
             raise ValueError("combined command stream budget is too large")
         return self
 

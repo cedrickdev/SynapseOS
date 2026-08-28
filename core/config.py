@@ -59,8 +59,8 @@ class Settings(BaseSettings):
     write_max_diff_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
     write_timeout_seconds: float = Field(default=10.0, gt=0.0, le=60.0, allow_inf_nan=False)
     command_timeout_seconds: float = Field(default=30.0, gt=0.0, le=30.0, allow_inf_nan=False)
-    command_stdout_max_bytes: int = Field(default=196_608, ge=1, le=262_144)
-    command_stderr_max_bytes: int = Field(default=65_536, ge=1, le=262_144)
+    command_stdout_max_bytes: int = Field(default=98_304, ge=1, le=131_072)
+    command_stderr_max_bytes: int = Field(default=32_768, ge=1, le=131_072)
     command_marker_max_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
     command_read_chunk_bytes: int = Field(default=65_536, ge=1, le=65_536)
     command_termination_grace_seconds: float = Field(
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def require_bounded_command_streams(self) -> Self:
-        if self.command_stdout_max_bytes + self.command_stderr_max_bytes > 262_144:
+        if self.command_stdout_max_bytes + self.command_stderr_max_bytes > 131_072:
             raise ValueError("combined command stream budget is too large")
         return self
 

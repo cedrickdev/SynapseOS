@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from core.agents import AgentReportOutcome
-from core.commands import CommandCategory, CommandTerminalStatus
+from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
 from core.reviewer import (
     FindingSeverity,
     ReviewAnalysis,
@@ -134,6 +134,20 @@ def test_gate_downgrades_each_disqualifying_condition(
     assert result.findings[-1].severity is FindingSeverity.HIGH
 
 
+def test_gate_rejects_a_required_profile_that_has_no_check_result() -> None:
+    """Prevent the supplied check set from defining its own completeness."""
+    request = _request(
+        required_check_profiles=(CommandProfileId.PYTEST, CommandProfileId.RUFF),
+    )
+
+    result = build_reviewer_result(request, _analysis())
+
+    assert result.decision is ReviewDecision.CHANGES_REQUESTED
+    assert any(
+        finding.rationale == "Required review checks are missing." for finding in result.findings
+    )
+
+
 def test_gate_never_upgrades_a_model_rejection() -> None:
     """Prevent the deterministic gate from turning requested changes into approval."""
     result = build_reviewer_result(_request(), _analysis(decision=ReviewDecision.CHANGES_REQUESTED))
@@ -171,3 +185,17 @@ def test_gate_caps_synthetic_blockers_without_dropping_model_findings() -> None:
     assert result.findings[:63] == model_findings
     assert len(result.findings) == 64
     assert result.findings[-1].category == "review-gate"
+
+
+def test_gate_retains_a_deterministic_blocker_when_model_fills_finding_budget() -> None:
+    """Prevent a full model result from hiding why deterministic approval was denied."""
+    model_findings = tuple(_finding() for _ in range(64))
+
+    result = build_reviewer_result(
+        _request(),
+        _analysis(findings=model_findings, confidence=0.69),
+    )
+
+    assert len(result.findings) == 64
+    assert result.findings[-1].category == "review-gate"
+    assert result.findings[:-1] == model_findings[:-1]

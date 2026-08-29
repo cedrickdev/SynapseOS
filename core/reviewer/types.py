@@ -161,10 +161,13 @@ class ReviewerRequest(_ImmutableReviewerModel):
     task_description: TaskDescription
     acceptance_criteria: Annotated[tuple[Criterion, ...], Field(min_length=1, max_length=16)]
     diff: Diff
+    required_check_profiles: Annotated[
+        tuple[CommandProfileId, ...], Field(min_length=1, max_length=10)
+    ]
     checks: Annotated[tuple[ReviewCheck, ...], Field(min_length=1, max_length=16)]
     developer_report: AgentReport
 
-    @field_validator("acceptance_criteria", "checks", mode="before")
+    @field_validator("acceptance_criteria", "required_check_profiles", "checks", mode="before")
     @classmethod
     def copy_sequences(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
@@ -176,6 +179,15 @@ class ReviewerRequest(_ImmutableReviewerModel):
     def require_unique_acceptance_criteria(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         if len(set(value)) != len(value):
             raise ValueError("acceptance criteria must be unique")
+        return value
+
+    @field_validator("required_check_profiles")
+    @classmethod
+    def require_unique_required_check_profiles(
+        cls, value: tuple[CommandProfileId, ...]
+    ) -> tuple[CommandProfileId, ...]:
+        if len(set(value)) != len(value):
+            raise ValueError("required check profiles must be unique")
         return value
 
     @field_validator("checks")

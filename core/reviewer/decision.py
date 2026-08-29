@@ -94,7 +94,7 @@ def _deterministic_blockers(
         codes.append("identities")
     if request.developer_report.outcome is not AgentReportOutcome.SUCCEEDED:
         codes.append("developer-report")
-    codes.extend(_check_blocker_codes(request.checks))
+    codes.extend(_check_blocker_codes(request.required_check_profiles, request.checks))
     if any(
         finding.severity in {FindingSeverity.HIGH, FindingSeverity.CRITICAL}
         for finding in analysis.findings
@@ -107,7 +107,9 @@ def _deterministic_blockers(
     return tuple(_blocker(code) for code in codes)
 
 
-def _check_blocker_codes(checks: tuple[ReviewCheck, ...]) -> tuple[str, ...]:
+def _check_blocker_codes(
+    required_profiles: tuple[CommandProfileId, ...], checks: tuple[ReviewCheck, ...]
+) -> tuple[str, ...]:
     """Index checks by profile and reject missing, malformed, or incomplete evidence."""
     checks_by_profile: dict[CommandProfileId, ReviewCheck] = {}
     inconsistent = False
@@ -119,8 +121,7 @@ def _check_blocker_codes(checks: tuple[ReviewCheck, ...]) -> tuple[str, ...]:
     if not checks_by_profile:
         return ("missing-checks",)
 
-    required_profiles = tuple(check.profile_id for check in checks)
-    missing = False
+    missing = not required_profiles
     truncated = False
     failed = False
     for profile in required_profiles:
@@ -164,9 +165,9 @@ def _append_blockers(
     model_findings: tuple[ReviewFinding, ...], blockers: tuple[ReviewFinding, ...]
 ) -> tuple[ReviewFinding, ...]:
     """Retain model order and append only the synthetic findings that fit."""
-    retained = list(model_findings[:_MAX_FINDINGS])
-    retained.extend(blockers[: _MAX_FINDINGS - len(retained)])
-    return tuple(retained)
+    retained_blockers = blockers[:_MAX_FINDINGS]
+    model_budget = _MAX_FINDINGS - len(retained_blockers)
+    return model_findings[:model_budget] + retained_blockers
 
 
 def _blocker(code: str) -> ReviewFinding:

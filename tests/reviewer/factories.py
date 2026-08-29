@@ -52,6 +52,7 @@ def request_values() -> dict[str, object]:
         "task_description": "Correct the faulty addition implementation.",
         "acceptance_criteria": ("The existing test suite passes.",),
         "diff": "--- a/src/add.py\n+++ b/src/add.py\n@@ -1 +1 @@\n-return 0\n+return a + b\n",
+        "required_check_profiles": (CommandProfileId.PYTEST,),
         "checks": (
             {
                 "profile_id": CommandProfileId.PYTEST,

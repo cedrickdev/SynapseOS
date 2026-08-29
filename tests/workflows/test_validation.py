@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -15,10 +16,11 @@ from core.workflows import (
     DeveloperReviewerWorkflowRequest,
     WorkflowError,
     WorkflowErrorCode,
+    WorkflowHandoffContext,
     validate_workflow_request,
 )
 from infrastructure.database.models import AuditEvent, Task
-from tests.workflows.factories import persisted_workflow_request
+from tests.workflows.factories import handoff_context_values, persisted_workflow_request
 
 pytest_plugins = ("tests.database.conftest",)
 
@@ -31,6 +33,7 @@ def _assert_rejected_without_side_effects(
 ) -> None:
     """Ensure preflight never assigns, audits, or invokes later workflow stages."""
     original_status = task.status
+    original_assigned_agent_id = task.assigned_agent_id
     audit_count = session.scalar(select(func.count()).select_from(AuditEvent))
 
     with pytest.raises(WorkflowError) as raised:
@@ -38,7 +41,7 @@ def _assert_rejected_without_side_effects(
 
     assert raised.value.code is expected_code
     assert task.status is original_status
-    assert task.assigned_agent_id is None
+    assert task.assigned_agent_id == original_assigned_agent_id
     assert session.scalar(select(func.count()).select_from(AuditEvent)) == audit_count
 
 
@@ -72,6 +75,30 @@ def test_validation_rejects_a_type_confused_request_before_persistence_side_effe
 ) -> None:
     """Prevent model_copy() corruption from bypassing the public workflow boundary."""
     task, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    forged = request.model_copy(update={"task_id": "not-a-uuid"})
+
+    _assert_rejected_without_side_effects(db_session, task, forged, WorkflowErrorCode.INVALID_INPUT)
+
+
+def test_validation_rejects_a_non_exact_top_level_object() -> None:
+    """Prevent arbitrary objects from reaching request canonicalization."""
+    with pytest.raises(WorkflowError) as raised:
+        validate_workflow_request(None, object())  # type: ignore[arg-type]
+
+    assert raised.value.code is WorkflowErrorCode.INVALID_INPUT
+
+
+def test_validation_preserves_a_preexisting_ready_assignment_on_rejection(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Prevent rejected preflight from clearing a READY task's existing assignment."""
+    task, developer, _, request = persisted_workflow_request(
+        db_session,
+        tmp_path,
+        task_overrides={"assigned_agent_id": None},
+    )
+    task.assigned_agent_id = developer.id
+    db_session.flush()
     forged = request.model_copy(update={"task_id": "not-a-uuid"})
 
     _assert_rejected_without_side_effects(db_session, task, forged, WorkflowErrorCode.INVALID_INPUT)
@@ -256,6 +283,30 @@ def test_validation_rejects_unrepresentable_persistent_task_content_before_side_
     _assert_rejected_without_side_effects(
         db_session, task, request, WorkflowErrorCode.INVALID_SCOPE
     )
+
+
+def test_validation_rejects_an_overlong_persistent_criterion_without_side_effects(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Prevent persisted criteria outside the 1,024-character handoff bound from reaching agents."""
+    task, _, _, request = persisted_workflow_request(
+        db_session,
+        tmp_path,
+        task_overrides={"acceptance_criteria": ["x" * 1025]},
+    )
+
+    _assert_rejected_without_side_effects(
+        db_session, task, request, WorkflowErrorCode.INVALID_SCOPE
+    )
+
+
+def test_handoff_context_rejects_a_criterion_above_its_persistent_bound() -> None:
+    """Prevent a relaxed handoff criterion bound from accepting stored overlong task content."""
+    values = handoff_context_values()
+    values["acceptance_criteria"] = ["x" * 1025]
+
+    with pytest.raises(ValidationError):
+        WorkflowHandoffContext.model_validate(values)
 
 
 @pytest.mark.parametrize(

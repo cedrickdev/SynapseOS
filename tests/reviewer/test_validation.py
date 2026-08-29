@@ -17,6 +17,13 @@ from core.reviewer import (
 from tests.reviewer.factories import request_values, reviewer_profile
 
 
+class _NonEqualIdentifier(str):
+    """A hostile identifier that lies only to non-equality checks."""
+
+    def __ne__(self, value: object) -> bool:
+        return True
+
+
 def _request(**overrides: object) -> ReviewerRequest:
     values = request_values()
     values.update(overrides)
@@ -31,6 +38,55 @@ def test_validation_rejects_self_review() -> None:
         validate_reviewer_request(request)
 
     assert raised.value.code is ReviewerErrorCode.INVALID_SCOPE
+
+
+def test_validation_rejects_a_model_copy_self_review_with_hostile_non_equality() -> None:
+    """Prevent a string subclass from bypassing independent-review enforcement."""
+    request = _request().model_copy(update={"developer_id": _NonEqualIdentifier("reviewer-01")})
+
+    with pytest.raises(ReviewerError) as raised:
+        validate_reviewer_request(request)
+
+    assert raised.value.code is ReviewerErrorCode.INVALID_SCOPE
+
+
+def test_validation_uses_the_canonical_request_for_a_serializable_profile_mapping() -> None:
+    """Prevent valid mapping-shaped profile data from reaching attribute access unnormalized."""
+    request = _request().model_copy(
+        update={"profile": reviewer_profile().model_dump(mode="python")}
+    )
+
+    validated = validate_reviewer_request(request)
+
+    assert validated.request is not request
+    assert validated.request.profile.id == "reviewer-01"
+    assert validated.request.profile.tool_ids == frozenset(
+        {"read_file", "list_files", "search_text", "git_status", "git_diff"}
+    )
+
+
+def test_validation_uses_the_canonical_request_for_a_list_backed_tool_set() -> None:
+    """Prevent list-shaped tools from reaching set-only authority checks unnormalized."""
+    profile = reviewer_profile().model_copy(update={"tool_ids": ["read_file"]})
+    request = _request().model_copy(update={"profile": profile})
+
+    validated = validate_reviewer_request(request)
+
+    assert validated.request is not request
+    assert validated.request.profile.tool_ids == frozenset({"read_file"})
+
+
+def test_validation_sanitizes_unknown_list_backed_tools() -> None:
+    """Prevent malformed list-shaped authority from leaking through a raw exception."""
+    rejected_tool = "reviewer-source-content-must-not-leak"
+    profile = reviewer_profile().model_copy(update={"tool_ids": ["read_file", rejected_tool]})
+    request = _request().model_copy(update={"profile": profile})
+
+    with pytest.raises(ReviewerError) as raised:
+        validate_reviewer_request(request)
+
+    assert raised.value.code is ReviewerErrorCode.INVALID_TOOLS
+    assert rejected_tool not in str(raised.value)
 
 
 @pytest.mark.parametrize(
@@ -169,7 +225,8 @@ def test_valid_active_reviewer_returns_immutable_canonical_authority(
 
     validated = validate_reviewer_request(request)
 
-    assert validated.request is request
+    assert validated.request is not request
+    assert validated.request.model_dump(mode="python") == request.model_dump(mode="python")
     assert validated.permissions == expected_permissions
     with pytest.raises(FrozenInstanceError):
         validated.permissions = frozenset()  # type: ignore[misc]

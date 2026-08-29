@@ -15,6 +15,7 @@ REVIEWER_TOOL_IDS = frozenset({"read_file", "list_files", "search_text", "git_st
 _ACTIVE_STATUSES = frozenset({AgentStatus.ASSIGNED, AgentStatus.WORKING})
 _ALLOWED_PERMISSIONS = frozenset({Permission.FILESYSTEM_READ, Permission.GIT_READ})
 _IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,127}$")
+_SCOPE_FIELDS = frozenset({"task_id", "project_id", "developer_id", "reviewer_id"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,15 +30,15 @@ def validate_reviewer_request(request: ReviewerRequest) -> ValidatedReviewerRequ
     """Reject invalid Reviewer authority and scope before collaborators are invoked."""
     if type(request) is not ReviewerRequest:
         raise ReviewerError(ReviewerErrorCode.INVALID_INPUT)
-    if not _has_consistent_scope(request):
+    canonical_request = _canonicalize_request(request)
+    if not _has_consistent_scope(canonical_request):
         raise ReviewerError(ReviewerErrorCode.INVALID_SCOPE)
-    _require_valid_request(request)
-    profile = request.profile
+    profile = canonical_request.profile
     if profile.role != "Reviewer":
         raise ReviewerError(ReviewerErrorCode.INVALID_ROLE)
     if profile.status not in _ACTIVE_STATUSES:
         raise ReviewerError(ReviewerErrorCode.INACTIVE_AGENT)
-    if profile.id != request.reviewer_id:
+    if profile.id != canonical_request.reviewer_id:
         raise ReviewerError(ReviewerErrorCode.INVALID_SCOPE)
     permissions = _canonical_permissions(profile.permission_ids)
     if Permission.FILESYSTEM_READ not in permissions or not permissions.issubset(
@@ -46,7 +47,7 @@ def validate_reviewer_request(request: ReviewerRequest) -> ValidatedReviewerRequ
         raise ReviewerError(ReviewerErrorCode.INVALID_PERMISSION)
     if not profile.tool_ids.issubset(REVIEWER_TOOL_IDS):
         raise ReviewerError(ReviewerErrorCode.INVALID_TOOLS)
-    return ValidatedReviewerRequest(request=request, permissions=permissions)
+    return ValidatedReviewerRequest(request=canonical_request, permissions=permissions)
 
 
 def _has_consistent_scope(request: ReviewerRequest) -> bool:
@@ -61,10 +62,14 @@ def _has_consistent_scope(request: ReviewerRequest) -> bool:
     )
 
 
-def _require_valid_request(request: ReviewerRequest) -> None:
+def _canonicalize_request(request: ReviewerRequest) -> ReviewerRequest:
     try:
-        ReviewerRequest.model_validate(request.model_dump(warnings=False))
-    except (TypeError, ValidationError):
+        return ReviewerRequest.model_validate(request.model_dump(mode="python", warnings=False))
+    except ValidationError as error:
+        if any(detail["loc"][0] in _SCOPE_FIELDS for detail in error.errors()):
+            raise ReviewerError(ReviewerErrorCode.INVALID_SCOPE) from None
+        raise ReviewerError(ReviewerErrorCode.INVALID_INPUT) from None
+    except Exception:
         raise ReviewerError(ReviewerErrorCode.INVALID_INPUT) from None
 
 

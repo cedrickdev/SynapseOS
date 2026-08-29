@@ -46,6 +46,14 @@ NonblankTaskTitle = Annotated[TaskTitle, AfterValidator(_require_nonblank)]
 NonblankTaskDescription = Annotated[TaskDescription, AfterValidator(_require_nonblank)]
 
 
+def _canonicalize_nested_model[ModelT: BaseModel](
+    value: object, model_type: type[ModelT]
+) -> ModelT:
+    if isinstance(value, BaseModel):
+        return model_type.model_validate(value.model_dump(mode="python", warnings=False))
+    return model_type.model_validate(value)
+
+
 class WorkflowOutcome(StrEnum):
     """The only terminal outcomes the Phase 16 workflow may report."""
 
@@ -77,9 +85,25 @@ class DeveloperReviewerWorkflowRequest(_ImmutableWorkflowModel):
     timeout_seconds: Annotated[float, Field(gt=0.0, le=3600.0, allow_inf_nan=False)]
     correlation_id: UUID
 
+    @field_validator("developer_request", mode="before")
+    @classmethod
+    def canonicalize_developer_request(cls, value: object) -> DeveloperRequest:
+        return _canonicalize_nested_model(value, DeveloperRequest)
+
+    @field_validator("reviewer_profile", mode="before")
+    @classmethod
+    def canonicalize_reviewer_profile(cls, value: object) -> AgentProfile:
+        return _canonicalize_nested_model(value, AgentProfile)
+
+    @model_validator(mode="after")
+    def require_distinct_persistent_agent_ids(self) -> Self:
+        if self.developer_agent_id == self.reviewer_agent_id:
+            raise ValueError("developer and reviewer agents must be distinct")
+        return self
+
 
 class WorkflowHandoffContext(_ImmutableWorkflowModel):
-    """Bounded persistent scope used to build one independent Reviewer request."""
+    """Bounded transient validated scope used to build one independent Reviewer request."""
 
     task_id: CanonicalUUIDText
     project_id: CanonicalUUIDText
@@ -101,6 +125,11 @@ class WorkflowHandoffContext(_ImmutableWorkflowModel):
         if isinstance(value, (list, tuple)):
             return tuple(value)
         return value
+
+    @field_validator("reviewer_profile", mode="before")
+    @classmethod
+    def canonicalize_reviewer_profile(cls, value: object) -> AgentProfile:
+        return _canonicalize_nested_model(value, AgentProfile)
 
     @field_validator("acceptance_criteria")
     @classmethod
@@ -124,11 +153,22 @@ class DeveloperReviewerWorkflowResult(_ImmutableWorkflowModel):
 
     task_status: TaskStatus
     outcome: WorkflowOutcome
+    max_review_cycles: Annotated[int, Field(ge=1, le=10)]
     developer_cycles: Annotated[int, Field(ge=1, le=10)]
     reviewer_cycles: Annotated[int, Field(ge=1, le=10)]
     developer_report: AgentReport
     reviewer_result: ReviewerResult
     correlation_id: UUID
+
+    @field_validator("developer_report", mode="before")
+    @classmethod
+    def canonicalize_developer_report(cls, value: object) -> AgentReport:
+        return _canonicalize_nested_model(value, AgentReport)
+
+    @field_validator("reviewer_result", mode="before")
+    @classmethod
+    def canonicalize_reviewer_result(cls, value: object) -> ReviewerResult:
+        return _canonicalize_nested_model(value, ReviewerResult)
 
     @model_validator(mode="after")
     def require_truthful_terminal_result(self) -> Self:
@@ -140,6 +180,13 @@ class DeveloperReviewerWorkflowResult(_ImmutableWorkflowModel):
             raise ValueError("workflow terminal status and outcome are inconsistent")
         if self.developer_cycles != self.reviewer_cycles:
             raise ValueError("developer and reviewer cycle counts must match")
+        if self.developer_cycles > self.max_review_cycles:
+            raise ValueError("workflow cycle counts exceed the configured limit")
+        if (
+            self.outcome is WorkflowOutcome.REVIEW_CYCLES_EXHAUSTED
+            and self.developer_cycles != self.max_review_cycles
+        ):
+            raise ValueError("exhausted workflow cycle counts must equal the configured limit")
         expected_decision = (
             ReviewDecision.APPROVED
             if self.outcome is WorkflowOutcome.APPROVED

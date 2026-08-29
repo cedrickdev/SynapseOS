@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
+from core.agents import AgentProfile, AgentReportOutcome
 from core.enums import TaskStatus
 from core.reviewer import ReviewDecision
 from core.workflows import (
@@ -72,6 +73,40 @@ def test_request_public_validation_rejects_a_type_confused_model_copy(tmp_path: 
         DeveloperReviewerWorkflowRequest.model_validate(forged)
 
 
+def test_request_rejects_equal_persistent_developer_and_reviewer_agent_ids(tmp_path: Path) -> None:
+    """Prevent a single persistent agent from being assigned to author and review one task."""
+    values = workflow_request_values(tmp_path)
+    values["reviewer_agent_id"] = values["developer_agent_id"]
+
+    with pytest.raises(ValidationError):
+        DeveloperReviewerWorkflowRequest.model_validate(values)
+
+
+def test_request_revalidates_forged_nested_developer_request_and_reviewer_profile(
+    tmp_path: Path,
+) -> None:
+    """Prevent model_copy() corruption from surviving the public workflow request boundary."""
+    request = DeveloperReviewerWorkflowRequest.model_validate(workflow_request_values(tmp_path))
+    forged_developer_request = request.developer_request.model_copy(
+        update={"required_check_profiles": ("unbounded-profile",)}
+    )
+    forged_reviewer_profile = request.reviewer_profile.model_copy(update={"autonomy_level": 6})
+
+    with pytest.raises(ValidationError) as error:
+        DeveloperReviewerWorkflowRequest.model_validate(
+            request.model_copy(
+                update={
+                    "developer_request": forged_developer_request,
+                    "reviewer_profile": forged_reviewer_profile,
+                }
+            )
+        )
+    assert {issue["loc"][0] for issue in error.value.errors()} == {
+        "developer_request",
+        "reviewer_profile",
+    }
+
+
 def test_handoff_context_copies_collections_and_requires_canonical_uuid_text() -> None:
     """Prevent later handoff construction from retaining mutable or ambiguous scope data."""
     values = handoff_context_values()
@@ -106,6 +141,7 @@ def test_result_rejects_untruthful_terminal_status_and_outcome_pairs(
         DeveloperReviewerWorkflowResult(
             task_status=task_status,
             outcome=outcome,
+            max_review_cycles=1,
             developer_cycles=1,
             reviewer_cycles=1,
             developer_report=completed_developer_report(),
@@ -123,6 +159,7 @@ def test_result_requires_equal_nonzero_completed_agent_cycles(
         DeveloperReviewerWorkflowResult(
             task_status=TaskStatus.WAITING_QA,
             outcome=WorkflowOutcome.APPROVED,
+            max_review_cycles=2,
             developer_cycles=developer_cycles,
             reviewer_cycles=reviewer_cycles,
             developer_report=completed_developer_report(),
@@ -156,10 +193,95 @@ def test_result_requires_its_final_reviewer_decision_to_match_its_outcome(
         DeveloperReviewerWorkflowResult(
             task_status=task_status,
             outcome=outcome,
+            max_review_cycles=1,
             developer_cycles=1,
             reviewer_cycles=1,
             developer_report=completed_developer_report(),
             reviewer_result=final_reviewer_result,
+            correlation_id=uuid4(),
+        )
+
+
+def test_result_revalidates_forged_nested_report_and_reviewer_values() -> None:
+    """Prevent raw nested values from surviving public terminal-result construction."""
+    result = DeveloperReviewerWorkflowResult(
+        task_status=TaskStatus.WAITING_QA,
+        outcome=WorkflowOutcome.APPROVED,
+        max_review_cycles=1,
+        developer_cycles=1,
+        reviewer_cycles=1,
+        developer_report=completed_developer_report(),
+        reviewer_result=approved_reviewer_result(),
+        correlation_id=uuid4(),
+    )
+    forged_report = result.developer_report.model_copy(update={"outcome": "SUCCEEDED"})
+    forged_reviewer_result = result.reviewer_result.model_copy(
+        update={"decision": "APPROVED", "confidence": "0.95"}
+    )
+
+    revalidated = DeveloperReviewerWorkflowResult.model_validate(
+        result.model_copy(
+            update={
+                "developer_report": forged_report,
+                "reviewer_result": forged_reviewer_result,
+            }
+        )
+    )
+
+    assert revalidated.developer_report.outcome is AgentReportOutcome.SUCCEEDED
+    assert revalidated.reviewer_result.decision is ReviewDecision.APPROVED
+    assert type(revalidated.reviewer_result.confidence) is float
+    assert revalidated.reviewer_result.confidence == 0.95
+
+
+@pytest.mark.parametrize("max_review_cycles", [0, 11])
+def test_result_rejects_review_cycle_limits_outside_workflow_bounds(max_review_cycles: int) -> None:
+    """Prevent terminal results from retaining an unbounded configured review limit."""
+    with pytest.raises(ValidationError):
+        DeveloperReviewerWorkflowResult(
+            task_status=TaskStatus.WAITING_QA,
+            outcome=WorkflowOutcome.APPROVED,
+            max_review_cycles=max_review_cycles,
+            developer_cycles=1,
+            reviewer_cycles=1,
+            developer_report=completed_developer_report(),
+            reviewer_result=approved_reviewer_result(),
+            correlation_id=uuid4(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("task_status", "outcome", "max_review_cycles", "cycles", "reviewer_decision"),
+    [
+        (TaskStatus.WAITING_QA, WorkflowOutcome.APPROVED, 1, 2, ReviewDecision.APPROVED),
+        (
+            TaskStatus.WAITING_HUMAN,
+            WorkflowOutcome.REVIEW_CYCLES_EXHAUSTED,
+            2,
+            1,
+            ReviewDecision.CHANGES_REQUESTED,
+        ),
+    ],
+)
+def test_result_requires_cycles_to_truthfully_match_the_configured_limit(
+    task_status: TaskStatus,
+    outcome: WorkflowOutcome,
+    max_review_cycles: int,
+    cycles: int,
+    reviewer_decision: ReviewDecision,
+) -> None:
+    """Prevent approval overruns and premature cycle-exhausted terminal results."""
+    with pytest.raises(ValidationError):
+        DeveloperReviewerWorkflowResult(
+            task_status=task_status,
+            outcome=outcome,
+            max_review_cycles=max_review_cycles,
+            developer_cycles=cycles,
+            reviewer_cycles=cycles,
+            developer_report=completed_developer_report(),
+            reviewer_result=approved_reviewer_result().model_copy(
+                update={"decision": reviewer_decision}
+            ),
             correlation_id=uuid4(),
         )
 
@@ -169,6 +291,7 @@ def test_result_retains_only_final_reports_and_scalar_metadata() -> None:
     result = DeveloperReviewerWorkflowResult(
         task_status=TaskStatus.WAITING_QA,
         outcome=WorkflowOutcome.APPROVED,
+        max_review_cycles=1,
         developer_cycles=1,
         reviewer_cycles=1,
         developer_report=completed_developer_report(),
@@ -179,6 +302,7 @@ def test_result_retains_only_final_reports_and_scalar_metadata() -> None:
     assert set(result.model_dump()) == {
         "task_status",
         "outcome",
+        "max_review_cycles",
         "developer_cycles",
         "reviewer_cycles",
         "developer_report",
@@ -188,17 +312,43 @@ def test_result_retains_only_final_reports_and_scalar_metadata() -> None:
     assert result.reviewer_result.decision is ReviewDecision.APPROVED
 
 
+def test_terminal_result_never_retains_handoff_reviewer_profile_or_system_prompt() -> None:
+    """Prevent transient handoff profile data from becoming terminal workflow history."""
+    profile_marker = "transient reviewer instruction must not enter terminal history"
+    context_values = handoff_context_values()
+    reviewer_profile = context_values["reviewer_profile"]
+    assert isinstance(reviewer_profile, AgentProfile)
+    context_values["reviewer_profile"] = reviewer_profile.model_copy(
+        update={"system_prompt": profile_marker}
+    )
+    context = WorkflowHandoffContext.model_validate(context_values)
+    result = DeveloperReviewerWorkflowResult(
+        task_status=TaskStatus.WAITING_QA,
+        outcome=WorkflowOutcome.APPROVED,
+        max_review_cycles=1,
+        developer_cycles=1,
+        reviewer_cycles=1,
+        developer_report=completed_developer_report(),
+        reviewer_result=approved_reviewer_result(),
+        correlation_id=uuid4(),
+    )
+
+    assert context.reviewer_profile.system_prompt == profile_marker
+    assert "reviewer_profile" not in result.model_dump()
+    assert profile_marker not in result.model_dump_json()
+
+
 def test_error_exposes_only_an_application_owned_safe_message() -> None:
     """Prevent sensitive collaborator or persistence text from crossing the workflow boundary."""
-    sensitive_text = "postgres://workflow:super-secret@db.internal/tasks"
-
     error = WorkflowError(WorkflowErrorCode.PERSISTENCE_FAILURE)
 
     assert error.code is WorkflowErrorCode.PERSISTENCE_FAILURE
     assert error.safe_message == "Workflow persistence failed."
     assert str(error) == "Workflow persistence failed."
-    assert sensitive_text not in str(error)
     with pytest.raises(TypeError):
-        WorkflowError(WorkflowErrorCode.PERSISTENCE_FAILURE, sensitive_text)  # type: ignore[call-arg]
+        WorkflowError(  # type: ignore[call-arg]
+            WorkflowErrorCode.PERSISTENCE_FAILURE,
+            "caller-controlled text is not an accepted workflow error input",
+        )
     with pytest.raises(TypeError):
         WorkflowError("PERSISTENCE_FAILURE")  # type: ignore[arg-type]

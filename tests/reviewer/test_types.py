@@ -192,6 +192,29 @@ def test_finding_rejects_absolute_or_traversing_paths(path: str) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "C:/repository/file.py",
+        r"C:\repository\file.py",
+        r"\\server\share\file.py",
+        "//server/share/file.py",
+        r"src\file.py",
+    ],
+)
+def test_finding_rejects_windows_drive_unc_and_backslash_paths(path: str) -> None:
+    """Prevent non-portable Windows and UNC locations from appearing repository-relative."""
+    with pytest.raises(ValidationError):
+        ReviewFinding(
+            category="correctness",
+            severity=FindingSeverity.HIGH,
+            rationale="The implementation returns an incorrect result.",
+            path=path,
+            line=1,
+            recommendation="Return the computed sum.",
+        )
+
+
 def test_finding_normalizes_a_relative_path() -> None:
     """Expose retained finding locations in a portable repository-relative form."""
     finding = ReviewFinding(

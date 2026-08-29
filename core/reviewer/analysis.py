@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+from collections.abc import Mapping
 from traceback import clear_frames
 from typing import Any, Never
 
 from core.agents import AgentOutputValidationError, decode_structured_output
-from core.llm import LLMMessage, LLMProvider, LLMProviderError, LLMRequest, LLMRole
+from core.llm import LLMMessage, LLMProvider, LLMRequest, LLMResponse, LLMRole
 from core.reviewer.errors import ReviewerError, ReviewerErrorCode
 from core.reviewer.types import ReviewAnalysis, ReviewerRequest
 from core.reviewer.validation import ValidatedReviewerRequest, validate_reviewer_request
@@ -85,21 +86,22 @@ class ReviewAnalyzer:
         request = validated.request
         try:
             async with asyncio.timeout(self._timeout_seconds):
-                response = await self._provider.generate(provider_request)
+                raw_response = await self._provider.generate(provider_request)
         except asyncio.CancelledError:
             del provider_request, validated, request, self
             raise
-        except TimeoutError as raw_error:
-            failure = ReviewerError(ReviewerErrorCode.PROVIDER_FAILURE)
-            _discard_exception(raw_error)
-            del raw_error, provider_request, validated, request, self
-            return failure
-        except LLMProviderError as raw_error:
+        except Exception as raw_error:
             failure = ReviewerError(ReviewerErrorCode.PROVIDER_FAILURE)
             _discard_exception(raw_error)
             del raw_error, provider_request, validated, request, self
             return failure
 
+        canonical_response = _canonicalize_response(raw_response)
+        del raw_response
+        if isinstance(canonical_response, ReviewerError):
+            del provider_request, validated, request, self
+            return canonical_response
+        response = canonical_response
         content = response.content
         try:
             response_bytes = len(content.encode("utf-8"))
@@ -122,6 +124,34 @@ class ReviewAnalyzer:
             return failure
         del content, response, provider_request, validated, request, self
         return analysis
+
+
+def _canonicalize_response(response: object) -> LLMResponse | ReviewerError:
+    """Detach and strictly revalidate the provider response before field access."""
+    if type(response) is not LLMResponse:
+        del response
+        return ReviewerError(ReviewerErrorCode.INVALID_ANALYSIS)
+    try:
+        response_data = _copy_mappings(response.model_dump(mode="python", warnings=False))
+        canonical_response = LLMResponse.model_validate(response_data, strict=True)
+    except Exception as raw_error:
+        failure = ReviewerError(ReviewerErrorCode.INVALID_ANALYSIS)
+        _discard_exception(raw_error)
+        del raw_error, response
+        return failure
+    del response_data, response
+    return canonical_response
+
+
+def _copy_mappings(value: object) -> object:
+    """Convert immutable contract mappings to detached dictionaries for strict validation."""
+    if isinstance(value, Mapping):
+        return {key: _copy_mappings(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return tuple(_copy_mappings(item) for item in value)
+    if isinstance(value, list):
+        return [_copy_mappings(item) for item in value]
+    return value
 
 
 def _raise_failure(error: ReviewerError) -> Never:

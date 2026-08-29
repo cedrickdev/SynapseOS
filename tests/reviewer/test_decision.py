@@ -10,6 +10,8 @@ from core.reviewer import (
     FindingSeverity,
     ReviewAnalysis,
     ReviewDecision,
+    ReviewerError,
+    ReviewerErrorCode,
     ReviewerRequest,
     ReviewFinding,
     build_reviewer_result,
@@ -59,10 +61,75 @@ def test_gate_approves_only_complete_passing_evidence_at_exact_confidence_thresh
 
 
 @pytest.mark.parametrize(
+    ("review_request", "analysis", "expected_code", "expected_message"),
+    [
+        (
+            _request(),
+            _analysis().model_copy(update={"decision": "CHANGES_REQUESTED"}),
+            ReviewerErrorCode.INVALID_ANALYSIS,
+            "Reviewer analysis is invalid.",
+        ),
+        (
+            _request(),
+            _analysis(
+                findings=(_finding(FindingSeverity.HIGH).model_copy(update={"severity": "HIGH"}),)
+            ),
+            ReviewerErrorCode.INVALID_ANALYSIS,
+            "Reviewer analysis is invalid.",
+        ),
+        (
+            _request().model_copy(
+                update={
+                    "developer_report": developer_report().model_copy(update={"outcome": "FAILED"})
+                }
+            ),
+            _analysis(),
+            ReviewerErrorCode.INVALID_INPUT,
+            "Reviewer input is invalid.",
+        ),
+        (
+            _request().model_copy(
+                update={
+                    "checks": (
+                        _request().checks[0].model_copy(update={"category": CommandCategory.BUILD}),
+                    )
+                }
+            ),
+            _analysis(),
+            ReviewerErrorCode.INVALID_INPUT,
+            "Reviewer input is invalid.",
+        ),
+    ],
+    ids=(
+        "raw-decision",
+        "raw-severity",
+        "raw-developer-outcome",
+        "inconsistent-check",
+    ),
+)
+def test_exported_gate_rejects_type_confused_models_without_approval(
+    review_request: ReviewerRequest,
+    analysis: ReviewAnalysis,
+    expected_code: ReviewerErrorCode,
+    expected_message: str,
+) -> None:
+    """Prevent validation-bypassing model copies from evading enum identity checks."""
+    with pytest.raises(ReviewerError) as raised:
+        build_reviewer_result(review_request, analysis)
+
+    assert raised.value.code is expected_code
+    assert str(raised.value) == expected_message
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+
+
+@pytest.mark.parametrize(
     ("review_request", "analysis"),
     [
         (
-            _request().model_copy(update={"checks": ()}),
+            _request(
+                required_check_profiles=(CommandProfileId.PYTEST, CommandProfileId.RUFF),
+            ),
             _analysis(),
         ),
         (
@@ -89,16 +156,6 @@ def test_gate_approves_only_complete_passing_evidence_at_exact_confidence_thresh
             _analysis(),
         ),
         (
-            _request().model_copy(
-                update={
-                    "checks": (
-                        _request().checks[0].model_copy(update={"category": CommandCategory.BUILD}),
-                    )
-                }
-            ),
-            _analysis(),
-        ),
-        (
             _request(
                 developer_report=developer_report().model_copy(
                     update={"outcome": AgentReportOutcome.FAILED}
@@ -115,7 +172,6 @@ def test_gate_approves_only_complete_passing_evidence_at_exact_confidence_thresh
         "missing-checks",
         "failed-check",
         "truncated-check",
-        "inconsistent-check",
         "unsuccessful-developer-report",
         "high-finding",
         "critical-finding",

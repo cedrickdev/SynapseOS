@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import re
+
 from core.agents import AgentReportOutcome
 from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
+from core.reviewer.errors import ReviewerError, ReviewerErrorCode
 from core.reviewer.scoring import calculate_review_score
 from core.reviewer.types import (
     FindingSeverity,
@@ -18,6 +21,24 @@ from core.reviewer.types import (
 _APPROVAL_CONFIDENCE_THRESHOLD = 0.70
 _MAX_FINDINGS = 64
 _GATE_CATEGORY = "review-gate"
+_REDACTED_CATEGORY = "redacted"
+_REDACTED_RATIONALE = "Reviewer rationale redacted because it echoed source evidence."
+_REDACTED_FINDING_RATIONALE = "Finding rationale redacted due to source evidence."
+_REDACTED_RECOMMENDATION = "Finding recommendation redacted due to source evidence."
+_MARKER_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{3,}")
+_MARKER_TERMS = (
+    "api_key",
+    "apikey",
+    "confidential",
+    "credential",
+    "marker",
+    "passwd",
+    "password",
+    "private_key",
+    "secret",
+    "sensitive",
+    "token",
+)
 _PROFILE_CATEGORIES = {
     CommandProfileId.PYTEST: CommandCategory.TEST,
     CommandProfileId.NPM_TEST: CommandCategory.TEST,
@@ -72,16 +93,145 @@ _BLOCKER_TEXT = {
 
 def build_reviewer_result(request: ReviewerRequest, analysis: ReviewAnalysis) -> ReviewerResult:
     """Apply the fail-closed gate and derive the score without external calls."""
-    blockers = _deterministic_blockers(request, analysis)
+    canonicalized = _canonicalize_gate_inputs(request, analysis)
+    del request, analysis
+    if isinstance(canonicalized, ReviewerError):
+        raise canonicalized from None
+    canonical_request, canonical_analysis = canonicalized
+    blockers = _deterministic_blockers(canonical_request, canonical_analysis)
     decision = ReviewDecision.CHANGES_REQUESTED if blockers else ReviewDecision.APPROVED
-    findings = _append_blockers(analysis.findings, blockers)
-    review_score = calculate_review_score(request.checks, findings)
+    sources = _canonical_text_evidence(canonical_request)
+    markers = _obvious_secret_markers(sources)
+    model_findings = tuple(
+        _redact_finding(finding, sources=sources, markers=markers)
+        for finding in canonical_analysis.findings
+    )
+    findings = _append_blockers(model_findings, blockers)
+    rationale = _redact_text(
+        canonical_analysis.rationale,
+        replacement=_REDACTED_RATIONALE,
+        sources=sources,
+        markers=markers,
+    )
+    review_score = calculate_review_score(canonical_request.checks, findings)
     return ReviewerResult(
         decision=decision,
         findings=findings,
-        rationale=analysis.rationale,
-        confidence=analysis.confidence,
+        rationale=rationale,
+        confidence=canonical_analysis.confidence,
         review_score=float(review_score),
+    )
+
+
+def _canonicalize_gate_inputs(
+    request: ReviewerRequest, analysis: ReviewAnalysis
+) -> tuple[ReviewerRequest, ReviewAnalysis] | ReviewerError:
+    """Detach strictly revalidated values before applying identity-based checks."""
+    if type(request) is not ReviewerRequest:
+        del request, analysis
+        return ReviewerError(ReviewerErrorCode.INVALID_INPUT)
+    try:
+        request_data = request.model_dump(mode="python", warnings=False)
+        canonical_request = ReviewerRequest.model_validate(request_data, strict=True)
+    except Exception:
+        del request, analysis
+        return ReviewerError(ReviewerErrorCode.INVALID_INPUT)
+
+    if type(analysis) is not ReviewAnalysis:
+        del request_data, canonical_request, request, analysis
+        return ReviewerError(ReviewerErrorCode.INVALID_ANALYSIS)
+    try:
+        analysis_data = analysis.model_dump(mode="python", warnings=False)
+        canonical_analysis = ReviewAnalysis.model_validate(analysis_data, strict=True)
+    except Exception:
+        del request_data, canonical_request, request, analysis
+        return ReviewerError(ReviewerErrorCode.INVALID_ANALYSIS)
+    del request_data, analysis_data, request, analysis
+    return canonical_request, canonical_analysis
+
+
+def _canonical_text_evidence(request: ReviewerRequest) -> tuple[str, ...]:
+    """Collect only bounded canonical text that must remain transient."""
+    report = request.developer_report
+    return (
+        request.task_title,
+        request.task_description,
+        *request.acceptance_criteria,
+        request.diff,
+        report.summary,
+        *report.details,
+        *report.next_actions,
+    )
+
+
+def _obvious_secret_markers(sources: tuple[str, ...]) -> frozenset[str]:
+    """Derive bounded marker-like tokens from canonical source evidence."""
+    return frozenset(
+        token.casefold()
+        for source in sources
+        for token in _MARKER_TOKEN_PATTERN.findall(source)
+        if any(term in token.casefold() for term in _MARKER_TERMS)
+    )
+
+
+def _redact_finding(
+    finding: ReviewFinding,
+    *,
+    sources: tuple[str, ...],
+    markers: frozenset[str],
+) -> ReviewFinding:
+    """Preserve safe finding structure while replacing echoed text deterministically."""
+    category = finding.category
+    if _echoes_source(category, sources=sources, markers=markers):
+        category = _REDACTED_CATEGORY
+    path = finding.path
+    line = finding.line
+    if path is not None and _echoes_source(path, sources=sources, markers=markers):
+        path = None
+        line = None
+    return ReviewFinding(
+        category=category,
+        severity=finding.severity,
+        rationale=_redact_text(
+            finding.rationale,
+            replacement=_REDACTED_FINDING_RATIONALE,
+            sources=sources,
+            markers=markers,
+        ),
+        path=path,
+        line=line,
+        recommendation=_redact_text(
+            finding.recommendation,
+            replacement=_REDACTED_RECOMMENDATION,
+            sources=sources,
+            markers=markers,
+        ),
+    )
+
+
+def _redact_text(
+    value: str,
+    *,
+    replacement: str,
+    sources: tuple[str, ...],
+    markers: frozenset[str],
+) -> str:
+    """Replace a retained field when it reproduces canonical evidence."""
+    if _echoes_source(value, sources=sources, markers=markers):
+        return replacement
+    return value
+
+
+def _echoes_source(
+    value: str,
+    *,
+    sources: tuple[str, ...],
+    markers: frozenset[str],
+) -> bool:
+    """Detect complete source fragments and obvious source-derived secret markers."""
+    folded = value.casefold()
+    return any(source.casefold() in folded for source in sources) or any(
+        marker in folded for marker in markers
     )
 
 

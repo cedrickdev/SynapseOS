@@ -51,6 +51,20 @@ class DelayingProvider:
         raise AssertionError("reviewer timeout did not cancel provider generation")
 
 
+class RuntimeFailingProvider:
+    """Provider double that raises an unexpected ordinary exception."""
+
+    def __init__(self, marker: str) -> None:
+        self.calls = 0
+        self._marker = marker
+
+    async def generate(self, request: LLMRequest) -> LLMResponse:
+        """Raise provider-local diagnostics outside the declared error hierarchy."""
+        del request
+        self.calls += 1
+        raise RuntimeError(self._marker)
+
+
 def _request(**overrides: object) -> ReviewerRequest:
     values = request_values()
     values.update(overrides)
@@ -121,6 +135,39 @@ def _capture_validation_failure() -> tuple[ReviewerError, int]:
         del marker, request, provider, analyzer
         return captured, calls
     raise AssertionError("invalid structured output should be sanitized")
+
+
+def _capture_unexpected_provider_failure() -> tuple[ReviewerError, int]:
+    marker = "runtime-provider-boundary-secret-marker"
+    request = _request(diff=marker)
+    provider = RuntimeFailingProvider(marker)
+    analyzer = ReviewAnalyzer(provider, max_tokens=512)
+    captured: ReviewerError | None = None
+    try:
+        asyncio.run(analyzer.analyze(request))
+    except ReviewerError as error:
+        captured = error
+        calls = provider.calls
+        del marker, request, provider, analyzer
+        return captured, calls
+    raise AssertionError("unexpected provider failure should be sanitized")
+
+
+def _capture_malformed_response_failure() -> tuple[ReviewerError, int]:
+    marker = "malformed-response-boundary-secret-marker"
+    request = _request(diff=marker)
+    malformed = _response(_valid_content()).model_copy(update={"content": object()})
+    provider = FakeLLMProvider(responses=[malformed])
+    analyzer = ReviewAnalyzer(provider, max_tokens=512)
+    captured: ReviewerError | None = None
+    try:
+        asyncio.run(analyzer.analyze(request))
+    except ReviewerError as error:
+        captured = error
+        calls = len(provider.requests)
+        del marker, request, malformed, provider, analyzer
+        return captured, calls
+    raise AssertionError("malformed provider response should be sanitized")
 
 
 def test_analysis_makes_one_strict_bounded_request_from_canonical_evidence() -> None:
@@ -270,6 +317,28 @@ def test_provider_failure_retains_no_raw_exception_context_or_sensitive_tracebac
     assert error.__context__ is None
     assert calls == 1
     _assert_exception_excludes_marker(error, "provider-boundary-secret-marker")
+
+
+def test_analysis_sanitizes_unexpected_provider_exception_without_raw_context() -> None:
+    """Prevent ordinary provider bugs from escaping with raw diagnostics or prompt evidence."""
+    error, calls = _capture_unexpected_provider_failure()
+
+    assert error.code is ReviewerErrorCode.PROVIDER_FAILURE
+    assert error.__cause__ is None
+    assert error.__context__ is None
+    assert calls == 1
+    _assert_exception_excludes_marker(error, "runtime-provider-boundary-secret-marker")
+
+
+def test_analysis_revalidates_type_confused_response_without_raw_context() -> None:
+    """Prevent validation-bypassing response copies from reaching content field operations."""
+    error, calls = _capture_malformed_response_failure()
+
+    assert error.code is ReviewerErrorCode.INVALID_ANALYSIS
+    assert error.__cause__ is None
+    assert error.__context__ is None
+    assert calls == 1
+    _assert_exception_excludes_marker(error, "malformed-response-boundary-secret-marker")
 
 
 def test_validation_failure_retains_no_raw_exception_context_or_sensitive_traceback_values() -> (

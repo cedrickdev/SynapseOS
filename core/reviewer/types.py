@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import Annotated, Self
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -20,7 +20,16 @@ def _require_nonblank(value: str) -> str:
 
 def _require_normalized_relative_path(value: str) -> str:
     path = PurePosixPath(value)
-    if not value or path.is_absolute() or ".." in path.parts or path.as_posix() != value:
+    windows_path = PureWindowsPath(value)
+    if (
+        not value
+        or "\\" in value
+        or windows_path.drive
+        or value.startswith("//")
+        or path.is_absolute()
+        or ".." in path.parts
+        or path.as_posix() != value
+    ):
         raise ValueError("path must be a normalized relative path")
     return value
 

@@ -1,5 +1,6 @@
 """Bounded Reviewer Agent composition for Phase 15."""
 
+from core.reviewer.analysis import ReviewAnalyzer
 from core.reviewer.errors import ReviewerError, ReviewerErrorCode
 from core.reviewer.types import (
     FindingSeverity,
@@ -15,6 +16,7 @@ from core.reviewer.validation import ValidatedReviewerRequest, validate_reviewer
 __all__ = [
     "FindingSeverity",
     "ReviewAnalysis",
+    "ReviewAnalyzer",
     "ReviewCheck",
     "ReviewDecision",
     "ReviewFinding",

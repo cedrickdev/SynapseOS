@@ -10,6 +10,7 @@ from core.reviewer.types import (
     ReviewerResult,
     ReviewFinding,
 )
+from core.reviewer.validation import ValidatedReviewerRequest, validate_reviewer_request
 
 __all__ = [
     "FindingSeverity",
@@ -21,4 +22,6 @@ __all__ = [
     "ReviewerErrorCode",
     "ReviewerRequest",
     "ReviewerResult",
+    "ValidatedReviewerRequest",
+    "validate_reviewer_request",
 ]

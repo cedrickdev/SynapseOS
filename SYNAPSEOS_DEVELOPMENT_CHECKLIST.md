@@ -1114,13 +1114,13 @@ Séparer auteur et validation.
 
 ## Checklist
 
-- [ ] Reviewer différent du Developer.
-- [ ] Lecture du diff.
-- [ ] Lecture critères d'acceptation.
-- [ ] Analyse qualité.
-- [ ] Demande de modifications.
-- [ ] Approval.
-- [ ] Score de review.
+- [x] Reviewer différent du Developer.
+- [x] Lecture du diff.
+- [x] Lecture critères d'acceptation.
+- [x] Analyse qualité.
+- [x] Demande de modifications.
+- [x] Approval.
+- [x] Score de review.
 
 ## Prompt Claude Code — Phase 15
 

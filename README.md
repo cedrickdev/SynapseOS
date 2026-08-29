@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_14-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_15-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,12 +48,12 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 14 — Developer Agent completed.** The repository now provides the persistence foundation, an
+**Phase 15 — Reviewer Agent completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
-free-form shell, MCP, multi-agent coordination, QA and security engines, ReviewerAgent, and the
+free-form shell, MCP, multi-agent coordination, QA and security engines, and the
 frontend remain intentionally unimplemented.
 
 What exists today:
@@ -94,6 +94,9 @@ What exists today:
 - A bounded Developer role that validates scope and authority before work, selects complete
   subordinate skills, composes the single-agent loop, uses real repository tools and fixed checks,
   and derives a metadata-only report that cannot hide missing or failed tests.
+- An independent read-only Reviewer role with one bounded provider call, strict structured
+  findings, explicit required-check evidence, a deterministic approval gate, and a deterministic
+  per-review score. Failed or missing mandatory checks can never be approved.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -140,7 +143,7 @@ make dev         # run the API with autoreload on http://localhost:8000
 ```text
 apps/api/                 # FastAPI application (Platform API)
 core/                     # Domain and application boundaries
-  agents/ commands/ developer/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
+  agents/ commands/ developer/ reviewer/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
@@ -187,6 +190,12 @@ The focused Phase 14 suite covers the Developer role and real repository-tool wo
 .venv/bin/pytest tests/developer -q
 ```
 
+The focused Phase 15 suite covers the independent read-only Reviewer role:
+
+```bash
+.venv/bin/pytest tests/reviewer -q
+```
+
 Run `make help` to list every available target.
 
 **Working agreement:** changes are test-driven (write the failing test first), and `make check`
@@ -211,7 +220,8 @@ validated pull request. The near-term sequence is:
 12. MCP client — deliberately not started
 13. **Loop Engineering V1** — completed
 14. **Developer Agent** — completed
-15. Reviewer Agent — not started
+15. **Reviewer Agent** — completed
+16. Developer ↔ Reviewer workflow — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -230,6 +240,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Secure command profiles:** [`docs/commands.md`](docs/commands.md)
 - **Loop Engineering V1:** [`docs/runtime.md`](docs/runtime.md)
 - **Developer Agent:** [`docs/developer-agent.md`](docs/developer-agent.md)
+- **Reviewer Agent:** [`docs/reviewer-agent.md`](docs/reviewer-agent.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

@@ -8,10 +8,9 @@ The repository has completed **Phase 1 — repository initialization**, **Phase 
 model**, **Phase 3 — task state machine**, **Phase 4 — LLM provider boundary**, **Phase 5 — agent
 core**, **Phase 6 — tool registry**, **Phase 7 — permission engine**, **Phase 8 — Skills
 Registry**, **Phase 9 — workspace isolation**, **Phase 10 — transactional write tools**, and
-**Phase 11 — secure command profiles**, **Phase 13 — Loop Engineering V1**, and **Phase 14 —
-Developer Agent**. Phase 12 remains
-deliberately unimplemented. It
-contains a minimal FastAPI application, typed
+**Phase 11 — secure command profiles**, **Phase 13 — Loop Engineering V1**, **Phase 14 —
+Developer Agent**, and **Phase 15 — Reviewer Agent**. Phase 12 remains deliberately unimplemented.
+It contains a minimal FastAPI application, typed
 SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
 bounded provider-neutral LLM contracts, an Ollama adapter, a bounded runtime agent with four
 strict structured operations, five bounded read-only repository tools, a PostgreSQL-backed
@@ -20,7 +19,8 @@ Compose service, a bounded local registry of five versioned instructional skills
 per-project workspaces with audited bounded Git import and cleanup, four permissioned
 compensatable UTF-8 file mutation tools, ten fixed test/lint/build/read-only-Git command profiles,
 a bounded provider-neutral single-agent loop with sanitized append-only step auditing, a bounded
-Developer role using deterministic skill context and real secure repository tools, and
+Developer role using deterministic skill context and real secure repository tools, an independent
+read-only Reviewer role with one-shot analysis and deterministic approval gating, and
 real-PostgreSQL integration tests.
 
 Phase 7 authorizes tools exclusively from active persisted `AgentPermission` grants. Phase 8 can
@@ -30,7 +30,7 @@ authority or execute directly. Phase 9 provides local filesystem
 isolation behind a backend-neutral contract; it is not an operating-system sandbox or execution
 container. Phase 11 command execution is an application-level fixed-profile boundary, not a
 hostile-code sandbox. The repository does not include a free-form shell, MCP access, provider
-routing, or multi-agent behavior. Phase 12 and Phase 15+ are not implemented.
+routing, or multi-agent behavior. Phase 12 and Phase 16+ are not implemented.
 In particular, there is no arbitrary terminal, approval workflow, MCP integration,
 QA/security engine, provider router, or frontend. Do not implement work from a later phase unless
 the user explicitly starts that phase.
@@ -54,6 +54,7 @@ Current source layout:
 - `core/commands/` and `infrastructure/commands/` — fixed command contracts, policy, and runner.
 - `core/runtime/` and `infrastructure/runtime/` — bounded one-agent loop and runtime-step audit.
 - `core/developer/` — Phase 14 role validation, skill context, evidence, reporting, and composition.
+- `core/reviewer/` — Phase 15 read-only validation, analysis, gate, scoring, and composition.
 - `skills/` — five repository-owned versioned V1 skill packages.
 - `alembic/` — PostgreSQL migrations.
 - `tests/` — unit and real-PostgreSQL integration tests.
@@ -90,6 +91,12 @@ For the focused Phase 14 Developer tests, run:
 
 ```bash
 .venv/bin/pytest tests/developer -q
+```
+
+For the focused Phase 15 Reviewer tests, run:
+
+```bash
+.venv/bin/pytest tests/reviewer -q
 ```
 
 Run a single test with:

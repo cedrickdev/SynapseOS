@@ -31,7 +31,8 @@ boundary.
 - the task title and description;
 - one through sixteen acceptance criteria;
 - a bounded UTF-8 unified Git diff;
-- one through sixteen deterministic check results;
+- one through ten explicit required command-profile IDs and one through sixteen deterministic check
+  results;
 - the completed `AgentReport` produced by `DeveloperAgent`;
 - an active Reviewer `AgentProfile` with read-only authority.
 

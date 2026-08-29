@@ -7,6 +7,7 @@ from core.workflows.types import (
     WorkflowHandoffContext,
     WorkflowOutcome,
 )
+from core.workflows.validation import ValidatedWorkflowScope, validate_workflow_request
 
 __all__ = [
     "DeveloperReviewerWorkflowRequest",
@@ -15,4 +16,6 @@ __all__ = [
     "WorkflowErrorCode",
     "WorkflowHandoffContext",
     "WorkflowOutcome",
+    "ValidatedWorkflowScope",
+    "validate_workflow_request",
 ]

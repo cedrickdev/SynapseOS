@@ -5,11 +5,18 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
 from core.agents import AgentReport, AgentReportOutcome
 from core.commands import CommandProfileId
 from core.developer import DeveloperRequest
+from core.enums import AgentSeniority, AgentStatus, ProjectStatus, TaskStatus
 from core.reviewer import ReviewDecision, ReviewerResult
-from tests.developer.factories import request_values
+from core.runtime import RuntimeTask
+from core.tools import ToolExecutionContext
+from core.workflows import DeveloperReviewerWorkflowRequest
+from infrastructure.database.models import Agent, Project, Task
+from tests.developer.factories import developer_profile, request_values
 from tests.reviewer.factories import reviewer_profile
 
 
@@ -72,3 +79,92 @@ def handoff_context_values() -> dict[str, object]:
         "reviewer_profile": reviewer_profile(),
         "required_check_profiles": [CommandProfileId.PYTEST],
     }
+
+
+def persisted_workflow_request(
+    session: Session,
+    tmp_path: Path,
+    *,
+    task_overrides: dict[str, object] | None = None,
+    developer_overrides: dict[str, object] | None = None,
+    reviewer_overrides: dict[str, object] | None = None,
+) -> tuple[Task, Agent, Agent, DeveloperReviewerWorkflowRequest]:
+    """Persist one coherent READY workflow scope and return its strict request."""
+    project = Project(name="Workflow validation project", status=ProjectStatus.IN_PROGRESS)
+    developer_values: dict[str, object] = {
+        "name": "Developer One",
+        "slug": "developer-01",
+        "role": "Developer",
+        "department": "engineering",
+        "seniority": AgentSeniority.ENGINEER,
+        "status": AgentStatus.WORKING,
+        "autonomy_level": 2,
+        "reputation_score": "0.8000",
+        "reliability_score": "0.9000",
+    }
+    reviewer_values: dict[str, object] = {
+        "name": "Reviewer One",
+        "slug": "reviewer-01",
+        "role": "Reviewer",
+        "department": "engineering",
+        "seniority": AgentSeniority.SENIOR,
+        "status": AgentStatus.WORKING,
+        "autonomy_level": 0,
+        "reputation_score": "0.8000",
+        "reliability_score": "0.9000",
+    }
+    developer_values.update(developer_overrides or {})
+    reviewer_values.update(reviewer_overrides or {})
+    developer = Agent(**developer_values)
+    reviewer = Agent(**reviewer_values)
+    session.add_all([project, developer, reviewer])
+    session.flush()
+
+    task_values: dict[str, object] = {
+        "project_id": project.id,
+        "title": "Correct addition",
+        "description": "Correct the faulty addition implementation.",
+        "status": TaskStatus.READY,
+        "acceptance_criteria": ["The existing test suite passes."],
+    }
+    task_values.update(task_overrides or {})
+    task = Task(**task_values)
+    session.add(task)
+    session.flush()
+
+    correlation_id = uuid4()
+    developer_profile_value = developer_profile()
+    runtime_task = RuntimeTask(
+        task_id=task.id,
+        objective="Correct the faulty addition implementation.",
+        acceptance_criteria=("The existing test suite passes.",),
+    )
+    execution_context = ToolExecutionContext(
+        workspace_root=tmp_path,
+        agent_id="developer-01",
+        agent_run_id=uuid4(),
+        project_id=project.id,
+        task_id=task.id,
+        declared_tool_ids=developer_profile_value.tool_ids,
+        correlation_id=correlation_id,
+    )
+    developer_request_value = DeveloperRequest(
+        task=runtime_task,
+        profile=developer_profile_value,
+        execution_context=execution_context,
+        domains=frozenset({"backend"}),
+        technologies=frozenset({"python"}),
+        tags=frozenset({"testing"}),
+        required_check_profiles=(CommandProfileId.PYTEST,),
+    )
+    request = DeveloperReviewerWorkflowRequest(
+        task_id=task.id,
+        developer_agent_id=developer.id,
+        reviewer_agent_id=reviewer.id,
+        developer_request=developer_request_value,
+        reviewer_profile=reviewer_profile(),
+        max_review_cycles=2,
+        timeout_seconds=30.0,
+        correlation_id=correlation_id,
+    )
+    return task, developer, reviewer, request

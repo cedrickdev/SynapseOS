@@ -19,10 +19,23 @@ class ReviewerErrorCode(StrEnum):
     PROVIDER_FAILURE = "PROVIDER_FAILURE"
 
 
+_SAFE_MESSAGES = {
+    ReviewerErrorCode.INVALID_INPUT: "Reviewer input is invalid.",
+    ReviewerErrorCode.INVALID_ROLE: "Reviewer profile role is invalid.",
+    ReviewerErrorCode.INACTIVE_AGENT: "Reviewer profile is inactive.",
+    ReviewerErrorCode.INVALID_SCOPE: "Reviewer request scope is invalid.",
+    ReviewerErrorCode.INVALID_PERMISSION: "Reviewer permissions are invalid.",
+    ReviewerErrorCode.INVALID_TOOLS: "Reviewer tools are invalid.",
+    ReviewerErrorCode.INVALID_CHECK: "Reviewer check evidence is invalid.",
+    ReviewerErrorCode.INVALID_ANALYSIS: "Reviewer analysis is invalid.",
+    ReviewerErrorCode.PROVIDER_FAILURE: "Reviewer provider failed.",
+}
+
+
 class ReviewerError(Exception):
     """A leak-resistant error carrying one stable classification."""
 
-    def __init__(self, code: ReviewerErrorCode, safe_message: str) -> None:
+    def __init__(self, code: ReviewerErrorCode) -> None:
         self.code = code
-        self.safe_message = safe_message
-        super().__init__(safe_message)
+        self.safe_message = _SAFE_MESSAGES[code]
+        super().__init__(self.safe_message)

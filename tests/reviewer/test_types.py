@@ -13,6 +13,8 @@ from core.reviewer import (
     ReviewAnalysis,
     ReviewCheck,
     ReviewDecision,
+    ReviewerError,
+    ReviewerErrorCode,
     ReviewerRequest,
     ReviewerResult,
     ReviewFinding,
@@ -46,6 +48,20 @@ def test_request_copies_collections_and_is_immutable() -> None:
         request.task_title = "Changed"  # type: ignore[misc]
 
 
+def test_error_exposes_only_application_owned_message() -> None:
+    """Prevent caller-supplied sensitive text from crossing the public error boundary."""
+    sensitive_text = "postgres://reviewer:super-secret@db.internal/reviews"
+
+    error = ReviewerError(ReviewerErrorCode.INVALID_INPUT)
+
+    assert error.code is ReviewerErrorCode.INVALID_INPUT
+    assert error.safe_message == "Reviewer input is invalid."
+    assert str(error) == "Reviewer input is invalid."
+    assert sensitive_text not in str(error)
+    with pytest.raises(TypeError):
+        ReviewerError(ReviewerErrorCode.INVALID_INPUT, sensitive_text)  # type: ignore[call-arg]
+
+
 def test_request_rejects_unknown_fields() -> None:
     """Prevent uncontracted evidence from reaching the reviewer boundary."""
     values = request_values()
@@ -62,47 +78,78 @@ def test_request_rejects_unknown_fields() -> None:
         ("acceptance_criteria", tuple(f"criterion-{index}" for index in range(17))),
         ("acceptance_criteria", ("same", "same")),
         ("checks", ()),
-        (
-            "checks",
-            (
-                {
-                    "profile_id": CommandProfileId.PYTEST,
-                    "category": CommandCategory.TEST,
-                    "status": CommandTerminalStatus.SUCCEEDED,
-                    "exit_code": 0,
-                    "truncated": False,
-                },
-                {
-                    "profile_id": CommandProfileId.PYTEST,
-                    "category": CommandCategory.TEST,
-                    "status": CommandTerminalStatus.SUCCEEDED,
-                    "exit_code": 0,
-                    "truncated": False,
-                },
-            ),
-        ),
-        (
-            "checks",
-            tuple(
-                {
-                    "profile_id": CommandProfileId.PYTEST,
-                    "category": CommandCategory.TEST,
-                    "status": CommandTerminalStatus.SUCCEEDED,
-                    "exit_code": 0,
-                    "truncated": False,
-                }
-                for _ in range(17)
-            ),
-        ),
     ],
 )
-def test_request_rejects_invalid_criteria_and_check_cardinality(field: str, value: object) -> None:
-    """Prevent unbounded, missing, and duplicate deterministic evidence."""
+def test_request_rejects_invalid_criteria_and_empty_checks(field: str, value: object) -> None:
+    """Prevent missing, duplicate, and oversized required evidence."""
     values = request_values()
     values[field] = value
 
     with pytest.raises(ValidationError):
         ReviewerRequest.model_validate(values)
+
+
+def test_request_accepts_each_closed_check_profile_once() -> None:
+    """Allow every available closed command profile to appear exactly once."""
+    values = request_values()
+    checks = (
+        (CommandProfileId.PYTEST, CommandCategory.TEST),
+        (CommandProfileId.RUFF, CommandCategory.LINT),
+        (CommandProfileId.MYPY, CommandCategory.LINT),
+        (CommandProfileId.NPM_TEST, CommandCategory.TEST),
+        (CommandProfileId.NPM_BUILD, CommandCategory.BUILD),
+        (CommandProfileId.PHP_ARTISAN_TEST, CommandCategory.TEST),
+        (CommandProfileId.GIT_STATUS, CommandCategory.GIT_READ),
+        (CommandProfileId.GIT_DIFF, CommandCategory.GIT_READ),
+        (CommandProfileId.GIT_DIFF_STAGED, CommandCategory.GIT_READ),
+        (CommandProfileId.GIT_LOG, CommandCategory.GIT_READ),
+    )
+    values["checks"] = tuple(
+        {
+            "profile_id": profile_id,
+            "category": category,
+            "status": CommandTerminalStatus.SUCCEEDED,
+            "exit_code": 0,
+            "truncated": False,
+        }
+        for profile_id, category in checks
+    )
+
+    request = ReviewerRequest.model_validate(values)
+
+    assert tuple(check.profile_id for check in request.checks) == tuple(
+        profile_id for profile_id, _ in checks
+    )
+
+
+def test_request_rejects_duplicate_check_profiles() -> None:
+    """Prevent a profile from being counted as separate deterministic evidence twice."""
+    values = request_values()
+    check = {
+        "profile_id": CommandProfileId.PYTEST,
+        "category": CommandCategory.TEST,
+        "status": CommandTerminalStatus.SUCCEEDED,
+        "exit_code": 0,
+        "truncated": False,
+    }
+    values["checks"] = (check, check)
+
+    with pytest.raises(ValidationError):
+        ReviewerRequest.model_validate(values)
+
+
+def test_check_rejects_unknown_closed_profile() -> None:
+    """Prevent arbitrary command identifiers from being retained as review evidence."""
+    values: dict[str, object] = {
+        "profile_id": "custom-review-command",
+        "category": CommandCategory.TEST,
+        "status": CommandTerminalStatus.SUCCEEDED,
+        "exit_code": 0,
+        "truncated": False,
+    }
+
+    with pytest.raises(ValidationError):
+        ReviewCheck.model_validate(values)
 
 
 @pytest.mark.parametrize(

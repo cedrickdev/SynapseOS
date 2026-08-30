@@ -141,12 +141,15 @@ class RecordingCommandExecutor:
 class FreshHandoffBuilder(ReviewerHandoffBuilder):
     """Build a complete Reviewer request from the latest bounded Developer evidence."""
 
+    invocation_count: int = field(default=0, init=False)
+
     async def build(
         self,
         context: WorkflowHandoffContext,
         developer_result: DeveloperResult,
         cycle: int,
     ) -> ReviewerRequest:
+        self.invocation_count += 1
         del cycle
         checks = tuple(
             ReviewCheck(
@@ -226,6 +229,7 @@ def _run_workflow(
     DeveloperReviewerWorkflowRequest,
     DeveloperReviewerWorkflowResult,
     RecordingCommandExecutor,
+    int,
     FakeLLMProvider,
     FakeLLMProvider,
     list[AuditEvent],
@@ -272,6 +276,7 @@ def _run_workflow(
         request,
         result,
         tool_executor,
+        handoff_builder.invocation_count,
         developer_provider,
         reviewer_provider,
         ordered_events,
@@ -314,6 +319,7 @@ def test_concrete_agents_approve_one_cycle_against_alembic_postgres(
         request,
         result,
         tool_executor,
+        handoff_invocations,
         developer_provider,
         reviewer_provider,
         events,
@@ -331,6 +337,7 @@ def test_concrete_agents_approve_one_cycle_against_alembic_postgres(
     assert result.developer_report.outcome is AgentReportOutcome.SUCCEEDED
     assert result.reviewer_result.decision is ReviewDecision.APPROVED
     assert len(tool_executor.calls) == 1
+    assert handoff_invocations == 1
     _assert_provider_operations(developer_provider, cycles=1)
     assert len(reviewer_provider.requests) == 1
     assert reviewer_provider.requests[0].max_tokens == 512
@@ -364,6 +371,7 @@ def test_concrete_agents_use_fresh_evidence_for_correction_then_approve(
         request,
         result,
         tool_executor,
+        handoff_invocations,
         developer_provider,
         reviewer_provider,
         events,
@@ -385,6 +393,7 @@ def test_concrete_agents_use_fresh_evidence_for_correction_then_approve(
     assert result.developer_report.details == ("All required checks passed.",)
     assert "developer-evidence-failed-failed" not in repr(result)
     assert len(tool_executor.calls) == 2
+    assert handoff_invocations == 2
     _assert_provider_operations(developer_provider, cycles=2)
     assert len(reviewer_provider.requests) == 2
     assert "developer-evidence-failed-failed" in reviewer_provider.requests[0].messages[0].content
@@ -430,6 +439,7 @@ def test_concrete_agents_exhaust_review_cycles_without_phase17_execution(
         request,
         result,
         tool_executor,
+        handoff_invocations,
         developer_provider,
         reviewer_provider,
         events,
@@ -449,6 +459,7 @@ def test_concrete_agents_exhaust_review_cycles_without_phase17_execution(
     assert result.developer_cycles == result.reviewer_cycles == 2
     assert result.reviewer_result.decision is ReviewDecision.CHANGES_REQUESTED
     assert len(tool_executor.calls) == 2
+    assert handoff_invocations == 2
     _assert_provider_operations(developer_provider, cycles=2)
     assert len(reviewer_provider.requests) == 2
     assert [event.event_type for event in events] == [

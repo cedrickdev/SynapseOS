@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from dataclasses import dataclass
 from enum import StrEnum
+from functools import partial
 from traceback import clear_frames
+from typing import NoReturn
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import set_committed_value
 
 from core.enums import AuditActorType, AuditResult, TaskStatus
 from core.reviewer import ReviewDecision
@@ -17,6 +22,7 @@ from core.tasks.state_machine import InvalidTaskTransitionError, TaskStateMachin
 from core.workflows.errors import WorkflowError, WorkflowErrorCode
 from core.workflows.validation import ValidatedWorkflowScope
 from infrastructure.database.models import AuditEvent, Task
+from infrastructure.database.task_status_guard import clear_task_status_authorizations
 
 
 class WorkflowEventType(StrEnum):
@@ -27,6 +33,14 @@ class WorkflowEventType(StrEnum):
     REVIEW_COMPLETED = "REVIEW_COMPLETED"
     REVIEW_CYCLE_EXHAUSTED = "REVIEW_CYCLE_EXHAUSTED"
     WORKFLOW_COMPLETED = "WORKFLOW_COMPLETED"
+
+
+@dataclass(frozen=True)
+class _TaskSnapshot:
+    """The only mutable task fields a checkpoint may stage before committing."""
+
+    status: TaskStatus
+    assigned_agent_id: UUID | None
 
 
 def append_workflow_event(
@@ -80,80 +94,55 @@ def append_workflow_event(
 
 def commit_assignment_checkpoint(session: Session, scope: ValidatedWorkflowScope) -> None:
     """Durably assign the Developer and record the workflow start as one checkpoint."""
-
-    def stage() -> None:
-        task = _locked_ready_task(session, scope)
-        task.assigned_agent_id = scope.developer.id
-        _transition(
-            session,
-            scope,
-            task,
-            TaskStatus.ASSIGNED,
-            actor_type=AuditActorType.AGENT,
-            actor_id=scope.developer.slug,
-            reason="Workflow developer assignment accepted.",
-        )
-        append_workflow_event(session, scope, WorkflowEventType.WORKFLOW_STARTED)
-
-    _commit_checkpoint(session, stage)
+    stage = partial(_stage_assignment, session, scope)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    if failure is not None:
+        _raise_failure(failure)
 
 
 def commit_developer_started_checkpoint(
     session: Session, scope: ValidatedWorkflowScope, *, cycle: int
 ) -> None:
     """Durably mark one bounded Developer cycle as in progress."""
-
-    _require_cycle(scope, cycle)
-
-    def stage() -> None:
-        _transition(
-            session,
-            scope,
-            scope.task,
-            TaskStatus.IN_PROGRESS,
-            actor_type=AuditActorType.AGENT,
-            actor_id=scope.developer.slug,
-            reason="Workflow developer cycle started.",
-        )
-
-    _commit_checkpoint(session, stage)
+    stage = partial(_stage_developer_started, session, scope, cycle)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del cycle
+    if failure is not None:
+        _raise_failure(failure)
 
 
 def commit_developer_handoff_checkpoint(
     session: Session, scope: ValidatedWorkflowScope, *, cycle: int
 ) -> None:
     """Durably record creation of one safe Reviewer handoff."""
-    _require_cycle(scope, cycle)
-
-    def stage() -> None:
-        append_workflow_event(
-            session,
-            scope,
-            WorkflowEventType.DEVELOPER_HANDOFF_CREATED,
-            cycle=cycle,
-        )
-
-    _commit_checkpoint(session, stage)
+    stage = partial(_stage_developer_handoff, session, scope, cycle)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del cycle
+    if failure is not None:
+        _raise_failure(failure)
 
 
 def commit_developer_completed_checkpoint(
     session: Session, scope: ValidatedWorkflowScope, *, cycle: int
 ) -> None:
     """Durably mark one bounded Developer cycle ready for independent review."""
-    _require_cycle(scope, cycle)
-
-    def stage() -> None:
-        _transition(
-            session,
-            scope,
-            scope.task,
-            TaskStatus.WAITING_REVIEW,
-            actor_type=AuditActorType.AGENT,
-            actor_id=scope.developer.slug,
-            reason="Workflow developer cycle completed.",
-        )
-
-    _commit_checkpoint(session, stage)
+    stage = partial(_stage_developer_completed, session, scope, cycle)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del cycle
+    if failure is not None:
+        _raise_failure(failure)
 
 
 def commit_review_completed_checkpoint(
@@ -166,6 +155,114 @@ def commit_review_completed_checkpoint(
     finding_count: int,
 ) -> None:
     """Durably record one Reviewer decision and its exact next task state."""
+    stage = partial(
+        _stage_review_completed,
+        session,
+        scope,
+        cycle,
+        decision,
+        review_score,
+        finding_count,
+    )
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del cycle
+    del decision
+    del review_score
+    del finding_count
+    if failure is not None:
+        _raise_failure(failure)
+
+
+def commit_review_cycle_exhausted_checkpoint(
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    cycle: int,
+    max_review_cycles: int,
+) -> None:
+    """Durably escalate an exhausted review workflow to human attention."""
+    stage = partial(_stage_review_cycle_exhausted, session, scope, cycle, max_review_cycles)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del cycle
+    del max_review_cycles
+    if failure is not None:
+        _raise_failure(failure)
+
+
+def commit_next_review_cycle_checkpoint(
+    session: Session, scope: ValidatedWorkflowScope, *, cycle: int
+) -> None:
+    """Durably start the next bounded Developer cycle after requested changes."""
+    stage = partial(_stage_next_review_cycle, session, scope, cycle)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del cycle
+    if failure is not None:
+        _raise_failure(failure)
+
+
+def _stage_assignment(session: Session, scope: ValidatedWorkflowScope) -> None:
+    task = _locked_ready_task(session, scope)
+    task.assigned_agent_id = scope.developer.id
+    _transition(
+        session,
+        scope,
+        task,
+        TaskStatus.ASSIGNED,
+        actor_type=AuditActorType.AGENT,
+        actor_id=scope.developer.slug,
+        reason="Workflow developer assignment accepted.",
+    )
+    append_workflow_event(session, scope, WorkflowEventType.WORKFLOW_STARTED)
+
+
+def _stage_developer_started(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
+    _require_cycle(scope, cycle)
+    _transition(
+        session,
+        scope,
+        scope.task,
+        TaskStatus.IN_PROGRESS,
+        actor_type=AuditActorType.AGENT,
+        actor_id=scope.developer.slug,
+        reason="Workflow developer cycle started.",
+    )
+
+
+def _stage_developer_handoff(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
+    _require_cycle(scope, cycle)
+    append_workflow_event(session, scope, WorkflowEventType.DEVELOPER_HANDOFF_CREATED, cycle=cycle)
+
+
+def _stage_developer_completed(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
+    _require_cycle(scope, cycle)
+    _transition(
+        session,
+        scope,
+        scope.task,
+        TaskStatus.WAITING_REVIEW,
+        actor_type=AuditActorType.AGENT,
+        actor_id=scope.developer.slug,
+        reason="Workflow developer cycle completed.",
+    )
+
+
+def _stage_review_completed(
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    cycle: int,
+    decision: ReviewDecision,
+    review_score: float,
+    finding_count: int,
+) -> None:
     _require_cycle(scope, cycle)
     _require_review_decision(decision)
     _require_review_score(review_score)
@@ -180,97 +277,75 @@ def commit_review_completed_checkpoint(
         if decision is ReviewDecision.APPROVED
         else "Workflow review requested changes."
     )
-
-    def stage() -> None:
-        _transition(
-            session,
-            scope,
-            scope.task,
-            target,
-            actor_type=AuditActorType.AGENT,
-            actor_id=scope.reviewer.slug,
-            reason=reason,
-        )
-        append_workflow_event(
-            session,
-            scope,
-            WorkflowEventType.REVIEW_COMPLETED,
-            cycle=cycle,
-            decision=decision,
-            review_score=review_score,
-            finding_count=finding_count,
-        )
-        if decision is ReviewDecision.APPROVED:
-            append_workflow_event(
-                session,
-                scope,
-                WorkflowEventType.WORKFLOW_COMPLETED,
-                cycle=cycle,
-            )
-
-    _commit_checkpoint(session, stage)
+    _transition(
+        session,
+        scope,
+        scope.task,
+        target,
+        actor_type=AuditActorType.AGENT,
+        actor_id=scope.reviewer.slug,
+        reason=reason,
+    )
+    append_workflow_event(
+        session,
+        scope,
+        WorkflowEventType.REVIEW_COMPLETED,
+        cycle=cycle,
+        decision=decision,
+        review_score=review_score,
+        finding_count=finding_count,
+    )
+    if decision is ReviewDecision.APPROVED:
+        append_workflow_event(session, scope, WorkflowEventType.WORKFLOW_COMPLETED, cycle=cycle)
 
 
-def commit_review_cycle_exhausted_checkpoint(
-    session: Session,
-    scope: ValidatedWorkflowScope,
-    *,
-    cycle: int,
-    max_review_cycles: int,
+def _stage_review_cycle_exhausted(
+    session: Session, scope: ValidatedWorkflowScope, cycle: int, max_review_cycles: int
 ) -> None:
-    """Durably escalate an exhausted review workflow to human attention."""
     _require_cycle(scope, cycle)
     _require_max_review_cycles(scope, max_review_cycles)
     if cycle != max_review_cycles:
         raise WorkflowError(WorkflowErrorCode.INVALID_INPUT)
-
-    def stage() -> None:
-        _transition(
-            session,
-            scope,
-            scope.task,
-            TaskStatus.WAITING_HUMAN,
-            actor_type=AuditActorType.AGENT,
-            actor_id=scope.reviewer.slug,
-            reason="Workflow review cycles exhausted.",
-        )
-        append_workflow_event(
-            session,
-            scope,
-            WorkflowEventType.REVIEW_CYCLE_EXHAUSTED,
-            cycle=cycle,
-            max_review_cycles=max_review_cycles,
-        )
-
-    _commit_checkpoint(session, stage)
+    _transition(
+        session,
+        scope,
+        scope.task,
+        TaskStatus.WAITING_HUMAN,
+        actor_type=AuditActorType.AGENT,
+        actor_id=scope.reviewer.slug,
+        reason="Workflow review cycles exhausted.",
+    )
+    append_workflow_event(
+        session,
+        scope,
+        WorkflowEventType.REVIEW_CYCLE_EXHAUSTED,
+        cycle=cycle,
+        max_review_cycles=max_review_cycles,
+    )
 
 
-def commit_next_review_cycle_checkpoint(
-    session: Session, scope: ValidatedWorkflowScope, *, cycle: int
-) -> None:
-    """Durably start the next bounded Developer cycle after requested changes."""
+def _stage_next_review_cycle(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
     _require_cycle(scope, cycle)
-
-    def stage() -> None:
-        _transition(
-            session,
-            scope,
-            scope.task,
-            TaskStatus.IN_PROGRESS,
-            actor_type=AuditActorType.AGENT,
-            actor_id=scope.developer.slug,
-            reason="Workflow correction cycle started.",
-        )
-
-    _commit_checkpoint(session, stage)
+    _transition(
+        session,
+        scope,
+        scope.task,
+        TaskStatus.IN_PROGRESS,
+        actor_type=AuditActorType.AGENT,
+        actor_id=scope.developer.slug,
+        reason="Workflow correction cycle started.",
+    )
 
 
-def _commit_checkpoint(session: Session, stage: Callable[[], None]) -> None:
+def _commit_checkpoint(
+    session: Session, task: Task, stage: Callable[[], None]
+) -> WorkflowError | None:
+    snapshot = _TaskSnapshot(status=task.status, assigned_agent_id=task.assigned_agent_id)
     error_code: WorkflowErrorCode | None = None
     try:
         stage()
         session.commit()
-        return
+        return None
     except WorkflowError as error:
         error_code = error.code
         _discard_exception(error)
@@ -287,8 +362,19 @@ def _commit_checkpoint(session: Session, stage: Callable[[], None]) -> None:
         error_code = WorkflowErrorCode.INTERNAL_FAILURE
         _discard_exception(error)
         del error
-    _best_effort_rollback(session)
-    raise WorkflowError(error_code)
+    rollback_failed = _recover_failed_checkpoint(session, task, snapshot)
+    if rollback_failed:
+        error_code = WorkflowErrorCode.PERSISTENCE_FAILURE
+    del snapshot
+    del task
+    del stage
+    del session
+    return WorkflowError(error_code)
+
+
+def _raise_failure(error: WorkflowError) -> NoReturn:
+    """Raise a previously detached public error from a scope-free frame."""
+    raise error
 
 
 def _locked_ready_task(session: Session, scope: ValidatedWorkflowScope) -> Task:
@@ -325,9 +411,45 @@ def _transition(
     )
 
 
-def _best_effort_rollback(session: Session) -> None:
+def _recover_failed_checkpoint(session: Session, task: Task, snapshot: _TaskSnapshot) -> bool:
+    rollback_failed = _best_effort_rollback(session)
+    if rollback_failed:
+        _best_effort_invalidate(session)
+    _best_effort_clear_authorizations(session)
+    _restore_task_snapshot(task, snapshot)
+    return rollback_failed
+
+
+def _best_effort_rollback(session: Session) -> bool:
     try:
         session.rollback()
+    except BaseException as error:
+        _discard_exception(error)
+        del error
+        return True
+    return False
+
+
+def _best_effort_invalidate(session: Session) -> None:
+    try:
+        session.invalidate()
+    except BaseException as error:
+        _discard_exception(error)
+        del error
+
+
+def _best_effort_clear_authorizations(session: Session) -> None:
+    try:
+        clear_task_status_authorizations(session)
+    except BaseException as error:
+        _discard_exception(error)
+        del error
+
+
+def _restore_task_snapshot(task: Task, snapshot: _TaskSnapshot) -> None:
+    try:
+        set_committed_value(task, "status", snapshot.status)
+        set_committed_value(task, "assigned_agent_id", snapshot.assigned_agent_id)
     except BaseException as error:
         _discard_exception(error)
         del error
@@ -385,9 +507,13 @@ def _event_data(
         }
     if event_type is WorkflowEventType.REVIEW_CYCLE_EXHAUSTED:
         _require_absent(decision, review_score, finding_count)
+        validated_cycle = _require_cycle(scope, cycle)
+        validated_max_review_cycles = _require_max_review_cycles(scope, max_review_cycles)
+        if validated_cycle != validated_max_review_cycles:
+            raise WorkflowError(WorkflowErrorCode.INVALID_INPUT)
         return {
-            "cycle": _require_cycle(scope, cycle),
-            "max_review_cycles": _require_max_review_cycles(scope, max_review_cycles),
+            "cycle": validated_cycle,
+            "max_review_cycles": validated_max_review_cycles,
         }
     _require_absent(decision, review_score, finding_count, max_review_cycles)
     return {"cycle": _require_cycle(scope, cycle)}

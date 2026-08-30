@@ -125,7 +125,8 @@ def _reject_unauthorized_task_status_changes(
             )
 
 
-def _clear_task_status_authorizations(session: Session, *_args: Any) -> None:
+def clear_task_status_authorizations(session: Session, *_args: Any) -> None:
+    """Discard all pending state-machine authorizations for one session."""
     session.info.pop(_AUTHORIZATIONS_KEY, None)
 
 
@@ -133,9 +134,9 @@ def register_task_status_guard() -> None:
     """Register the process-wide task-status guard exactly once."""
     listeners = (
         ("before_flush", _reject_unauthorized_task_status_changes),
-        ("after_flush", _clear_task_status_authorizations),
-        ("after_rollback", _clear_task_status_authorizations),
-        ("after_soft_rollback", _clear_task_status_authorizations),
+        ("after_flush", clear_task_status_authorizations),
+        ("after_rollback", clear_task_status_authorizations),
+        ("after_soft_rollback", clear_task_status_authorizations),
     )
     for event_name, listener in listeners:
         if not event.contains(Session, event_name, listener):

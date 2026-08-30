@@ -66,6 +66,18 @@ def _assert_traceback_excludes_markers(
         traceback = traceback.tb_next
 
 
+def _assert_checkpoint_implementation_frames_are_clean(error: WorkflowError, *markers: str) -> None:
+    """Inspect only workflow implementation frames, not uncontrollable caller frames."""
+    traceback = error.__traceback__
+    while traceback is not None:
+        frame = traceback.tb_frame
+        if frame.f_code.co_filename.endswith("core/workflows/audit.py"):
+            assert {"scope", "request", "task", "session", "stage"}.isdisjoint(frame.f_locals)
+            for value in frame.f_locals.values():
+                assert all(marker not in repr(value) for marker in markers)
+        traceback = traceback.tb_next
+
+
 def _capture_workflow_error(operation: Callable[[], None]) -> WorkflowError:
     """Return one sanitized checkpoint error without retaining caller-local marker data."""
     try:
@@ -371,6 +383,28 @@ def test_exhaustion_rejects_a_cycle_before_the_configured_limit(
     assert len(_events(db_session)) == event_count
 
 
+def test_direct_exhaustion_event_rejects_a_cycle_before_the_configured_limit(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Prevent direct workflow-event callers from falsely recording exhaustion."""
+    _, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    from core.workflows import validate_workflow_request
+
+    scope = validate_workflow_request(db_session, request)
+
+    with pytest.raises(WorkflowError) as raised:
+        append_workflow_event(
+            db_session,
+            scope,
+            WorkflowEventType.REVIEW_CYCLE_EXHAUSTED,
+            cycle=1,
+            max_review_cycles=2,
+        )
+
+    assert raised.value.code is WorkflowErrorCode.INVALID_INPUT
+    assert _events(db_session) == []
+
+
 def test_next_review_cycle_checkpoint_transitions_back_to_developer_work(
     db_session: Session, tmp_path: Path
 ) -> None:
@@ -535,30 +569,104 @@ def test_assignment_staging_failures_roll_back_and_detach_raw_exceptions(
     assert restored_after_commit.assigned_agent_id is None
 
 
-def test_rollback_failure_is_detached_and_never_replaces_safe_checkpoint_error(
-    db_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_rollback_failure_invalidates_partial_assignment_and_returns_safe_persistence_error(
+    database_engine: Engine, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Prevent a rollback error from disclosing or replacing the checkpoint failure."""
-    _, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    """Prevent a poisoned checkpoint transaction from later persisting partial state."""
+    factory = sessionmaker(bind=database_engine, expire_on_commit=False)
+    seed_session = factory()
+    poisoned_session = factory()
+    verification_session = factory()
     from core.workflows import validate_workflow_request
 
-    scope = validate_workflow_request(db_session, request)
-    staging_marker = "staging-exception-marker-9cde"
+    task, developer, reviewer, request = persisted_workflow_request(seed_session, tmp_path)
+    developer_slug = f"developer-{uuid4().hex[:12]}"
+    reviewer_slug = f"reviewer-{uuid4().hex[:12]}"
+    developer.slug = developer_slug
+    reviewer.slug = reviewer_slug
+    developer_request = request.developer_request.model_copy(
+        update={
+            "profile": request.developer_request.profile.model_copy(update={"id": developer_slug}),
+            "execution_context": request.developer_request.execution_context.model_copy(
+                update={"agent_id": developer_slug}
+            ),
+        }
+    )
+    request = request.model_copy(
+        update={
+            "developer_request": developer_request,
+            "reviewer_profile": request.reviewer_profile.model_copy(update={"id": reviewer_slug}),
+        }
+    )
+    task_id = task.id
+    seed_session.commit()
+    scope = validate_workflow_request(poisoned_session, request)
+    original_commit = poisoned_session.commit
+    original_rollback = poisoned_session.rollback
+    staging_marker = "commit-exception-marker-9cde"
     rollback_marker = "rollback-exception-marker-12f7"
 
-    def fail_stage(*_args: object, **_kwargs: object) -> AuditEvent:
-        raise RuntimeError(staging_marker)
+    def fail_after_flush() -> None:
+        poisoned_session.flush()
+        raise SQLAlchemyError(staging_marker)
 
     def fail_rollback() -> None:
         raise RuntimeError(rollback_marker)
 
+    monkeypatch.setattr(poisoned_session, "commit", fail_after_flush)
+    monkeypatch.setattr(poisoned_session, "rollback", fail_rollback)
+
+    error = _capture_workflow_error(lambda: commit_assignment_checkpoint(poisoned_session, scope))
+
+    assert error.code is WorkflowErrorCode.PERSISTENCE_FAILURE
+    _assert_exception_chain_excludes_markers(error, staging_marker, rollback_marker)
+    monkeypatch.setattr(poisoned_session, "commit", original_commit)
+    monkeypatch.setattr(poisoned_session, "rollback", original_rollback)
+    poisoned_session.commit()
+
+    restored = verification_session.get(Task, task_id)
+    assert restored is not None
+    assert restored.status is TaskStatus.READY
+    assert restored.assigned_agent_id is None
+    assert _events(verification_session) == []
+    poisoned_session.close()
+    verification_session.close()
+    seed_session.close()
+
+
+def test_safe_checkpoint_error_traceback_does_not_retain_workflow_scope_markers(
+    db_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Prevent public checkpoint frames from retaining task or workspace scope data."""
+    task_marker = "task-scope-marker-3efa"
+    workspace_marker = "workspace-scope-marker-940c"
+    workspace_root = tmp_path / workspace_marker
+    workspace_root.mkdir()
+    task, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    task.title = task_marker
+    db_session.commit()
+    from core.workflows import validate_workflow_request
+
+    developer_request = request.developer_request.model_copy(
+        update={
+            "execution_context": request.developer_request.execution_context.model_copy(
+                update={"workspace_root": workspace_root}
+            )
+        }
+    )
+    scope = validate_workflow_request(
+        db_session, request.model_copy(update={"developer_request": developer_request})
+    )
+
+    def fail_stage(*_args: object, **_kwargs: object) -> AuditEvent:
+        raise RuntimeError("staging failure")
+
     monkeypatch.setattr("core.workflows.audit.append_workflow_event", fail_stage)
-    monkeypatch.setattr(db_session, "rollback", fail_rollback)
 
     error = _capture_workflow_error(lambda: commit_assignment_checkpoint(db_session, scope))
 
     assert error.code is WorkflowErrorCode.INTERNAL_FAILURE
-    _assert_exception_chain_excludes_markers(error, staging_marker, rollback_marker)
+    _assert_checkpoint_implementation_frames_are_clean(error, task_marker, workspace_marker)
 
 
 def test_assignment_reloads_a_locked_task_and_rejects_a_stale_preflight(
@@ -608,7 +716,7 @@ def test_assignment_reloads_a_locked_task_and_rejects_a_stale_preflight(
         stored = second_session.get(Task, task_id, populate_existing=True)
         assert stored is not None
         assert stored.status is TaskStatus.ASSIGNED
-        events = _events(second_session)
+        events = [event for event in _events(second_session) if event.task_id == task_id]
         status_events = [event for event in events if event.event_type == "TASK_STATUS_CHANGED"]
         assert [(event.event_type, event.data["to_status"]) for event in status_events] == [
             ("TASK_STATUS_CHANGED", "ASSIGNED")

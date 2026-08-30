@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from copy import deepcopy
+from uuid import UUID
 
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session, object_session
@@ -118,6 +119,7 @@ class TaskStateMachine:
         actor_id: str | None,
         reason: str,
         metadata: Mapping[str, object] | None = None,
+        correlation_id: UUID | None = None,
     ) -> AuditEvent:
         """Apply one valid transition and stage its audit event without committing."""
         if object_session(task) is not self._session or not inspect(task).persistent:
@@ -156,6 +158,7 @@ class TaskStateMachine:
             action="transition_task_status",
             result=AuditResult.SUCCEEDED,
             data=audit_data,
+            correlation_id=correlation_id,
         )
         authorize_task_status_change(self._session, task, current, target, event)
         self._session.add(event)

@@ -5,16 +5,18 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from enum import StrEnum
+from traceback import clear_frames
 
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from core.enums import AuditActorType, AuditResult, TaskStatus
 from core.reviewer import ReviewDecision
-from core.tasks.state_machine import TaskStateMachine
+from core.tasks.state_machine import InvalidTaskTransitionError, TaskStateMachine
 from core.workflows.errors import WorkflowError, WorkflowErrorCode
 from core.workflows.validation import ValidatedWorkflowScope
-from infrastructure.database.models import AuditEvent
+from infrastructure.database.models import AuditEvent, Task
 
 
 class WorkflowEventType(StrEnum):
@@ -52,7 +54,8 @@ def append_workflow_event(
     )
     actor_id = (
         scope.developer.slug
-        if event_type in {
+        if event_type
+        in {
             WorkflowEventType.WORKFLOW_STARTED,
             WorkflowEventType.DEVELOPER_HANDOFF_CREATED,
         }
@@ -79,9 +82,12 @@ def commit_assignment_checkpoint(session: Session, scope: ValidatedWorkflowScope
     """Durably assign the Developer and record the workflow start as one checkpoint."""
 
     def stage() -> None:
-        scope.task.assigned_agent_id = scope.developer.id
-        TaskStateMachine(session).transition(
-            scope.task,
+        task = _locked_ready_task(session, scope)
+        task.assigned_agent_id = scope.developer.id
+        _transition(
+            session,
+            scope,
+            task,
             TaskStatus.ASSIGNED,
             actor_type=AuditActorType.AGENT,
             actor_id=scope.developer.slug,
@@ -100,7 +106,9 @@ def commit_developer_started_checkpoint(
     _require_cycle(scope, cycle)
 
     def stage() -> None:
-        TaskStateMachine(session).transition(
+        _transition(
+            session,
+            scope,
             scope.task,
             TaskStatus.IN_PROGRESS,
             actor_type=AuditActorType.AGENT,
@@ -135,7 +143,9 @@ def commit_developer_completed_checkpoint(
     _require_cycle(scope, cycle)
 
     def stage() -> None:
-        TaskStateMachine(session).transition(
+        _transition(
+            session,
+            scope,
             scope.task,
             TaskStatus.WAITING_REVIEW,
             actor_type=AuditActorType.AGENT,
@@ -172,7 +182,9 @@ def commit_review_completed_checkpoint(
     )
 
     def stage() -> None:
-        TaskStateMachine(session).transition(
+        _transition(
+            session,
+            scope,
             scope.task,
             target,
             actor_type=AuditActorType.AGENT,
@@ -209,9 +221,13 @@ def commit_review_cycle_exhausted_checkpoint(
     """Durably escalate an exhausted review workflow to human attention."""
     _require_cycle(scope, cycle)
     _require_max_review_cycles(scope, max_review_cycles)
+    if cycle != max_review_cycles:
+        raise WorkflowError(WorkflowErrorCode.INVALID_INPUT)
 
     def stage() -> None:
-        TaskStateMachine(session).transition(
+        _transition(
+            session,
+            scope,
             scope.task,
             TaskStatus.WAITING_HUMAN,
             actor_type=AuditActorType.AGENT,
@@ -236,7 +252,9 @@ def commit_next_review_cycle_checkpoint(
     _require_cycle(scope, cycle)
 
     def stage() -> None:
-        TaskStateMachine(session).transition(
+        _transition(
+            session,
+            scope,
             scope.task,
             TaskStatus.IN_PROGRESS,
             actor_type=AuditActorType.AGENT,
@@ -248,12 +266,93 @@ def commit_next_review_cycle_checkpoint(
 
 
 def _commit_checkpoint(session: Session, stage: Callable[[], None]) -> None:
+    error_code: WorkflowErrorCode | None = None
     try:
         stage()
         session.commit()
-    except SQLAlchemyError:
+        return
+    except WorkflowError as error:
+        error_code = error.code
+        _discard_exception(error)
+        del error
+    except InvalidTaskTransitionError as error:
+        error_code = WorkflowErrorCode.INVALID_STATE
+        _discard_exception(error)
+        del error
+    except SQLAlchemyError as error:
+        error_code = WorkflowErrorCode.PERSISTENCE_FAILURE
+        _discard_exception(error)
+        del error
+    except Exception as error:
+        error_code = WorkflowErrorCode.INTERNAL_FAILURE
+        _discard_exception(error)
+        del error
+    _best_effort_rollback(session)
+    raise WorkflowError(error_code)
+
+
+def _locked_ready_task(session: Session, scope: ValidatedWorkflowScope) -> Task:
+    task = session.scalar(
+        select(Task)
+        .where(Task.id == scope.task.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if task is None:
+        raise WorkflowError(WorkflowErrorCode.INVALID_SCOPE)
+    if task.status is not TaskStatus.READY or task.assigned_agent_id is not None:
+        raise WorkflowError(WorkflowErrorCode.INVALID_STATE)
+    return task
+
+
+def _transition(
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    task: Task,
+    target: TaskStatus,
+    *,
+    actor_type: AuditActorType,
+    actor_id: str,
+    reason: str,
+) -> AuditEvent:
+    return TaskStateMachine(session).transition(
+        task,
+        target,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        reason=reason,
+        correlation_id=scope.request.correlation_id,
+    )
+
+
+def _best_effort_rollback(session: Session) -> None:
+    try:
         session.rollback()
-        raise WorkflowError(WorkflowErrorCode.PERSISTENCE_FAILURE) from None
+    except BaseException as error:
+        _discard_exception(error)
+        del error
+
+
+def _discard_exception(error: BaseException) -> None:
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        traceback = current.__traceback__
+        cause = current.__cause__
+        context = current.__context__
+        current.__traceback__ = None
+        current.__cause__ = None
+        current.__context__ = None
+        if traceback is not None:
+            clear_frames(traceback)
+        if cause is not None:
+            pending.append(cause)
+        if context is not None:
+            pending.append(context)
 
 
 def _event_data(

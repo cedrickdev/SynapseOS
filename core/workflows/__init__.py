@@ -10,9 +10,11 @@ from core.workflows.audit import (
     commit_next_review_cycle_checkpoint,
     commit_review_completed_checkpoint,
     commit_review_cycle_exhausted_checkpoint,
+    commit_safe_failure_checkpoint,
 )
 from core.workflows.errors import WorkflowError, WorkflowErrorCode
 from core.workflows.handoff import validate_reviewer_handoff
+from core.workflows.orchestrator import WorkflowOrchestrator
 from core.workflows.ports import DeveloperRunner, ReviewerHandoffBuilder, ReviewerRunner
 from core.workflows.types import (
     DeveloperReviewerWorkflowRequest,
@@ -39,8 +41,10 @@ __all__ = [
     "commit_next_review_cycle_checkpoint",
     "commit_review_completed_checkpoint",
     "commit_review_cycle_exhausted_checkpoint",
+    "commit_safe_failure_checkpoint",
     "WorkflowHandoffContext",
     "WorkflowOutcome",
+    "WorkflowOrchestrator",
     "ValidatedWorkflowScope",
     "validate_reviewer_handoff",
     "validate_workflow_request",

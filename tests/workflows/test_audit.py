@@ -28,6 +28,7 @@ from core.workflows import (
     commit_next_review_cycle_checkpoint,
     commit_review_completed_checkpoint,
     commit_review_cycle_exhausted_checkpoint,
+    commit_safe_failure_checkpoint,
 )
 from infrastructure.database.append_only import AppendOnlyViolationError
 from infrastructure.database.models import AuditEvent, Task
@@ -441,6 +442,35 @@ def test_next_review_cycle_checkpoint_transitions_back_to_developer_work(
         "to_status": "IN_PROGRESS",
         "reason": "Workflow correction cycle started.",
         "metadata": {},
+    }
+
+
+def test_safe_failure_checkpoint_escalates_a_started_workflow_with_only_a_stable_code(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """A collaborator failure must use TaskStateMachine to commit its human escalation."""
+    task, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    from core.workflows import validate_workflow_request
+
+    scope = validate_workflow_request(db_session, request)
+    commit_assignment_checkpoint(db_session, scope)
+    commit_developer_started_checkpoint(db_session, scope, cycle=1)
+
+    commit_safe_failure_checkpoint(
+        db_session, scope, error_code=WorkflowErrorCode.COLLABORATOR_FAILURE
+    )
+
+    assert task.status is TaskStatus.WAITING_HUMAN
+    status_event = next(
+        event
+        for event in _events(db_session)
+        if event.event_type == "TASK_STATUS_CHANGED" and event.data["to_status"] == "WAITING_HUMAN"
+    )
+    assert status_event.data == {
+        "from_status": "IN_PROGRESS",
+        "to_status": "WAITING_HUMAN",
+        "reason": "Workflow safely escalated for human attention.",
+        "metadata": {"workflow_error_code": "COLLABORATOR_FAILURE"},
     }
 
 

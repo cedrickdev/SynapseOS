@@ -211,6 +211,23 @@ def commit_next_review_cycle_checkpoint(
         _raise_failure(failure)
 
 
+def commit_safe_failure_checkpoint(
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    error_code: WorkflowErrorCode,
+) -> None:
+    """Durably escalate one started workflow failure using only its stable category."""
+    stage = partial(_stage_safe_failure, session, scope, error_code)
+    failure = _commit_checkpoint(session, scope.task, stage)
+    del stage
+    del scope
+    del session
+    del error_code
+    if failure is not None:
+        _raise_failure(failure)
+
+
 def _stage_assignment(session: Session, scope: ValidatedWorkflowScope) -> None:
     scope.task.assigned_agent_id = scope.developer.id
     _transition(
@@ -338,6 +355,22 @@ def _stage_next_review_cycle(session: Session, scope: ValidatedWorkflowScope, cy
     )
 
 
+def _stage_safe_failure(
+    session: Session, scope: ValidatedWorkflowScope, error_code: WorkflowErrorCode
+) -> None:
+    _require_safe_failure_code(error_code)
+    _transition(
+        session,
+        scope,
+        scope.task,
+        TaskStatus.WAITING_HUMAN,
+        actor_type=AuditActorType.SYSTEM,
+        actor_id=None,
+        reason="Workflow safely escalated for human attention.",
+        metadata={"workflow_error_code": error_code.value},
+    )
+
+
 def _commit_checkpoint(
     session: Session,
     task: Task,
@@ -408,8 +441,9 @@ def _transition(
     target: TaskStatus,
     *,
     actor_type: AuditActorType,
-    actor_id: str,
+    actor_id: str | None,
     reason: str,
+    metadata: dict[str, object] | None = None,
 ) -> AuditEvent:
     return TaskStateMachine(session).transition(
         task,
@@ -417,6 +451,7 @@ def _transition(
         actor_type=actor_type,
         actor_id=actor_id,
         reason=reason,
+        metadata=metadata,
         correlation_id=scope.request.correlation_id,
     )
 
@@ -530,6 +565,20 @@ def _event_data(
         }
     _require_absent(decision, review_score, finding_count, max_review_cycles)
     return {"cycle": _require_cycle(scope, cycle)}
+
+
+def _require_safe_failure_code(error_code: WorkflowErrorCode) -> None:
+    allowed_codes = frozenset(
+        {
+            WorkflowErrorCode.UNSAFE_HANDOFF,
+            WorkflowErrorCode.TIMEOUT,
+            WorkflowErrorCode.COLLABORATOR_FAILURE,
+            WorkflowErrorCode.PERSISTENCE_FAILURE,
+            WorkflowErrorCode.INTERNAL_FAILURE,
+        }
+    )
+    if type(error_code) is not WorkflowErrorCode or error_code not in allowed_codes:
+        raise WorkflowError(WorkflowErrorCode.INVALID_INPUT)
 
 
 def _require_scope(scope: ValidatedWorkflowScope) -> None:

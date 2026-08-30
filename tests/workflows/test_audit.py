@@ -72,7 +72,9 @@ def _assert_checkpoint_implementation_frames_are_clean(error: WorkflowError, *ma
     while traceback is not None:
         frame = traceback.tb_frame
         if frame.f_code.co_filename.endswith("core/workflows/audit.py"):
-            assert {"scope", "request", "task", "session", "stage"}.isdisjoint(frame.f_locals)
+            assert {"scope", "request", "task", "session", "stage", "preflight"}.isdisjoint(
+                frame.f_locals
+            )
             for value in frame.f_locals.values():
                 assert all(marker not in repr(value) for marker in markers)
         traceback = traceback.tb_next
@@ -729,6 +731,57 @@ def test_assignment_reloads_a_locked_task_and_rejects_a_stale_preflight(
     finally:
         first_session.close()
         second_session.close()
+        seed_session.close()
+
+
+def test_rejected_stale_assignment_keeps_the_losing_scope_task_at_winning_state(
+    database_engine: Engine, tmp_path: Path
+) -> None:
+    """Prevent rejected assignment recovery from restoring a stale READY task snapshot."""
+    factory = sessionmaker(bind=database_engine, expire_on_commit=False)
+    seed_session = factory()
+    winning_session = factory()
+    losing_session = factory()
+    try:
+        task, developer, reviewer, request = persisted_workflow_request(seed_session, tmp_path)
+        developer_slug = f"developer-{uuid4().hex[:12]}"
+        reviewer_slug = f"reviewer-{uuid4().hex[:12]}"
+        developer.slug = developer_slug
+        reviewer.slug = reviewer_slug
+        developer_request = request.developer_request.model_copy(
+            update={
+                "profile": request.developer_request.profile.model_copy(
+                    update={"id": developer_slug}
+                ),
+                "execution_context": request.developer_request.execution_context.model_copy(
+                    update={"agent_id": developer_slug}
+                ),
+            }
+        )
+        request = request.model_copy(
+            update={
+                "developer_request": developer_request,
+                "reviewer_profile": request.reviewer_profile.model_copy(
+                    update={"id": reviewer_slug}
+                ),
+            }
+        )
+        seed_session.commit()
+        from core.workflows import validate_workflow_request
+
+        winning_scope = validate_workflow_request(winning_session, request)
+        losing_scope = validate_workflow_request(losing_session, request)
+        commit_assignment_checkpoint(winning_session, winning_scope)
+
+        with pytest.raises(WorkflowError) as raised:
+            commit_assignment_checkpoint(losing_session, losing_scope)
+
+        assert raised.value.code is WorkflowErrorCode.INVALID_STATE
+        assert losing_scope.task.status is TaskStatus.ASSIGNED
+        assert losing_scope.task.assigned_agent_id == developer.id
+    finally:
+        winning_session.close()
+        losing_session.close()
         seed_session.close()
 
 

@@ -95,7 +95,9 @@ def append_workflow_event(
 def commit_assignment_checkpoint(session: Session, scope: ValidatedWorkflowScope) -> None:
     """Durably assign the Developer and record the workflow start as one checkpoint."""
     stage = partial(_stage_assignment, session, scope)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    preflight = partial(_locked_ready_task, session, scope)
+    failure = _commit_checkpoint(session, scope.task, stage, preflight=preflight)
+    del preflight
     del stage
     del scope
     del session
@@ -210,12 +212,11 @@ def commit_next_review_cycle_checkpoint(
 
 
 def _stage_assignment(session: Session, scope: ValidatedWorkflowScope) -> None:
-    task = _locked_ready_task(session, scope)
-    task.assigned_agent_id = scope.developer.id
+    scope.task.assigned_agent_id = scope.developer.id
     _transition(
         session,
         scope,
-        task,
+        scope.task,
         TaskStatus.ASSIGNED,
         actor_type=AuditActorType.AGENT,
         actor_id=scope.developer.slug,
@@ -338,11 +339,18 @@ def _stage_next_review_cycle(session: Session, scope: ValidatedWorkflowScope, cy
 
 
 def _commit_checkpoint(
-    session: Session, task: Task, stage: Callable[[], None]
+    session: Session,
+    task: Task,
+    stage: Callable[[], None],
+    *,
+    preflight: Callable[[], Task] | None = None,
 ) -> WorkflowError | None:
-    snapshot = _TaskSnapshot(status=task.status, assigned_agent_id=task.assigned_agent_id)
+    snapshot: _TaskSnapshot | None = None
     error_code: WorkflowErrorCode | None = None
     try:
+        if preflight is not None:
+            task = preflight()
+        snapshot = _TaskSnapshot(status=task.status, assigned_agent_id=task.assigned_agent_id)
         stage()
         session.commit()
         return None
@@ -365,7 +373,9 @@ def _commit_checkpoint(
     rollback_failed = _recover_failed_checkpoint(session, task, snapshot)
     if rollback_failed:
         error_code = WorkflowErrorCode.PERSISTENCE_FAILURE
+    assert error_code is not None
     del snapshot
+    del preflight
     del task
     del stage
     del session
@@ -411,12 +421,15 @@ def _transition(
     )
 
 
-def _recover_failed_checkpoint(session: Session, task: Task, snapshot: _TaskSnapshot) -> bool:
+def _recover_failed_checkpoint(
+    session: Session, task: Task, snapshot: _TaskSnapshot | None
+) -> bool:
     rollback_failed = _best_effort_rollback(session)
     if rollback_failed:
         _best_effort_invalidate(session)
     _best_effort_clear_authorizations(session)
-    _restore_task_snapshot(task, snapshot)
+    if snapshot is not None:
+        _restore_task_snapshot(task, snapshot)
     return rollback_failed
 
 

@@ -1171,13 +1171,13 @@ flowchart TD
 
 ## Checklist
 
-- [ ] orchestrateur
-- [ ] assignation
-- [ ] handoff
-- [ ] review cycle
-- [ ] max review cycles
-- [ ] état Task
-- [ ] audit
+- [x] orchestrateur
+- [x] assignation
+- [x] handoff
+- [x] review cycle
+- [x] max review cycles
+- [x] état Task
+- [x] audit
 
 ## Prompt Claude Code — Phase 16
 

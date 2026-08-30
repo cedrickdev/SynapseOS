@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_15-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_16-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,7 +48,7 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 15 — Reviewer Agent completed.** The repository now provides the persistence foundation, an
+**Phase 16 — Developer ↔ Reviewer workflow completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
@@ -97,6 +97,9 @@ What exists today:
 - An independent read-only Reviewer role with one bounded provider call, strict structured
   findings, explicit required-check evidence, a deterministic approval gate, and a deterministic
   per-review score. Failed or missing mandatory checks can never be approved.
+- A bounded Developer ↔ Reviewer workflow that assigns one persistent READY task, commits audited
+  checkpoints, obtains fresh handoff evidence for each correction cycle, and ends at WAITING_QA on
+  approval or WAITING_HUMAN on review-cycle exhaustion.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -144,6 +147,7 @@ make dev         # run the API with autoreload on http://localhost:8000
 apps/api/                 # FastAPI application (Platform API)
 core/                     # Domain and application boundaries
   agents/ commands/ developer/ reviewer/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
+  workflows/               # Explicit bounded Developer ↔ Reviewer orchestration
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
@@ -196,6 +200,13 @@ The focused Phase 15 suite covers the independent read-only Reviewer role:
 .venv/bin/pytest tests/reviewer -q
 ```
 
+The focused Phase 16 suite composes concrete Developer and Reviewer agents against real PostgreSQL
+created through Alembic:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_integration.py -q
+```
+
 Run `make help` to list every available target.
 
 **Working agreement:** changes are test-driven (write the failing test first), and `make check`
@@ -221,7 +232,8 @@ validated pull request. The near-term sequence is:
 13. **Loop Engineering V1** — completed
 14. **Developer Agent** — completed
 15. **Reviewer Agent** — completed
-16. Developer ↔ Reviewer workflow — not started
+16. **Developer ↔ Reviewer workflow** — completed
+17. QA Agent — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -241,6 +253,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Loop Engineering V1:** [`docs/runtime.md`](docs/runtime.md)
 - **Developer Agent:** [`docs/developer-agent.md`](docs/developer-agent.md)
 - **Reviewer Agent:** [`docs/reviewer-agent.md`](docs/reviewer-agent.md)
+- **Developer ↔ Reviewer workflow:** [`docs/developer-reviewer-workflow.md`](docs/developer-reviewer-workflow.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

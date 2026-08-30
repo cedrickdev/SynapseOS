@@ -82,6 +82,7 @@
       APPROVED = "APPROVED"
       REVIEW_CYCLES_EXHAUSTED = "REVIEW_CYCLES_EXHAUSTED"
 
+
   class DeveloperReviewerWorkflowRequest(_ImmutableWorkflowModel):
       task_id: UUID
       developer_agent_id: UUID
@@ -242,8 +243,10 @@
   class DeveloperRunner(Protocol):
       async def run(self, request: DeveloperRequest) -> DeveloperResult: ...
 
+
   class ReviewerRunner(Protocol):
       async def run(self, request: ReviewerRequest) -> ReviewerResult: ...
+
 
   class ReviewerHandoffBuilder(Protocol):
       async def build(

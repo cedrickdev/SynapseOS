@@ -53,8 +53,9 @@ audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a 
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
-free-form shell, MCP, multi-agent coordination, QA and security engines, and the
-frontend remain intentionally unimplemented.
+free-form shell, MCP, general-purpose multi-agent orchestration beyond the explicit
+Developer–Reviewer workflow, QA and security engines, and the frontend remain intentionally
+unimplemented.
 
 What exists today:
 

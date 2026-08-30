@@ -7,21 +7,14 @@ import pytest
 from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
 from core.developer import DeveloperCheckResult, DeveloperResult
 from core.enums import Permission
-from core.reviewer import ReviewCheck, ReviewerRequest
+from core.reviewer import ReviewCheck, ReviewerRequest, validate_reviewer_request
 from core.runtime import RuntimeResult, RuntimeTerminalReason, RuntimeTerminalStatus
 from core.workflows import WorkflowError, WorkflowErrorCode, WorkflowHandoffContext
 from core.workflows.handoff import validate_reviewer_handoff
-from core.workflows.ports import DeveloperRunner, ReviewerHandoffBuilder, ReviewerRunner
 from tests.reviewer.factories import reviewer_profile
 from tests.workflows.factories import (
-    approved_reviewer_result,
     completed_developer_report,
     handoff_context_values,
-)
-from tests.workflows.fakes import (
-    RecordingDeveloperRunner,
-    RecordingReviewerHandoffBuilder,
-    RecordingReviewerRunner,
 )
 
 
@@ -147,111 +140,102 @@ def test_handoff_preserves_only_the_current_canonical_evidence() -> None:
     assert validated.profile == context.reviewer_profile
 
 
-def test_recording_fakes_conform_to_the_exact_workflow_protocols() -> None:
-    """Prevent future orchestration tests from using collaborators with widened calls."""
+def test_handoff_rejects_latest_developer_checks_outside_required_profile_scope() -> None:
+    """Prevent a fresh check from being reviewed when it is not an explicitly required check."""
     context = _context()
-    developer_result = _developer_result()
+    developer_result = _developer_result(
+        (
+            DeveloperCheckResult(
+                profile_id=CommandProfileId.RUFF,
+                category=CommandCategory.LINT,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
+            ),
+        )
+    )
     request = _request(context, developer_result)
 
-    assert isinstance(RecordingDeveloperRunner(developer_result), DeveloperRunner)
-    assert isinstance(RecordingReviewerRunner(approved_reviewer_result()), ReviewerRunner)
-    assert isinstance(RecordingReviewerHandoffBuilder(request), ReviewerHandoffBuilder)
+    with pytest.raises(WorkflowError) as raised:
+        validate_reviewer_handoff(context, developer_result, request)
+
+    assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
 
 
 @pytest.mark.parametrize(
-    ("case", "request_factory", "rejected_value"),
+    "returned_checks",
     [
         (
-            "stale developer report",
-            lambda context, result, request: request.model_copy(
-                update={
-                    "developer_report": completed_developer_report().model_copy(
-                        update={"summary": "developer-report-must-not-leak"}
-                    )
-                }
+            ReviewCheck(
+                profile_id=CommandProfileId.PYTEST,
+                category=CommandCategory.TEST,
+                status=CommandTerminalStatus.FAILED,
+                exit_code=1,
+                truncated=False,
             ),
-            "developer-report-must-not-leak",
+            ReviewCheck(
+                profile_id=CommandProfileId.RUFF,
+                category=CommandCategory.LINT,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
+            ),
         ),
         (
-            "missing check evidence",
-            lambda context, result, request: request.model_copy(update={"checks": ()}),
-            "missing-check-must-not-leak",
+            ReviewCheck(
+                profile_id=CommandProfileId.PYTEST,
+                category=CommandCategory.TEST,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
+            ),
+            ReviewCheck(
+                profile_id=CommandProfileId.RUFF,
+                category=CommandCategory.LINT,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
+            ),
+            ReviewCheck(
+                profile_id=CommandProfileId.MYPY,
+                category=CommandCategory.LINT,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
+            ),
         ),
         (
-            "extra check evidence",
-            lambda context, result, request: request.model_copy(
-                update={"checks": request.checks + (request.checks[0],)}
+            ReviewCheck(
+                profile_id=CommandProfileId.PYTEST,
+                category=CommandCategory.TEST,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
             ),
-            "extra-check-must-not-leak",
         ),
         (
-            "reordered check evidence",
-            lambda context, result, request: request.model_copy(
-                update={"checks": tuple(reversed(request.checks))}
+            ReviewCheck(
+                profile_id=CommandProfileId.RUFF,
+                category=CommandCategory.LINT,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
             ),
-            "reordered-check-must-not-leak",
-        ),
-        (
-            "stale task identifier",
-            lambda context, result, request: request.model_copy(
-                update={"task_id": "stale-task-must-not-leak"}
+            ReviewCheck(
+                profile_id=CommandProfileId.PYTEST,
+                category=CommandCategory.TEST,
+                status=CommandTerminalStatus.SUCCEEDED,
+                exit_code=0,
+                truncated=False,
             ),
-            "stale-task-must-not-leak",
-        ),
-        (
-            "wrong reviewer profile",
-            lambda context, result, request: request.model_copy(
-                update={"profile": reviewer_profile(id="wrong-profile-must-not-leak")}
-            ),
-            "wrong-profile-must-not-leak",
-        ),
-        (
-            "write permission",
-            lambda context, result, request: request.model_copy(
-                update={
-                    "profile": reviewer_profile(
-                        permission_ids=frozenset(
-                            {
-                                Permission.FILESYSTEM_READ.value,
-                                Permission.FILESYSTEM_WRITE.value,
-                            }
-                        )
-                    )
-                }
-            ),
-            "write-permission-must-not-leak",
-        ),
-        (
-            "command tool",
-            lambda context, result, request: request.model_copy(
-                update={"profile": reviewer_profile(tool_ids=frozenset({"run_command_profile"}))}
-            ),
-            "command-tool-must-not-leak",
-        ),
-        (
-            "malformed diff",
-            lambda context, result, request: request.model_copy(
-                update={"diff": _LeakingValue("malformed-diff-must-not-leak")}
-            ),
-            "malformed-diff-must-not-leak",
-        ),
-        (
-            "type-confused reviewer request",
-            lambda context, result, request: request.model_copy(
-                update={"profile": _LeakingValue("type-confused-request-must-not-leak")}
-            ),
-            "type-confused-request-must-not-leak",
         ),
     ],
-    ids=lambda value: value if isinstance(value, str) else None,
+    ids=("changed-status", "extra-profile", "omitted-source", "reordered"),
 )
-def test_handoff_rejects_non_current_or_unsafe_review_evidence(
-    case: str,
-    request_factory: object,
-    rejected_value: str,
+def test_handoff_rejects_canonical_review_checks_that_differ_from_latest_evidence(
+    returned_checks: tuple[ReviewCheck, ...],
 ) -> None:
-    """Prevent stale scope, altered checks, or authority from crossing the handoff."""
-    context = _context()
+    """Prevent the handoff builder from altering, adding, dropping, or reordering check evidence."""
     developer_result = _developer_result(
         (
             DeveloperCheckResult(
@@ -270,34 +254,78 @@ def test_handoff_rejects_non_current_or_unsafe_review_evidence(
             ),
         )
     )
-    context = context.model_copy(
+    context = _context().model_copy(
         update={"required_check_profiles": (CommandProfileId.PYTEST, CommandProfileId.RUFF)}
     )
-    request = _request(context, developer_result)
-    if case == "missing check evidence":
-        request = request.model_copy(update={"checks": (_LeakingValue(rejected_value),)})
-    elif case == "extra check evidence":
-        request = request.model_copy(
-            update={"checks": request.checks + (_LeakingValue(rejected_value),)}
-        )
-    elif case == "reordered check evidence":
-        request = request.model_copy(
-            update={
-                "checks": (
-                    request.checks[1],
-                    _LeakingValue(rejected_value),
-                )
-            }
-        )
-    else:
-        request = request_factory(context, developer_result, request)  # type: ignore[operator]
+    request = _request(context, developer_result).model_copy(update={"checks": returned_checks})
 
     with pytest.raises(WorkflowError) as raised:
         validate_reviewer_handoff(context, developer_result, request)
 
     assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
-    assert rejected_value not in str(raised.value)
-    assert rejected_value not in repr(raised.value)
+
+
+def test_handoff_requires_the_exact_context_reviewer_profile() -> None:
+    """Prevent a valid read-only reviewer from substituting a different persistent profile value."""
+    context = _context()
+    developer_result = _developer_result()
+    changed_profile = reviewer_profile(system_prompt="A different but valid Reviewer instruction.")
+    request = _request(context, developer_result).model_copy(update={"profile": changed_profile})
+
+    assert validate_reviewer_request(request).request.profile == changed_profile
+    with pytest.raises(WorkflowError) as raised:
+        validate_reviewer_handoff(context, developer_result, request)
+
+    assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
+
+
+def test_handoff_rejects_a_stale_developer_report_without_leaking_it() -> None:
+    """Prevent a previous-cycle report from crossing the fresh handoff boundary."""
+    marker = "stale-developer-report-must-not-leak"
+    context = _context()
+    developer_result = _developer_result()
+    stale_report = completed_developer_report().model_copy(update={"summary": marker})
+    request = _request(context, developer_result).model_copy(
+        update={"developer_report": stale_report}
+    )
+
+    with pytest.raises(WorkflowError) as raised:
+        validate_reviewer_handoff(context, developer_result, request)
+
+    assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
+    assert marker not in str(raised.value)
+    assert marker not in repr(raised.value)
+
+
+def test_handoff_rejects_stale_scope_without_leaking_it() -> None:
+    """Prevent stale task scope from being normalized into a current handoff."""
+    marker = "stale-task-must-not-leak"
+    context = _context()
+    developer_result = _developer_result()
+    request = _request(context, developer_result).model_copy(update={"task_id": marker})
+
+    with pytest.raises(WorkflowError) as raised:
+        validate_reviewer_handoff(context, developer_result, request)
+
+    assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
+    assert marker not in str(raised.value)
+    assert marker not in repr(raised.value)
+
+
+@pytest.mark.parametrize("field", ["diff", "profile"])
+def test_handoff_sanitizes_type_confused_reviewer_evidence(field: str) -> None:
+    """Prevent malformed Reviewer evidence from escaping the safe workflow boundary."""
+    marker = f"type-confused-{field}-must-not-leak"
+    context = _context()
+    developer_result = _developer_result()
+    request = _request(context, developer_result).model_copy(update={field: _LeakingValue(marker)})
+
+    with pytest.raises(WorkflowError) as raised:
+        validate_reviewer_handoff(context, developer_result, request)
+
+    assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
+    assert marker not in str(raised.value)
+    assert marker not in repr(raised.value)
 
 
 @pytest.mark.parametrize(

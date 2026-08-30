@@ -77,6 +77,8 @@ def _require_exact_handoff(
         or request.acceptance_criteria != context.acceptance_criteria
         or request.developer_report != developer_result.report
         or request.required_check_profiles != context.required_check_profiles
+        or tuple(check.profile_id for check in developer_result.checks)
+        != context.required_check_profiles
         or request.checks != _convert_checks(developer_result)
     ):
         raise WorkflowError(WorkflowErrorCode.UNSAFE_HANDOFF)

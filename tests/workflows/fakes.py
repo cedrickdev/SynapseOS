@@ -166,12 +166,16 @@ class BlockingDeveloperRunner(DeveloperRunner):
     started: Event = field(default_factory=Event)
     release: Event = field(default_factory=Event)
     requests: list[DeveloperRequest] = field(default_factory=list)
+    close_calls: int = 0
 
     async def run(self, request: DeveloperRequest) -> DeveloperResult:
         self.requests.append(request)
         self.started.set()
         await self.release.wait()
         return self.result
+
+    async def close(self) -> None:
+        self.close_calls += 1
 
 
 @dataclass(slots=True)
@@ -182,12 +186,16 @@ class BlockingReviewerRunner(ReviewerRunner):
     started: Event = field(default_factory=Event)
     release: Event = field(default_factory=Event)
     requests: list[ReviewerRequest] = field(default_factory=list)
+    close_calls: int = 0
 
     async def run(self, request: ReviewerRequest) -> ReviewerResult:
         self.requests.append(request)
         self.started.set()
         await self.release.wait()
         return self.result
+
+    async def close(self) -> None:
+        self.close_calls += 1
 
 
 @dataclass(slots=True)
@@ -198,6 +206,7 @@ class BlockingReviewerHandoffBuilder(ReviewerHandoffBuilder):
     started: Event = field(default_factory=Event)
     release: Event = field(default_factory=Event)
     calls: list[tuple[WorkflowHandoffContext, DeveloperResult, int]] = field(default_factory=list)
+    close_calls: int = 0
 
     async def build(
         self,
@@ -209,3 +218,6 @@ class BlockingReviewerHandoffBuilder(ReviewerHandoffBuilder):
         self.started.set()
         await self.release.wait()
         return self.request
+
+    async def close(self) -> None:
+        self.close_calls += 1

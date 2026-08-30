@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from traceback import clear_frames
 from typing import NoReturn
 
@@ -77,16 +78,21 @@ class WorkflowOrchestrator:
                         commit_developer_started_checkpoint(self._session, scope, cycle=cycle)
                     else:
                         commit_next_review_cycle_checkpoint(self._session, scope, cycle=cycle)
-                    developer_result = await self._developer.run(scope.request.developer_request)
+                    developer_result = await _invoke_collaborator(
+                        self._developer.run(scope.request.developer_request)
+                    )
                     commit_developer_completed_checkpoint(self._session, scope, cycle=cycle)
-                    handoff = await self._handoff_builder.build(
-                        scope.handoff_context, developer_result, cycle
+                    handoff = await _invoke_collaborator(
+                        self._handoff_builder.build(scope.handoff_context, developer_result, cycle)
                     )
                     reviewer_request = validate_reviewer_handoff(
                         scope.handoff_context, developer_result, handoff
                     )
                     commit_developer_handoff_checkpoint(self._session, scope, cycle=cycle)
-                    reviewer_result = await self._reviewer.run(reviewer_request)
+                    reviewer_result = await _invoke_collaborator(
+                        self._reviewer.run(reviewer_request),
+                        canonicalize=_canonicalize_reviewer_result,
+                    )
                     commit_review_completed_checkpoint(
                         self._session,
                         scope,
@@ -121,7 +127,7 @@ class WorkflowOrchestrator:
             _discard_exception(error)
             del error
         except Exception as error:
-            failure_code = WorkflowErrorCode.COLLABORATOR_FAILURE
+            failure_code = WorkflowErrorCode.INTERNAL_FAILURE
             _discard_exception(error)
             del error
 
@@ -171,9 +177,16 @@ def _exhausted_result(
     )
 
 
+def _canonicalize_reviewer_result(reviewer_result: ReviewerResult) -> ReviewerResult:
+    if type(reviewer_result) is not ReviewerResult:
+        raise TypeError("reviewer result must be a ReviewerResult")
+    return ReviewerResult.model_validate(reviewer_result.model_dump(mode="python", warnings=False))
+
+
 def _normalization_code(error: WorkflowError) -> WorkflowErrorCode:
     if error.code in {
         WorkflowErrorCode.UNSAFE_HANDOFF,
+        WorkflowErrorCode.COLLABORATOR_FAILURE,
         WorkflowErrorCode.PERSISTENCE_FAILURE,
     }:
         return error.code
@@ -195,6 +208,28 @@ def _safe_escalation_code(
         del error
         return safe_code
     return failure_code
+
+
+async def _invoke_collaborator[ResultT](
+    operation: Awaitable[ResultT],
+    *,
+    canonicalize: Callable[[ResultT], ResultT] | None = None,
+) -> ResultT:
+    try:
+        result = await operation
+        if canonicalize is not None:
+            result = canonicalize(result)
+        return result
+    except asyncio.CancelledError:
+        del operation
+        del canonicalize
+        raise
+    except Exception as error:
+        _discard_exception(error)
+        del error
+    del operation
+    del canonicalize
+    _raise_workflow_error(WorkflowErrorCode.COLLABORATOR_FAILURE)
 
 
 def _discard_exception(error: Exception) -> None:

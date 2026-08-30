@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
+from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -49,6 +52,109 @@ def _status_edges(session: Session) -> set[tuple[str, str]]:
         for event in session.scalars(select(AuditEvent))
         if event.event_type == "TASK_STATUS_CHANGED"
     }
+
+
+@contextmanager
+def _capture_audit_stream(session: Session) -> Iterator[list[AuditEvent]]:
+    stream: list[AuditEvent] = []
+
+    def record_flushed_events(flushed_session: Session, _flush_context: object) -> None:
+        stream.extend(item for item in flushed_session.new if isinstance(item, AuditEvent))
+
+    sqlalchemy_event.listen(session, "after_flush", record_flushed_events)
+    try:
+        yield stream
+    finally:
+        sqlalchemy_event.remove(session, "after_flush", record_flushed_events)
+
+
+def _audit_stream_labels(stream: list[AuditEvent]) -> list[str]:
+    labels: list[str] = []
+    for audit_event in stream:
+        if audit_event.event_type == "TASK_STATUS_CHANGED":
+            labels.append(f"TASK_STATUS_CHANGED:{audit_event.data['to_status']}")
+        elif audit_event.event_type == "DEVELOPER_HANDOFF_CREATED":
+            labels.append(f"DEVELOPER_HANDOFF_CREATED:{audit_event.data['cycle']}")
+        else:
+            labels.append(audit_event.event_type)
+    return labels
+
+
+class _SensitiveValue:
+    """Malformed collaborator output carrying data that must not escape."""
+
+    def __init__(self, marker: str) -> None:
+        self.marker = marker
+
+    def __repr__(self) -> str:
+        return self.marker
+
+
+def test_malformed_reviewer_result_is_rejected_before_approval_checkpoint(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Removing Reviewer canonicalization must permit a false WAITING_QA checkpoint."""
+    task, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    developer_result = _developer_result()
+    handoff = _handoff_request(str(task.id), str(task.project_id), developer_result, request)
+    marker = f"malformed-reviewer-result-marker-{tmp_path}"
+    malformed_result = approved_reviewer_result().model_copy(
+        update={"rationale": _SensitiveValue(marker)}
+    )
+    developer = RecordingDeveloperRunner(developer_result)
+    handoff_builder = RecordingReviewerHandoffBuilder(handoff)
+    reviewer = RecordingReviewerRunner(malformed_result)
+
+    with pytest.raises(WorkflowError) as raised:
+        asyncio.run(
+            WorkflowOrchestrator(db_session, developer, reviewer, handoff_builder).run(request)
+        )
+
+    assert raised.value.code is WorkflowErrorCode.COLLABORATOR_FAILURE
+    assert task.status is TaskStatus.WAITING_HUMAN
+    assert all(target != "WAITING_QA" for _, target in _status_edges(db_session))
+    assert len(developer.requests) == 1
+    assert len(handoff_builder.calls) == 1
+    assert len(reviewer.requests) == 1
+    _assert_workflow_error_excludes_markers(raised.value, marker, str(tmp_path))
+
+
+def test_unexpected_orchestration_exception_is_not_labeled_as_collaborator_failure(
+    db_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A broad outer catch must not misclassify an internal checkpoint defect."""
+    task, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    developer_result = _developer_result()
+    handoff = _handoff_request(str(task.id), str(task.project_id), developer_result, request)
+    developer = RecordingDeveloperRunner(developer_result)
+    handoff_builder = RecordingReviewerHandoffBuilder(handoff)
+    reviewer = RecordingReviewerRunner(approved_reviewer_result())
+    marker = f"internal-orchestration-marker-{tmp_path}"
+
+    def fail_internal_checkpoint(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError(marker)
+
+    monkeypatch.setattr(
+        "core.workflows.orchestrator.commit_developer_completed_checkpoint",
+        fail_internal_checkpoint,
+    )
+
+    with pytest.raises(WorkflowError) as raised:
+        asyncio.run(
+            WorkflowOrchestrator(db_session, developer, reviewer, handoff_builder).run(request)
+        )
+
+    assert raised.value.code is WorkflowErrorCode.INTERNAL_FAILURE
+    assert task.status is TaskStatus.WAITING_HUMAN
+    assert _status_edges(db_session) == {
+        ("READY", "ASSIGNED"),
+        ("ASSIGNED", "IN_PROGRESS"),
+        ("IN_PROGRESS", "WAITING_HUMAN"),
+    }
+    assert len(developer.requests) == 1
+    assert handoff_builder.calls == []
+    assert reviewer.requests == []
+    _assert_workflow_error_excludes_markers(raised.value, marker, str(tmp_path))
 
 
 @pytest.mark.parametrize("failure_site", ["developer", "handoff", "reviewer"])
@@ -127,7 +233,10 @@ def test_timeout_escalates_without_retrying_the_developer(
 
 @pytest.mark.parametrize("cancel_site", ["developer", "handoff", "reviewer"])
 def test_cancellation_propagates_without_any_subsequent_checkpoint_or_call(
-    db_session: Session, tmp_path: Path, cancel_site: str
+    db_session: Session,
+    tmp_path: Path,
+    cancel_site: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Cancellation must preserve the last completed checkpoint without normalizing it."""
     task, _, _, request = persisted_workflow_request(db_session, tmp_path)
@@ -160,6 +269,13 @@ def test_cancellation_propagates_without_any_subsequent_checkpoint_or_call(
         reviewer=reviewer,
         handoff_builder=handoff_builder,
     )
+    session_close_calls = 0
+
+    def record_session_close() -> None:
+        nonlocal session_close_calls
+        session_close_calls += 1
+
+    monkeypatch.setattr(db_session, "close", record_session_close)
 
     async def cancel_running_workflow() -> None:
         operation = asyncio.create_task(orchestrator.run(request))
@@ -168,13 +284,33 @@ def test_cancellation_propagates_without_any_subsequent_checkpoint_or_call(
         with pytest.raises(asyncio.CancelledError):
             await operation
 
-    asyncio.run(cancel_running_workflow())
+    with _capture_audit_stream(db_session) as audit_stream:
+        asyncio.run(cancel_running_workflow())
 
     assert task.status is expected_status
     assert task.status is not TaskStatus.WAITING_HUMAN
-    assert all(
-        target not in {"WAITING_QA", "WAITING_HUMAN"} for _, target in _status_edges(db_session)
-    )
+    expected_audit_stream = {
+        "developer": [
+            "TASK_STATUS_CHANGED:ASSIGNED",
+            "WORKFLOW_STARTED",
+            "TASK_STATUS_CHANGED:IN_PROGRESS",
+        ],
+        "handoff": [
+            "TASK_STATUS_CHANGED:ASSIGNED",
+            "WORKFLOW_STARTED",
+            "TASK_STATUS_CHANGED:IN_PROGRESS",
+            "TASK_STATUS_CHANGED:WAITING_REVIEW",
+        ],
+        "reviewer": [
+            "TASK_STATUS_CHANGED:ASSIGNED",
+            "WORKFLOW_STARTED",
+            "TASK_STATUS_CHANGED:IN_PROGRESS",
+            "TASK_STATUS_CHANGED:WAITING_REVIEW",
+            "DEVELOPER_HANDOFF_CREATED:1",
+        ],
+    }[cancel_site]
+    assert _audit_stream_labels(audit_stream) == expected_audit_stream
+    assert len(audit_stream) == len(expected_audit_stream)
     expected_calls = {
         "developer": (1, 0, 0),
         "handoff": (1, 1, 0),
@@ -183,3 +319,8 @@ def test_cancellation_propagates_without_any_subsequent_checkpoint_or_call(
     assert len(developer.requests) == expected_calls[0]
     assert len(handoff_builder.calls) == expected_calls[1]
     assert len(reviewer.requests) == expected_calls[2]
+    assert developer.close_calls == 0
+    assert handoff_builder.close_calls == 0
+    assert reviewer.close_calls == 0
+    assert session_close_calls == 0
+    assert db_session.get(Task, task.id) is task

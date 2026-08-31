@@ -574,29 +574,29 @@ Permettre aux agents d'utiliser uniquement des capacités explicitement enregist
 
 ## Interface d'un Tool
 
-- [ ] nom
-- [ ] description
-- [ ] schéma d'entrée
-- [ ] permissions requises
-- [ ] niveau de risque
-- [ ] timeout
-- [ ] méthode `execute`
+- [x] nom
+- [x] description
+- [x] schéma d'entrée
+- [x] permissions requises
+- [x] niveau de risque
+- [x] timeout
+- [x] méthode `execute`
 
 ## Tools V1
 
-- [ ] `read_file`
-- [ ] `list_files`
-- [ ] `search_text`
-- [ ] `git_status`
-- [ ] `git_diff`
+- [x] `read_file`
+- [x] `list_files`
+- [x] `search_text`
+- [x] `git_status`
+- [x] `git_diff`
 
 ## Sécurité
 
-- [ ] path traversal bloqué
-- [ ] sandbox root obligatoire
-- [ ] audit automatique
-- [ ] permissions vérifiées
-- [ ] timeout
+- [x] path traversal bloqué
+- [x] sandbox root obligatoire
+- [x] audit automatique
+- [x] permissions vérifiées
+- [x] timeout
 
 ## Prompt Claude Code — Phase 6
 
@@ -647,27 +647,27 @@ Empêcher un agent d'utiliser une capacité qu'il ne possède pas.
 
 ## Permissions V1
 
-- [ ] `filesystem.read`
-- [ ] `filesystem.write`
-- [ ] `git.read`
-- [ ] `git.write`
-- [ ] `shell.execute`
-- [ ] `tests.execute`
-- [ ] `network.access`
-- [ ] `database.read`
-- [ ] `database.write`
-- [ ] `deployment.staging`
-- [ ] `deployment.production`
+- [x] `filesystem.read`
+- [x] `filesystem.write`
+- [x] `git.read`
+- [x] `git.write`
+- [x] `shell.execute`
+- [x] `tests.execute`
+- [x] `network.access`
+- [x] `database.read`
+- [x] `database.write`
+- [x] `deployment.staging`
+- [x] `deployment.production`
 
 ## Checklist
 
-- [ ] Permission enum.
-- [ ] Permission policy.
-- [ ] AgentPermission.
-- [ ] ToolPermission.
-- [ ] Deny by default.
-- [ ] Audit refus.
-- [ ] Tests.
+- [x] Permission enum.
+- [x] Permission policy.
+- [x] AgentPermission.
+- [x] ToolPermission.
+- [x] Deny by default.
+- [x] Audit refus.
+- [x] Tests.
 
 ## Prompt Claude Code — Phase 7
 
@@ -720,23 +720,23 @@ skills/
 
 ## Metadata
 
-- [ ] id
-- [ ] nom
-- [ ] description
-- [ ] domaines
-- [ ] technologies
-- [ ] tags
-- [ ] version
-- [ ] outils recommandés
-- [ ] permissions nécessaires
+- [x] id
+- [x] nom
+- [x] description
+- [x] domaines
+- [x] technologies
+- [x] tags
+- [x] version
+- [x] outils recommandés
+- [x] permissions nécessaires
 
 ## Skills V1
 
-- [ ] generic-backend
-- [ ] generic-frontend
-- [ ] testing
-- [ ] git-workflow
-- [ ] security-review
+- [x] generic-backend
+- [x] generic-frontend
+- [x] testing
+- [x] git-workflow
+- [x] security-review
 
 ## Prompt Claude Code — Phase 8
 
@@ -786,14 +786,14 @@ Donner à chaque projet un espace de travail contrôlé.
 
 ## Checklist
 
-- [ ] `Workspace`
-- [ ] workspace par projet
-- [ ] clonage Git
-- [ ] racine immutable côté runtime
-- [ ] validation chemins
-- [ ] répertoire temporaire
-- [ ] nettoyage
-- [ ] limites d'accès
+- [x] `Workspace`
+- [x] workspace par projet
+- [x] clonage Git
+- [x] racine immutable côté runtime
+- [x] validation chemins
+- [x] répertoire temporaire
+- [x] nettoyage
+- [x] limites d'accès
 
 ## Prompt Claude Code — Phase 9
 

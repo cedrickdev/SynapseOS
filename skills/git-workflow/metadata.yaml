@@ -1,0 +1,9 @@
+id: git-workflow
+name: Audited Git Workflow
+description: Inspect repository changes and prepare reviewable version-control history.
+domains: [engineering, version-control]
+technologies: [git]
+tags: [branch, review, workflow]
+version: 1.0.0
+recommended_tool_ids: [git_diff, git_status, read_file]
+required_permissions: [filesystem.read, git.read]

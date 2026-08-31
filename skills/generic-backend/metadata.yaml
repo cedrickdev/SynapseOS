@@ -1,0 +1,9 @@
+id: generic-backend
+name: Generic Backend Engineering
+description: Design and review maintainable backend services and APIs.
+domains: [api, backend]
+technologies: [generic, python]
+tags: [architecture, rest, service]
+version: 1.0.0
+recommended_tool_ids: [git_diff, git_status, read_file, search_text]
+required_permissions: [filesystem.read, git.read]

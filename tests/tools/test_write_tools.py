@@ -22,6 +22,7 @@ from infrastructure.tools.write import (
     DeleteFileTool,
     PatchFileInput,
     PatchFileTool,
+    PatchOperation,
     WriteFileInput,
     WriteFileTool,
 )
@@ -210,3 +211,15 @@ def test_write_tools_delegate_to_managed_transaction_boundary(tmp_path: Path) ->
     assert (root / "created.py").read_text(encoding="utf-8") == "created\n"
     assert (root / "patch.py").read_text(encoding="utf-8") == "new\n"
     assert not (root / "delete.py").exists()
+
+
+def test_patch_input_accepts_copied_json_array_from_structured_tool_call() -> None:
+    source = [{"old_text": "before", "new_text": "after"}]
+
+    parsed = PatchFileInput.model_validate(
+        {"path": "module.py", "operations": source},
+        strict=True,
+    )
+    source[0]["new_text"] = "mutated"
+
+    assert parsed.operations == (PatchOperation(old_text="before", new_text="after"),)

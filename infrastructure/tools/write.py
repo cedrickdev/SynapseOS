@@ -48,6 +48,14 @@ class PatchOperation(BaseModel):
 class PatchFileInput(_StrictWriteInput):
     operations: Annotated[tuple[PatchOperation, ...], Field(min_length=1, max_length=1_024)]
 
+    @field_validator("operations", mode="before")
+    @classmethod
+    def copy_json_operations(cls, value: object) -> object:
+        """Copy the JSON array emitted by structured model tool calls."""
+        if isinstance(value, (list, tuple)):
+            return tuple(value)
+        return value
+
 
 class _WriteToolBase[InputT: BaseModel](Tool[InputT]):
     required_permissions = frozenset({Permission.FILESYSTEM_WRITE})

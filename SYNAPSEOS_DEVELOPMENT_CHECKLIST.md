@@ -1006,13 +1006,13 @@ flowchart TD
 
 ## Garde-fous
 
-- [ ] `max_iterations`
-- [ ] timeout global
-- [ ] maximum failures
-- [ ] tool call budget
-- [ ] token budget
-- [ ] loop stagnation detection
-- [ ] human escalation
+- [x] `max_iterations`
+- [x] timeout global
+- [x] maximum failures
+- [x] tool call budget
+- [x] token budget
+- [x] loop stagnation detection
+- [x] human escalation
 
 ## Prompt Claude Code — Phase 13
 
@@ -1065,15 +1065,15 @@ Créer le premier véritable rôle métier.
 
 Responsabilités :
 
-- [ ] comprendre une tâche
-- [ ] inspecter repository
-- [ ] sélectionner skills
-- [ ] planifier
-- [ ] modifier code
-- [ ] exécuter tests
-- [ ] analyser erreurs
-- [ ] corriger
-- [ ] produire rapport
+- [x] comprendre une tâche
+- [x] inspecter repository
+- [x] sélectionner skills
+- [x] planifier
+- [x] modifier code
+- [x] exécuter tests
+- [x] analyser erreurs
+- [x] corriger
+- [x] produire rapport
 
 ## Prompt Claude Code — Phase 14
 

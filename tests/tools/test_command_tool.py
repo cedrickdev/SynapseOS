@@ -114,7 +114,7 @@ def test_input_rejects_unknown_profiles_and_command_control_fields(
         RunCommandProfileInput.model_validate(values, strict=True)
 
 
-def test_tool_declares_high_risk_shell_permission(tmp_path: Path) -> None:
+def test_tool_declares_high_risk_shell_and_test_permissions(tmp_path: Path) -> None:
     spec = _spec(CommandProfileId.PYTEST, tmp_path)
     result = CommandResult(
         profile_id=CommandProfileId.PYTEST,
@@ -130,7 +130,9 @@ def test_tool_declares_high_risk_shell_permission(tmp_path: Path) -> None:
     tool = RunCommandProfileTool(RecordingPolicy(spec), RecordingRunner(result))
 
     assert tool.name == "run_command_profile"
-    assert tool.required_permissions == frozenset({Permission.SHELL_EXECUTE})
+    assert tool.required_permissions == frozenset(
+        {Permission.SHELL_EXECUTE, Permission.TESTS_EXECUTE}
+    )
     assert tool.risk_level is ToolRiskLevel.HIGH
     assert tool.timeout_seconds == 30.0
 

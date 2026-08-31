@@ -97,13 +97,14 @@ def _executor(
     )
 
 
-def test_persisted_shell_grant_runs_profile_and_keeps_raw_output_out_of_audit(
+def test_persisted_shell_and_test_grants_run_profile_and_keep_raw_output_out_of_audit(
     db_session: Session,
     tmp_path: Path,
 ) -> None:
     marker = "secret-command-output-marker-84f1"
     scope = create_permission_scope(db_session, autonomy_level=3)
     add_permission(db_session, scope, Permission.SHELL_EXECUTE, project=scope.project)
+    add_permission(db_session, scope, Permission.TESTS_EXECUTE, project=scope.project)
     tool, root = _command_tool(tmp_path, scope)
     (root / "test_failure.py").write_text(
         f"def test_failure():\n    assert False, {marker!r}\n",
@@ -150,6 +151,7 @@ def test_shell_permission_requires_autonomy_three_before_process_execution(
 ) -> None:
     scope = create_permission_scope(db_session, autonomy_level=2)
     add_permission(db_session, scope, Permission.SHELL_EXECUTE, project=scope.project)
+    add_permission(db_session, scope, Permission.TESTS_EXECUTE, project=scope.project)
     tool, root = _command_tool(tmp_path, scope)
     side_effect = root / "must-not-be-created"
     (root / "conftest.py").write_text(
@@ -180,6 +182,7 @@ def test_missing_or_cross_project_shell_grant_never_executes(
 ) -> None:
     scope = create_permission_scope(db_session, autonomy_level=3)
     other_scope = create_permission_scope(db_session, autonomy_level=3)
+    add_permission(db_session, scope, Permission.TESTS_EXECUTE, project=scope.project)
     add_permission(db_session, scope, Permission.SHELL_EXECUTE, project=other_scope.project)
     tool, root = _command_tool(tmp_path, scope)
 
@@ -192,3 +195,28 @@ def test_missing_or_cross_project_shell_grant_never_executes(
     )
 
     assert result.error_code is ToolErrorCode.PERMISSION_DENIED
+
+
+def test_missing_persisted_test_grant_never_executes(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    scope = create_permission_scope(db_session, autonomy_level=3)
+    add_permission(db_session, scope, Permission.SHELL_EXECUTE, project=scope.project)
+    tool, root = _command_tool(tmp_path, scope)
+    side_effect = root / "must-not-be-created"
+    (root / "conftest.py").write_text(
+        f"from pathlib import Path\nPath({str(side_effect)!r}).touch()\n",
+        encoding="utf-8",
+    )
+
+    result = asyncio.run(
+        _executor(db_session, scope, tool).execute(
+            "run_command_profile",
+            {"profile_id": "pytest"},
+            _context(scope, root),
+        )
+    )
+
+    assert result.error_code is ToolErrorCode.PERMISSION_DENIED
+    assert not side_effect.exists()

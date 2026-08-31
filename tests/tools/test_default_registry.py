@@ -86,7 +86,7 @@ def test_default_registry_definitions_are_permissioned_and_bounded(tmp_path: Pat
     assert definitions["patch_file"].risk_level is ToolRiskLevel.MEDIUM
     assert definitions["delete_file"].risk_level is ToolRiskLevel.HIGH
     assert definitions["run_command_profile"].required_permissions == frozenset(
-        {Permission.SHELL_EXECUTE}
+        {Permission.SHELL_EXECUTE, Permission.TESTS_EXECUTE}
     )
     assert definitions["run_command_profile"].risk_level is ToolRiskLevel.HIGH
     assert all(0 < definition.timeout_seconds <= 30 for definition in definitions.values())

@@ -9,7 +9,8 @@ model**, **Phase 3 — task state machine**, **Phase 4 — LLM provider boundary
 core**, **Phase 6 — tool registry**, **Phase 7 — permission engine**, **Phase 8 — Skills
 Registry**, **Phase 9 — workspace isolation**, **Phase 10 — transactional write tools**, and
 **Phase 11 — secure command profiles**, **Phase 13 — Loop Engineering V1**, **Phase 14 —
-Developer Agent**, and **Phase 15 — Reviewer Agent**. Phase 12 remains deliberately unimplemented.
+Developer Agent**, **Phase 15 — Reviewer Agent**, and **Phase 16 — Developer–Reviewer workflow**.
+Phase 12 remains deliberately unimplemented.
 It contains a minimal FastAPI application, typed
 SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
 bounded provider-neutral LLM contracts, an Ollama adapter, a bounded runtime agent with four
@@ -20,8 +21,9 @@ per-project workspaces with audited bounded Git import and cleanup, four permiss
 compensatable UTF-8 file mutation tools, ten fixed test/lint/build/read-only-Git command profiles,
 a bounded provider-neutral single-agent loop with sanitized append-only step auditing, a bounded
 Developer role using deterministic skill context and real secure repository tools, an independent
-read-only Reviewer role with one-shot analysis and deterministic approval gating, and
-real-PostgreSQL integration tests.
+read-only Reviewer role with one-shot analysis and deterministic approval gating, real-PostgreSQL
+integration tests, and a bounded audited Developer–Reviewer workflow with fresh correction-cycle
+handoffs and concrete-agent integration coverage.
 
 Phase 7 authorizes tools exclusively from active persisted `AgentPermission` grants. Phase 8 can
 load and rank local `SKILL.md` packages. Phase 14 may inject only selected, complete, bounded skill
@@ -30,10 +32,10 @@ authority or execute directly. Phase 9 provides local filesystem
 isolation behind a backend-neutral contract; it is not an operating-system sandbox or execution
 container. Phase 11 command execution is an application-level fixed-profile boundary, not a
 hostile-code sandbox. The repository does not include a free-form shell, MCP access, provider
-routing, or multi-agent behavior. Phase 12 and Phase 16+ are not implemented.
-In particular, there is no arbitrary terminal, approval workflow, MCP integration,
-QA/security engine, provider router, or frontend. Do not implement work from a later phase unless
-the user explicitly starts that phase.
+routing, QA/Security execution, or frontend. Phase 12 remains deliberately unimplemented. Phase
+16 provides only the explicit Developer–Reviewer workflow documented in
+`docs/developer-reviewer-workflow.md`; Phase 17 and later phases are not implemented. Do not
+implement work from a later phase unless the user explicitly starts that phase.
 
 Important files:
 
@@ -55,9 +57,11 @@ Current source layout:
 - `core/runtime/` and `infrastructure/runtime/` — bounded one-agent loop and runtime-step audit.
 - `core/developer/` — Phase 14 role validation, skill context, evidence, reporting, and composition.
 - `core/reviewer/` — Phase 15 read-only validation, analysis, gate, scoring, and composition.
+- `core/workflows/` — Phase 16 explicit bounded Developer–Reviewer orchestration, fresh handoff validation, checkpoints, and safe errors.
 - `skills/` — five repository-owned versioned V1 skill packages.
 - `alembic/` — PostgreSQL migrations.
 - `tests/` — unit and real-PostgreSQL integration tests.
+- `docs/developer-reviewer-workflow.md` — Phase 16 flow, contracts, checkpoints, safety boundary, and Phase 17 exclusions.
 
 ## Development commands
 
@@ -97,6 +101,12 @@ For the focused Phase 15 Reviewer tests, run:
 
 ```bash
 .venv/bin/pytest tests/reviewer -q
+```
+
+For the focused Phase 16 concrete-agent PostgreSQL integration tests, run:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_integration.py -q
 ```
 
 Run a single test with:

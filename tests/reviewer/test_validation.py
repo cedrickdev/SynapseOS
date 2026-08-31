@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import FrozenInstanceError
+from types import TracebackType
 
 import pytest
 
@@ -12,6 +13,7 @@ from core.reviewer import (
     ReviewerError,
     ReviewerErrorCode,
     ReviewerRequest,
+    validate_reviewer_profile_authority,
     validate_reviewer_request,
 )
 from tests.reviewer.factories import request_values, reviewer_profile
@@ -28,6 +30,24 @@ def _request(**overrides: object) -> ReviewerRequest:
     values = request_values()
     values.update(overrides)
     return ReviewerRequest.model_validate(values)
+
+
+def _assert_authority_validation_traceback_is_profile_free(
+    traceback: TracebackType | None, marker: str
+) -> None:
+    """Reject Reviewer validation frames that retain a confidential profile."""
+    forbidden_locals = frozenset({"profile", "canonical_profile"})
+    while traceback is not None:
+        frame = traceback.tb_frame
+        if frame.f_code.co_filename.endswith("core/reviewer/validation.py"):
+            retained = sorted(
+                name
+                for name in forbidden_locals.intersection(frame.f_locals)
+                if frame.f_locals[name] is not None
+            )
+            assert retained == [], (frame.f_code.co_name, retained)
+            assert all(marker not in repr(value) for value in frame.f_locals.values())
+        traceback = traceback.tb_next
 
 
 def test_validation_rejects_self_review() -> None:
@@ -230,3 +250,49 @@ def test_valid_active_reviewer_returns_immutable_canonical_authority(
     assert validated.permissions == expected_permissions
     with pytest.raises(FrozenInstanceError):
         validated.permissions = frozenset()  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    ("profile_overrides", "expected_code"),
+    [
+        (
+            {
+                "permission_ids": frozenset(
+                    {Permission.FILESYSTEM_READ.value, Permission.FILESYSTEM_WRITE.value}
+                )
+            },
+            ReviewerErrorCode.INVALID_PERMISSION,
+        ),
+        (
+            {"tool_ids": frozenset({"read_file", "run_command_profile"})},
+            ReviewerErrorCode.INVALID_TOOLS,
+        ),
+    ],
+)
+def test_profile_authority_validator_reuses_reviewer_read_only_rules(
+    profile_overrides: dict[str, object], expected_code: ReviewerErrorCode
+) -> None:
+    """Prevent workflow preflight from inventing weaker Reviewer authority rules."""
+    with pytest.raises(ReviewerError) as raised:
+        validate_reviewer_profile_authority(reviewer_profile(**profile_overrides))
+
+    assert raised.value.code is expected_code
+
+
+def test_profile_authority_failure_traceback_does_not_retain_the_reviewer_profile() -> None:
+    """Prevent direct authority errors from retaining a confidential system prompt."""
+    marker = "reviewer-authority-profile-secret-marker-79c2"
+    profile = reviewer_profile(
+        system_prompt=marker,
+        permission_ids=frozenset(
+            {Permission.FILESYSTEM_READ.value, Permission.FILESYSTEM_WRITE.value}
+        ),
+    )
+
+    with pytest.raises(ReviewerError) as raised:
+        validate_reviewer_profile_authority(profile)
+
+    assert raised.value.code is ReviewerErrorCode.INVALID_PERMISSION
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+    _assert_authority_validation_traceback_is_profile_free(raised.value.__traceback__, marker)

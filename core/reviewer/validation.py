@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import NoReturn
 
 from pydantic import ValidationError
 
+from core.agents import AgentProfile
 from core.enums import AgentStatus, Permission
 from core.reviewer.errors import ReviewerError, ReviewerErrorCode
 from core.reviewer.types import ReviewerRequest
@@ -40,14 +42,50 @@ def validate_reviewer_request(request: ReviewerRequest) -> ValidatedReviewerRequ
         raise ReviewerError(ReviewerErrorCode.INACTIVE_AGENT)
     if profile.id != canonical_request.reviewer_id:
         raise ReviewerError(ReviewerErrorCode.INVALID_SCOPE)
-    permissions = _canonical_permissions(profile.permission_ids)
+    permissions = validate_reviewer_profile_authority(profile)
+    return ValidatedReviewerRequest(request=canonical_request, permissions=permissions)
+
+
+def validate_reviewer_profile_authority(profile: AgentProfile) -> frozenset[Permission]:
+    """Return canonical read-only Reviewer permissions for one complete profile."""
+    permissions, error_code = _validate_reviewer_profile_authority_result(profile)
+    del profile
+    if error_code is not None:
+        del permissions
+        _raise_reviewer_error(error_code)
+    assert permissions is not None
+    return permissions
+
+
+def _validate_reviewer_profile_authority_result(
+    profile: AgentProfile,
+) -> tuple[frozenset[Permission] | None, ReviewerErrorCode | None]:
+    """Return canonical authority or a stable failure without raising publicly."""
+    if type(profile) is not AgentProfile:
+        return None, ReviewerErrorCode.INVALID_INPUT
+    try:
+        canonical_profile = AgentProfile.model_validate(
+            profile.model_dump(mode="python", warnings=False)
+        )
+    except (TypeError, ValueError, ValidationError):
+        return None, ReviewerErrorCode.INVALID_INPUT
+    if canonical_profile.role != "Reviewer":
+        return None, ReviewerErrorCode.INVALID_ROLE
+    if canonical_profile.status not in _ACTIVE_STATUSES:
+        return None, ReviewerErrorCode.INACTIVE_AGENT
+    try:
+        permissions = frozenset(
+            Permission(permission_id) for permission_id in canonical_profile.permission_ids
+        )
+    except (TypeError, ValueError):
+        return None, ReviewerErrorCode.INVALID_PERMISSION
     if Permission.FILESYSTEM_READ not in permissions or not permissions.issubset(
         _ALLOWED_PERMISSIONS
     ):
-        raise ReviewerError(ReviewerErrorCode.INVALID_PERMISSION)
-    if not profile.tool_ids.issubset(REVIEWER_TOOL_IDS):
-        raise ReviewerError(ReviewerErrorCode.INVALID_TOOLS)
-    return ValidatedReviewerRequest(request=canonical_request, permissions=permissions)
+        return None, ReviewerErrorCode.INVALID_PERMISSION
+    if not canonical_profile.tool_ids.issubset(REVIEWER_TOOL_IDS):
+        return None, ReviewerErrorCode.INVALID_TOOLS
+    return permissions, None
 
 
 def _has_consistent_scope(request: ReviewerRequest) -> bool:
@@ -73,8 +111,6 @@ def _canonicalize_request(request: ReviewerRequest) -> ReviewerRequest:
         raise ReviewerError(ReviewerErrorCode.INVALID_INPUT) from None
 
 
-def _canonical_permissions(permission_ids: frozenset[str]) -> frozenset[Permission]:
-    try:
-        return frozenset(Permission(permission_id) for permission_id in permission_ids)
-    except (TypeError, ValueError):
-        raise ReviewerError(ReviewerErrorCode.INVALID_PERMISSION) from None
+def _raise_reviewer_error(code: ReviewerErrorCode) -> NoReturn:
+    """Raise one application-owned error from a scope-free frame."""
+    raise ReviewerError(code) from None

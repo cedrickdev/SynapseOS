@@ -2,7 +2,6 @@
 
 from core.workflows.audit import (
     WorkflowEventType,
-    append_workflow_event,
     commit_assignment_checkpoint,
     commit_developer_completed_checkpoint,
     commit_developer_handoff_checkpoint,
@@ -33,7 +32,6 @@ __all__ = [
     "WorkflowError",
     "WorkflowErrorCode",
     "WorkflowEventType",
-    "append_workflow_event",
     "commit_assignment_checkpoint",
     "commit_developer_completed_checkpoint",
     "commit_developer_handoff_checkpoint",

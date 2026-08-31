@@ -15,13 +15,14 @@ explicit limits:
 
 Preflight loads the task and both persistent agents from the caller-owned SQLAlchemy session. It
 rejects missing or non-`READY` tasks, missing or inactive agents, incorrect roles, self-review,
-profile or runtime scope mismatches, and inconsistent bounded task criteria before assignment or
-an agent call. The Developer and Reviewer identities must differ both by persistent UUID and by
-profile slug.
+profile or runtime scope mismatches, unsafe Reviewer permissions or tool declarations, and
+inconsistent bounded task criteria before assignment or an agent call. The Developer and Reviewer
+identities must differ both by persistent UUID and by profile slug.
 
 The session is supplied by the caller. The orchestrator commits each durable checkpoint before the
-next external call and never closes, disposes, or reconfigures the session. Injected agents,
-providers, tools, handoff builders, and clients are also caller-owned.
+next external call and never closes or invalidates the Session. PostgreSQL statement and lock
+timeouts are transaction-local and disappear with the checkpoint commit or rollback. Injected
+agents, providers, tools, handoff builders, and clients are also caller-owned.
 
 ## Exact flow
 
@@ -80,7 +81,13 @@ Audit data is an allowlist of stable identifiers, cycle numbers, decisions, scor
 limits. It does not persist prompts, provider responses, conversation history, diffs, findings,
 rationales, command output, paths, environment values, exceptions, credentials, or arbitrary
 provider metadata. Events share the request correlation UUID and use the existing append-only
-audit model.
+audit model. Raw workflow-event staging is private; public callers can record these facts only
+through the state-coupled checkpoint functions that validate the exact legal source state.
+
+Before every checkpoint, the task row is reloaded with `SELECT FOR UPDATE` and
+`populate_existing`. The checkpoint requires the exact expected source status and assigned
+Developer UUID. A concurrent human escalation or cancellation therefore wins; stale workflow
+state raises `INVALID_STATE` without overwriting the task or recording a false workflow event.
 
 ## Result and resource bounds
 
@@ -91,9 +98,14 @@ not retain earlier results, diffs, prompts, responses, runtime histories, or com
 
 Each cycle invokes Developer once, the handoff builder once, and Reviewer once. There is no hidden
 retry, provider fallback, duplicate call, speculative parallel call, or unbounded collection. The
-overall timeout follows the same safe escalation path as a collaborator failure. Cancellation is
-re-raised immediately without another call; the last committed checkpoint remains the durable
-location of interruption. Database failures are rolled back and sanitized without retry.
+overall monotonic deadline starts before persistent preflight. Its remaining budget is installed as
+transaction-local PostgreSQL `statement_timeout` and `lock_timeout` before preflight and each
+checkpoint, so synchronous SQL and row-lock waits cannot escape the workflow limit. Timeout
+follows the same safe escalation path as a collaborator failure. Cancellation is re-raised
+immediately without another call; the last committed checkpoint remains the durable location of
+interruption. After the work deadline expires, safe escalation receives only a separate bounded
+50-millisecond cleanup transaction budget and cannot invoke a collaborator. Database failures are
+rolled back and sanitized without retry.
 
 ## Safe failures
 
@@ -102,6 +114,9 @@ failure, timeout, or persistence failure safely escalates the task to `WAITING_H
 transition is legal, records only a stable error category, and raises a sanitized `WorkflowError`.
 Cancellation is not converted into a normal failure. Raw exception messages and tracebacks never
 reach the public error or audit data. A Reviewer decision is never upgraded by the orchestrator.
+If rollback itself fails, only the poisoned SQLAlchemy connection is invalidated. The caller-owned
+Session is neither closed nor invalidated; the failure is fatal and the caller must discard or
+explicitly recover that Session before reuse.
 
 ## Usage example
 

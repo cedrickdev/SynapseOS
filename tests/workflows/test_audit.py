@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from types import TracebackType
 from uuid import UUID, uuid4
@@ -12,6 +13,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
+import core.workflows as workflow_api
 from core.enums import AuditActorType, AuditResult, TaskStatus
 from core.reviewer import ReviewDecision
 from core.tasks.state_machine import InvalidTaskTransitionError
@@ -20,7 +22,6 @@ from core.workflows import (
     WorkflowError,
     WorkflowErrorCode,
     WorkflowEventType,
-    append_workflow_event,
     commit_assignment_checkpoint,
     commit_developer_completed_checkpoint,
     commit_developer_handoff_checkpoint,
@@ -35,6 +36,11 @@ from infrastructure.database.models import AuditEvent, Task
 from tests.workflows.factories import persisted_workflow_request
 
 pytest_plugins = ("tests.database.conftest",)
+
+
+def test_raw_workflow_event_staging_is_not_publicly_exposed() -> None:
+    """Prevent callers from recording workflow facts outside legal state checkpoints."""
+    assert not hasattr(workflow_api, "append_workflow_event")
 
 
 def _events(session: Session) -> list[AuditEvent]:
@@ -90,23 +96,6 @@ def _capture_workflow_error(operation: Callable[[], None]) -> WorkflowError:
     raise AssertionError("checkpoint should have raised WorkflowError")
 
 
-def _capture_rejected_metadata_error(
-    session: Session, scope: ValidatedWorkflowScope
-) -> tuple[TypeError, str]:
-    marker = "unbounded-metadata-marker-5a5c"
-    try:
-        append_workflow_event(  # type: ignore[call-arg]
-            session,
-            scope,
-            WorkflowEventType.WORKFLOW_STARTED,
-            metadata={"source-marker": marker},
-        )
-    except TypeError as error:
-        del marker
-        return error, "unbounded-metadata-marker-5a5c"
-    raise AssertionError("workflow event constructor should reject arbitrary metadata")
-
-
 @pytest.mark.parametrize(
     ("event_type", "expected_actor", "expected_data"),
     [
@@ -146,7 +135,7 @@ def _capture_rejected_metadata_error(
         ),
     ],
 )
-def test_append_workflow_event_records_only_its_allowlisted_scalars(
+def test_state_coupled_checkpoint_records_only_its_allowlisted_scalars(
     db_session: Session,
     tmp_path: Path,
     event_type: WorkflowEventType,
@@ -159,8 +148,7 @@ def test_append_workflow_event_records_only_its_allowlisted_scalars(
 
     scope = validate_workflow_request(db_session, request)
 
-    event = _append_event_for_type(db_session, scope, event_type)
-    db_session.commit()
+    event = _commit_checkpoint_for_event(db_session, scope, event_type)
 
     assert event.event_type == event_type.value
     assert event.action == "record_workflow_checkpoint"
@@ -175,26 +163,59 @@ def test_append_workflow_event_records_only_its_allowlisted_scalars(
     assert event.data == expected_data
 
 
-def _append_event_for_type(
+def _commit_checkpoint_for_event(
     session: Session, scope: ValidatedWorkflowScope, event_type: WorkflowEventType
 ) -> AuditEvent:
+    commit_assignment_checkpoint(session, scope)
     if event_type is WorkflowEventType.WORKFLOW_STARTED:
-        return append_workflow_event(session, scope, event_type)
+        return next(
+            event for event in _workflow_events(session) if event.event_type == event_type.value
+        )
+    commit_developer_started_checkpoint(session, scope, cycle=1)
+    commit_developer_completed_checkpoint(session, scope, cycle=1)
     if event_type is WorkflowEventType.DEVELOPER_HANDOFF_CREATED:
-        return append_workflow_event(session, scope, event_type, cycle=1)
-    if event_type is WorkflowEventType.REVIEW_COMPLETED:
-        return append_workflow_event(
+        commit_developer_handoff_checkpoint(session, scope, cycle=1)
+    elif event_type is WorkflowEventType.REVIEW_COMPLETED:
+        commit_review_completed_checkpoint(
             session,
             scope,
-            event_type,
             cycle=1,
             decision=ReviewDecision.CHANGES_REQUESTED,
             review_score=0.75,
             finding_count=2,
         )
-    if event_type is WorkflowEventType.REVIEW_CYCLE_EXHAUSTED:
-        return append_workflow_event(session, scope, event_type, cycle=2, max_review_cycles=2)
-    return append_workflow_event(session, scope, event_type, cycle=1)
+    elif event_type is WorkflowEventType.REVIEW_CYCLE_EXHAUSTED:
+        commit_review_completed_checkpoint(
+            session,
+            scope,
+            cycle=1,
+            decision=ReviewDecision.CHANGES_REQUESTED,
+            review_score=0.75,
+            finding_count=2,
+        )
+        commit_next_review_cycle_checkpoint(session, scope, cycle=2)
+        commit_developer_completed_checkpoint(session, scope, cycle=2)
+        commit_review_completed_checkpoint(
+            session,
+            scope,
+            cycle=2,
+            decision=ReviewDecision.CHANGES_REQUESTED,
+            review_score=0.75,
+            finding_count=2,
+        )
+        commit_review_cycle_exhausted_checkpoint(session, scope, cycle=2, max_review_cycles=2)
+    else:
+        commit_review_completed_checkpoint(
+            session,
+            scope,
+            cycle=1,
+            decision=ReviewDecision.APPROVED,
+            review_score=0.75,
+            finding_count=2,
+        )
+    return next(
+        event for event in _workflow_events(session) if event.event_type == event_type.value
+    )
 
 
 def test_assignment_checkpoint_commits_assignment_status_and_start_event_together(
@@ -386,28 +407,6 @@ def test_exhaustion_rejects_a_cycle_before_the_configured_limit(
     assert len(_events(db_session)) == event_count
 
 
-def test_direct_exhaustion_event_rejects_a_cycle_before_the_configured_limit(
-    db_session: Session, tmp_path: Path
-) -> None:
-    """Prevent direct workflow-event callers from falsely recording exhaustion."""
-    _, _, _, request = persisted_workflow_request(db_session, tmp_path)
-    from core.workflows import validate_workflow_request
-
-    scope = validate_workflow_request(db_session, request)
-
-    with pytest.raises(WorkflowError) as raised:
-        append_workflow_event(
-            db_session,
-            scope,
-            WorkflowEventType.REVIEW_CYCLE_EXHAUSTED,
-            cycle=1,
-            max_review_cycles=2,
-        )
-
-    assert raised.value.code is WorkflowErrorCode.INVALID_INPUT
-    assert _events(db_session) == []
-
-
 def test_next_review_cycle_checkpoint_transitions_back_to_developer_work(
     db_session: Session, tmp_path: Path
 ) -> None:
@@ -457,7 +456,10 @@ def test_safe_failure_checkpoint_escalates_a_started_workflow_with_only_a_stable
     commit_developer_started_checkpoint(db_session, scope, cycle=1)
 
     commit_safe_failure_checkpoint(
-        db_session, scope, error_code=WorkflowErrorCode.COLLABORATOR_FAILURE
+        db_session,
+        scope,
+        error_code=WorkflowErrorCode.COLLABORATOR_FAILURE,
+        expected_status=TaskStatus.IN_PROGRESS,
     )
 
     assert task.status is TaskStatus.WAITING_HUMAN
@@ -472,20 +474,6 @@ def test_safe_failure_checkpoint_escalates_a_started_workflow_with_only_a_stable
         "reason": "Workflow safely escalated for human attention.",
         "metadata": {"workflow_error_code": "COLLABORATOR_FAILURE"},
     }
-
-
-def test_workflow_event_constructor_rejects_arbitrary_metadata(
-    db_session: Session, tmp_path: Path
-) -> None:
-    """Prevent callers from smuggling unbounded metadata into immutable audit history."""
-    _, _, _, request = persisted_workflow_request(db_session, tmp_path)
-    from core.workflows import validate_workflow_request
-
-    scope = validate_workflow_request(db_session, request)
-
-    error, marker = _capture_rejected_metadata_error(db_session, scope)
-
-    _assert_exception_chain_excludes_markers(error, marker)
 
 
 def test_invalid_review_scalars_leave_no_pending_transition_or_audit(
@@ -584,7 +572,7 @@ def test_assignment_staging_failures_roll_back_and_detach_raw_exceptions(
     def fail_after_transition(*_args: object, **_kwargs: object) -> AuditEvent:
         raise exception_factory()  # type: ignore[operator]
 
-    monkeypatch.setattr("core.workflows.audit.append_workflow_event", fail_after_transition)
+    monkeypatch.setattr("core.workflows.audit._stage_workflow_event", fail_after_transition)
 
     error = _capture_workflow_error(lambda: commit_assignment_checkpoint(db_session, scope))
 
@@ -601,10 +589,10 @@ def test_assignment_staging_failures_roll_back_and_detach_raw_exceptions(
     assert restored_after_commit.assigned_agent_id is None
 
 
-def test_rollback_failure_invalidates_partial_assignment_and_returns_safe_persistence_error(
+def test_rollback_failure_invalidates_only_the_poisoned_connection_and_session_cannot_commit(
     database_engine: Engine, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Prevent a poisoned checkpoint transaction from later persisting partial state."""
+    """Prevent rollback recovery from closing caller Session ownership or preserving writes."""
     factory = sessionmaker(bind=database_engine, expire_on_commit=False)
     seed_session = factory()
     poisoned_session = factory()
@@ -633,10 +621,16 @@ def test_rollback_failure_invalidates_partial_assignment_and_returns_safe_persis
     task_id = task.id
     seed_session.commit()
     scope = validate_workflow_request(poisoned_session, request)
+    poisoned_connection = poisoned_session.connection()
     original_commit = poisoned_session.commit
     original_rollback = poisoned_session.rollback
+    original_close = poisoned_session.close
+    original_connection_invalidate = poisoned_connection.invalidate
     staging_marker = "commit-exception-marker-9cde"
     rollback_marker = "rollback-exception-marker-12f7"
+    session_invalidate_calls = 0
+    session_close_calls = 0
+    connection_invalidate_calls = 0
 
     def fail_after_flush() -> None:
         poisoned_session.flush()
@@ -645,23 +639,44 @@ def test_rollback_failure_invalidates_partial_assignment_and_returns_safe_persis
     def fail_rollback() -> None:
         raise RuntimeError(rollback_marker)
 
+    def record_session_invalidate() -> None:
+        nonlocal session_invalidate_calls
+        session_invalidate_calls += 1
+
+    def record_session_close() -> None:
+        nonlocal session_close_calls
+        session_close_calls += 1
+
+    def record_connection_invalidate(exception: BaseException | None = None) -> None:
+        nonlocal connection_invalidate_calls
+        connection_invalidate_calls += 1
+        original_connection_invalidate(exception)
+
     monkeypatch.setattr(poisoned_session, "commit", fail_after_flush)
     monkeypatch.setattr(poisoned_session, "rollback", fail_rollback)
+    monkeypatch.setattr(poisoned_session, "invalidate", record_session_invalidate)
+    monkeypatch.setattr(poisoned_session, "close", record_session_close)
+    monkeypatch.setattr(poisoned_connection, "invalidate", record_connection_invalidate)
 
     error = _capture_workflow_error(lambda: commit_assignment_checkpoint(poisoned_session, scope))
 
     assert error.code is WorkflowErrorCode.PERSISTENCE_FAILURE
     _assert_exception_chain_excludes_markers(error, staging_marker, rollback_marker)
-    monkeypatch.setattr(poisoned_session, "commit", original_commit)
-    monkeypatch.setattr(poisoned_session, "rollback", original_rollback)
-    poisoned_session.commit()
+    assert session_invalidate_calls == 0
+    assert session_close_calls == 0
+    assert connection_invalidate_calls == 1
+    with pytest.raises(SQLAlchemyError):
+        original_commit()
 
     restored = verification_session.get(Task, task_id)
     assert restored is not None
     assert restored.status is TaskStatus.READY
     assert restored.assigned_agent_id is None
     assert _events(verification_session) == []
-    poisoned_session.close()
+    monkeypatch.setattr(poisoned_session, "rollback", original_rollback)
+    with suppress(SQLAlchemyError):
+        original_rollback()
+    original_close()
     verification_session.close()
     seed_session.close()
 
@@ -693,7 +708,7 @@ def test_safe_checkpoint_error_traceback_does_not_retain_workflow_scope_markers(
     def fail_stage(*_args: object, **_kwargs: object) -> AuditEvent:
         raise RuntimeError("staging failure")
 
-    monkeypatch.setattr("core.workflows.audit.append_workflow_event", fail_stage)
+    monkeypatch.setattr("core.workflows.audit._stage_workflow_event", fail_stage)
 
     error = _capture_workflow_error(lambda: commit_assignment_checkpoint(db_session, scope))
 

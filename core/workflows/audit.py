@@ -12,6 +12,7 @@ from typing import NoReturn
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
@@ -19,6 +20,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 from core.enums import AuditActorType, AuditResult, TaskStatus
 from core.reviewer import ReviewDecision
 from core.tasks.state_machine import InvalidTaskTransitionError, TaskStateMachine
+from core.workflows.deadline import _configure_transaction_timeouts, _is_database_timeout
 from core.workflows.errors import WorkflowError, WorkflowErrorCode
 from core.workflows.validation import ValidatedWorkflowScope
 from infrastructure.database.models import AuditEvent, Task
@@ -43,7 +45,7 @@ class _TaskSnapshot:
     assigned_agent_id: UUID | None
 
 
-def append_workflow_event(
+def _stage_workflow_event(
     session: Session,
     scope: ValidatedWorkflowScope,
     event_type: WorkflowEventType,
@@ -92,57 +94,84 @@ def append_workflow_event(
     return event
 
 
-def commit_assignment_checkpoint(session: Session, scope: ValidatedWorkflowScope) -> None:
+def commit_assignment_checkpoint(
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    deadline: float | None = None,
+) -> None:
     """Durably assign the Developer and record the workflow start as one checkpoint."""
     stage = partial(_stage_assignment, session, scope)
-    preflight = partial(_locked_ready_task, session, scope)
-    failure = _commit_checkpoint(session, scope.task, stage, preflight=preflight)
-    del preflight
+    expected = _TaskSnapshot(status=TaskStatus.READY, assigned_agent_id=None)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
 
 def commit_developer_started_checkpoint(
-    session: Session, scope: ValidatedWorkflowScope, *, cycle: int
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    cycle: int,
+    deadline: float | None = None,
 ) -> None:
     """Durably mark one bounded Developer cycle as in progress."""
     stage = partial(_stage_developer_started, session, scope, cycle)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, TaskStatus.ASSIGNED)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
     del cycle
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
 
 def commit_developer_handoff_checkpoint(
-    session: Session, scope: ValidatedWorkflowScope, *, cycle: int
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    cycle: int,
+    deadline: float | None = None,
 ) -> None:
     """Durably record creation of one safe Reviewer handoff."""
     stage = partial(_stage_developer_handoff, session, scope, cycle)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, TaskStatus.WAITING_REVIEW)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
     del cycle
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
 
 def commit_developer_completed_checkpoint(
-    session: Session, scope: ValidatedWorkflowScope, *, cycle: int
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    cycle: int,
+    deadline: float | None = None,
 ) -> None:
     """Durably mark one bounded Developer cycle ready for independent review."""
     stage = partial(_stage_developer_completed, session, scope, cycle)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, TaskStatus.IN_PROGRESS)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
     del cycle
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
@@ -155,6 +184,7 @@ def commit_review_completed_checkpoint(
     decision: ReviewDecision,
     review_score: float,
     finding_count: int,
+    deadline: float | None = None,
 ) -> None:
     """Durably record one Reviewer decision and its exact next task state."""
     stage = partial(
@@ -166,7 +196,9 @@ def commit_review_completed_checkpoint(
         review_score,
         finding_count,
     )
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, TaskStatus.WAITING_REVIEW)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
@@ -174,6 +206,7 @@ def commit_review_completed_checkpoint(
     del decision
     del review_score
     del finding_count
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
@@ -184,29 +217,40 @@ def commit_review_cycle_exhausted_checkpoint(
     *,
     cycle: int,
     max_review_cycles: int,
+    deadline: float | None = None,
 ) -> None:
     """Durably escalate an exhausted review workflow to human attention."""
     stage = partial(_stage_review_cycle_exhausted, session, scope, cycle, max_review_cycles)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, TaskStatus.CHANGES_REQUESTED)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
     del cycle
     del max_review_cycles
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
 
 def commit_next_review_cycle_checkpoint(
-    session: Session, scope: ValidatedWorkflowScope, *, cycle: int
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    *,
+    cycle: int,
+    deadline: float | None = None,
 ) -> None:
     """Durably start the next bounded Developer cycle after requested changes."""
     stage = partial(_stage_next_review_cycle, session, scope, cycle)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, TaskStatus.CHANGES_REQUESTED)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
     del cycle
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
@@ -216,14 +260,19 @@ def commit_safe_failure_checkpoint(
     scope: ValidatedWorkflowScope,
     *,
     error_code: WorkflowErrorCode,
+    expected_status: TaskStatus,
+    deadline: float | None = None,
 ) -> None:
     """Durably escalate one started workflow failure using only its stable category."""
     stage = partial(_stage_safe_failure, session, scope, error_code)
-    failure = _commit_checkpoint(session, scope.task, stage)
+    expected = _assigned_task_snapshot(scope, expected_status)
+    failure = _commit_checkpoint(session, scope, stage, expected=expected, deadline=deadline)
+    del expected
     del stage
     del scope
     del session
     del error_code
+    del deadline
     if failure is not None:
         _raise_failure(failure)
 
@@ -239,7 +288,7 @@ def _stage_assignment(session: Session, scope: ValidatedWorkflowScope) -> None:
         actor_id=scope.developer.slug,
         reason="Workflow developer assignment accepted.",
     )
-    append_workflow_event(session, scope, WorkflowEventType.WORKFLOW_STARTED)
+    _stage_workflow_event(session, scope, WorkflowEventType.WORKFLOW_STARTED)
 
 
 def _stage_developer_started(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
@@ -257,7 +306,7 @@ def _stage_developer_started(session: Session, scope: ValidatedWorkflowScope, cy
 
 def _stage_developer_handoff(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
     _require_cycle(scope, cycle)
-    append_workflow_event(session, scope, WorkflowEventType.DEVELOPER_HANDOFF_CREATED, cycle=cycle)
+    _stage_workflow_event(session, scope, WorkflowEventType.DEVELOPER_HANDOFF_CREATED, cycle=cycle)
 
 
 def _stage_developer_completed(session: Session, scope: ValidatedWorkflowScope, cycle: int) -> None:
@@ -304,7 +353,7 @@ def _stage_review_completed(
         actor_id=scope.reviewer.slug,
         reason=reason,
     )
-    append_workflow_event(
+    _stage_workflow_event(
         session,
         scope,
         WorkflowEventType.REVIEW_COMPLETED,
@@ -314,7 +363,7 @@ def _stage_review_completed(
         finding_count=finding_count,
     )
     if decision is ReviewDecision.APPROVED:
-        append_workflow_event(session, scope, WorkflowEventType.WORKFLOW_COMPLETED, cycle=cycle)
+        _stage_workflow_event(session, scope, WorkflowEventType.WORKFLOW_COMPLETED, cycle=cycle)
 
 
 def _stage_review_cycle_exhausted(
@@ -333,7 +382,7 @@ def _stage_review_cycle_exhausted(
         actor_id=scope.reviewer.slug,
         reason="Workflow review cycles exhausted.",
     )
-    append_workflow_event(
+    _stage_workflow_event(
         session,
         scope,
         WorkflowEventType.REVIEW_CYCLE_EXHAUSTED,
@@ -373,16 +422,21 @@ def _stage_safe_failure(
 
 def _commit_checkpoint(
     session: Session,
-    task: Task,
+    scope: ValidatedWorkflowScope,
     stage: Callable[[], None],
     *,
-    preflight: Callable[[], Task] | None = None,
+    expected: _TaskSnapshot,
+    deadline: float | None,
 ) -> WorkflowError | None:
     snapshot: _TaskSnapshot | None = None
+    connection: Connection | None = None
     error_code: WorkflowErrorCode | None = None
+    task = scope.task
     try:
-        if preflight is not None:
-            task = preflight()
+        connection = session.connection()
+        if deadline is not None:
+            _configure_transaction_timeouts(session, deadline)
+        task = _locked_expected_task(session, scope, expected)
         snapshot = _TaskSnapshot(status=task.status, assigned_agent_id=task.assigned_agent_id)
         stage()
         session.commit()
@@ -396,19 +450,26 @@ def _commit_checkpoint(
         _discard_exception(error)
         del error
     except SQLAlchemyError as error:
-        error_code = WorkflowErrorCode.PERSISTENCE_FAILURE
+        error_code = (
+            WorkflowErrorCode.TIMEOUT
+            if _is_database_timeout(error)
+            else WorkflowErrorCode.PERSISTENCE_FAILURE
+        )
         _discard_exception(error)
         del error
     except Exception as error:
         error_code = WorkflowErrorCode.INTERNAL_FAILURE
         _discard_exception(error)
         del error
-    rollback_failed = _recover_failed_checkpoint(session, task, snapshot)
+    rollback_failed = _recover_failed_checkpoint(session, connection, task, snapshot)
     if rollback_failed:
         error_code = WorkflowErrorCode.PERSISTENCE_FAILURE
     assert error_code is not None
     del snapshot
-    del preflight
+    del expected
+    del scope
+    del connection
+    del deadline
     del task
     del stage
     del session
@@ -420,18 +481,27 @@ def _raise_failure(error: WorkflowError) -> NoReturn:
     raise error
 
 
-def _locked_ready_task(session: Session, scope: ValidatedWorkflowScope) -> Task:
-    task = session.scalar(
-        select(Task)
-        .where(Task.id == scope.task.id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
+def _locked_expected_task(
+    session: Session,
+    scope: ValidatedWorkflowScope,
+    expected: _TaskSnapshot,
+) -> Task:
+    with session.no_autoflush:
+        task = session.scalar(
+            select(Task)
+            .where(Task.id == scope.task.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
     if task is None:
         raise WorkflowError(WorkflowErrorCode.INVALID_SCOPE)
-    if task.status is not TaskStatus.READY or task.assigned_agent_id is not None:
+    if task.status is not expected.status or task.assigned_agent_id != expected.assigned_agent_id:
         raise WorkflowError(WorkflowErrorCode.INVALID_STATE)
     return task
+
+
+def _assigned_task_snapshot(scope: ValidatedWorkflowScope, status: TaskStatus) -> _TaskSnapshot:
+    return _TaskSnapshot(status=status, assigned_agent_id=scope.developer.id)
 
 
 def _transition(
@@ -457,11 +527,14 @@ def _transition(
 
 
 def _recover_failed_checkpoint(
-    session: Session, task: Task, snapshot: _TaskSnapshot | None
+    session: Session,
+    connection: Connection | None,
+    task: Task,
+    snapshot: _TaskSnapshot | None,
 ) -> bool:
     rollback_failed = _best_effort_rollback(session)
-    if rollback_failed:
-        _best_effort_invalidate(session)
+    if rollback_failed and connection is not None:
+        _best_effort_invalidate(connection)
     _best_effort_clear_authorizations(session)
     if snapshot is not None:
         _restore_task_snapshot(task, snapshot)
@@ -478,9 +551,9 @@ def _best_effort_rollback(session: Session) -> bool:
     return False
 
 
-def _best_effort_invalidate(session: Session) -> None:
+def _best_effort_invalidate(connection: Connection) -> None:
     try:
-        session.invalidate()
+        connection.invalidate()
     except BaseException as error:
         _discard_exception(error)
         del error

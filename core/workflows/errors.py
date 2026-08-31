@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from traceback import clear_frames
+from typing import NoReturn
 
 
 class WorkflowErrorCode(StrEnum):
@@ -43,3 +45,31 @@ class WorkflowError(Exception):
         self.code = code
         self.safe_message = _SAFE_MESSAGES[code]
         super().__init__(self.safe_message)
+
+
+def _discard_exception(error: BaseException) -> None:
+    """Clear traceback links and frames before replacing an internal failure."""
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        traceback = current.__traceback__
+        cause = current.__cause__
+        context = current.__context__
+        current.__traceback__ = None
+        current.__cause__ = None
+        current.__context__ = None
+        if traceback is not None:
+            clear_frames(traceback)
+        if cause is not None:
+            pending.append(cause)
+        if context is not None:
+            pending.append(context)
+
+
+def _raise_workflow_error(code: WorkflowErrorCode) -> NoReturn:
+    """Raise one application-owned error from a scope-free frame."""
+    raise WorkflowError(code) from None

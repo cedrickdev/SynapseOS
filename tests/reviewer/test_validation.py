@@ -12,6 +12,7 @@ from core.reviewer import (
     ReviewerError,
     ReviewerErrorCode,
     ReviewerRequest,
+    validate_reviewer_profile_authority,
     validate_reviewer_request,
 )
 from tests.reviewer.factories import request_values, reviewer_profile
@@ -230,3 +231,30 @@ def test_valid_active_reviewer_returns_immutable_canonical_authority(
     assert validated.permissions == expected_permissions
     with pytest.raises(FrozenInstanceError):
         validated.permissions = frozenset()  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    ("profile_overrides", "expected_code"),
+    [
+        (
+            {
+                "permission_ids": frozenset(
+                    {Permission.FILESYSTEM_READ.value, Permission.FILESYSTEM_WRITE.value}
+                )
+            },
+            ReviewerErrorCode.INVALID_PERMISSION,
+        ),
+        (
+            {"tool_ids": frozenset({"read_file", "run_command_profile"})},
+            ReviewerErrorCode.INVALID_TOOLS,
+        ),
+    ],
+)
+def test_profile_authority_validator_reuses_reviewer_read_only_rules(
+    profile_overrides: dict[str, object], expected_code: ReviewerErrorCode
+) -> None:
+    """Prevent workflow preflight from inventing weaker Reviewer authority rules."""
+    with pytest.raises(ReviewerError) as raised:
+        validate_reviewer_profile_authority(reviewer_profile(**profile_overrides))
+
+    assert raised.value.code is expected_code

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from pydantic import ValidationError
 
+from core.agents import AgentProfile
 from core.enums import AgentStatus, Permission
 from core.reviewer.errors import ReviewerError, ReviewerErrorCode
 from core.reviewer.types import ReviewerRequest
@@ -40,14 +41,32 @@ def validate_reviewer_request(request: ReviewerRequest) -> ValidatedReviewerRequ
         raise ReviewerError(ReviewerErrorCode.INACTIVE_AGENT)
     if profile.id != canonical_request.reviewer_id:
         raise ReviewerError(ReviewerErrorCode.INVALID_SCOPE)
-    permissions = _canonical_permissions(profile.permission_ids)
+    permissions = validate_reviewer_profile_authority(profile)
+    return ValidatedReviewerRequest(request=canonical_request, permissions=permissions)
+
+
+def validate_reviewer_profile_authority(profile: AgentProfile) -> frozenset[Permission]:
+    """Return canonical read-only Reviewer permissions for one complete profile."""
+    if type(profile) is not AgentProfile:
+        raise ReviewerError(ReviewerErrorCode.INVALID_INPUT)
+    try:
+        canonical_profile = AgentProfile.model_validate(
+            profile.model_dump(mode="python", warnings=False)
+        )
+    except (TypeError, ValueError, ValidationError):
+        raise ReviewerError(ReviewerErrorCode.INVALID_INPUT) from None
+    if canonical_profile.role != "Reviewer":
+        raise ReviewerError(ReviewerErrorCode.INVALID_ROLE)
+    if canonical_profile.status not in _ACTIVE_STATUSES:
+        raise ReviewerError(ReviewerErrorCode.INACTIVE_AGENT)
+    permissions = _canonical_permissions(canonical_profile.permission_ids)
     if Permission.FILESYSTEM_READ not in permissions or not permissions.issubset(
         _ALLOWED_PERMISSIONS
     ):
         raise ReviewerError(ReviewerErrorCode.INVALID_PERMISSION)
-    if not profile.tool_ids.issubset(REVIEWER_TOOL_IDS):
+    if not canonical_profile.tool_ids.issubset(REVIEWER_TOOL_IDS):
         raise ReviewerError(ReviewerErrorCode.INVALID_TOOLS)
-    return ValidatedReviewerRequest(request=canonical_request, permissions=permissions)
+    return permissions
 
 
 def _has_consistent_scope(request: ReviewerRequest) -> bool:

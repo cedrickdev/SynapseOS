@@ -21,6 +21,7 @@ from core.workflows import (
 )
 from infrastructure.database.models import AuditEvent, Task
 from tests.workflows.factories import handoff_context_values, persisted_workflow_request
+from tests.workflows.traceback_assertions import assert_workflow_frames_are_scope_free
 
 pytest_plugins = ("tests.database.conftest",)
 
@@ -327,3 +328,49 @@ def test_validation_rejects_reviewer_profile_mismatch_before_side_effects(
     )
 
     _assert_rejected_without_side_effects(db_session, task, forged, WorkflowErrorCode.INVALID_SCOPE)
+
+
+def test_direct_validation_failure_traceback_does_not_retain_workflow_scope(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Prevent direct preflight errors from retaining task, profile, or workspace objects."""
+    task_marker = "direct-validation-task-marker-71ad"
+    profile_marker = "direct-validation-profile-marker-b426"
+    workspace_marker = "direct-validation-workspace-marker-9c34"
+    workspace_root = tmp_path / workspace_marker
+    workspace_root.mkdir()
+    task, _, _, request = persisted_workflow_request(db_session, tmp_path)
+    task.title = task_marker
+    task.description = task_marker
+    db_session.commit()
+    developer_request = request.developer_request.model_copy(
+        update={
+            "task": request.developer_request.task.model_copy(update={"objective": task_marker}),
+            "execution_context": request.developer_request.execution_context.model_copy(
+                update={"workspace_root": workspace_root}
+            ),
+        }
+    )
+    unsafe_request = request.model_copy(
+        update={
+            "developer_request": developer_request,
+            "reviewer_profile": request.reviewer_profile.model_copy(
+                update={
+                    "id": "other-reviewer",
+                    "system_prompt": profile_marker,
+                }
+            ),
+        }
+    )
+
+    with pytest.raises(WorkflowError) as raised:
+        validate_workflow_request(db_session, unsafe_request)
+
+    assert raised.value.code is WorkflowErrorCode.INVALID_SCOPE
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+    assert_workflow_frames_are_scope_free(
+        raised.value.__traceback__,
+        filenames=frozenset({"core/workflows/validation.py"}),
+        markers=(task_marker, profile_marker, workspace_marker),
+    )

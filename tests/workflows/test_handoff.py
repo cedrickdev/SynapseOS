@@ -16,6 +16,7 @@ from tests.workflows.factories import (
     completed_developer_report,
     handoff_context_values,
 )
+from tests.workflows.traceback_assertions import assert_workflow_frames_are_scope_free
 
 
 def _developer_result(
@@ -392,6 +393,39 @@ def test_handoff_canonicalizes_model_copy_nested_evidence_before_comparison() ->
     assert validated.profile == context.reviewer_profile
     assert validated.developer_report == canonical_developer_result.report
     assert validated.checks == canonical_request.checks
+
+
+def test_direct_handoff_failure_traceback_does_not_retain_evidence_scope() -> None:
+    """Prevent direct handoff errors from retaining diff, report, or Reviewer profile data."""
+    diff_marker = "direct-handoff-diff-marker-43d8"
+    report_marker = "direct-handoff-report-marker-5ba1"
+    profile_marker = "direct-handoff-profile-marker-e20c"
+    context = _context()
+    context = context.model_copy(
+        update={
+            "reviewer_profile": context.reviewer_profile.model_copy(
+                update={"system_prompt": profile_marker}
+            )
+        }
+    )
+    developer_result = _developer_result().model_copy(
+        update={"report": _developer_result().report.model_copy(update={"summary": report_marker})}
+    )
+    request = _request(context, developer_result).model_copy(
+        update={"task_id": "stale-task", "diff": diff_marker}
+    )
+
+    with pytest.raises(WorkflowError) as raised:
+        validate_reviewer_handoff(context, developer_result, request)
+
+    assert raised.value.code is WorkflowErrorCode.UNSAFE_HANDOFF
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+    assert_workflow_frames_are_scope_free(
+        raised.value.__traceback__,
+        filenames=frozenset({"core/workflows/handoff.py"}),
+        markers=(diff_marker, report_marker, profile_marker),
+    )
 
 
 class _LeakingValue:

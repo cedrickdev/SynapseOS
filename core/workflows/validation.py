@@ -10,7 +10,14 @@ from sqlalchemy.orm import Session
 
 from core.developer import DeveloperError, validate_developer_request
 from core.enums import AgentStatus, TaskStatus
-from core.workflows.errors import WorkflowError, WorkflowErrorCode
+from core.reviewer import ReviewerError, validate_reviewer_profile_authority
+from core.workflows.deadline import _configure_transaction_timeouts, _is_database_timeout
+from core.workflows.errors import (
+    WorkflowError,
+    WorkflowErrorCode,
+    _discard_exception,
+    _raise_workflow_error,
+)
 from core.workflows.types import DeveloperReviewerWorkflowRequest, WorkflowHandoffContext
 from infrastructure.database.models import Agent, Task
 
@@ -32,21 +39,79 @@ def validate_workflow_request(
     session: Session, request: DeveloperReviewerWorkflowRequest
 ) -> ValidatedWorkflowScope:
     """Validate one strict workflow request against its persistent READY scope."""
-    if type(request) is not DeveloperReviewerWorkflowRequest:
-        raise WorkflowError(WorkflowErrorCode.INVALID_INPUT)
-    canonical_request = _canonicalize_request(request)
-    task, developer, reviewer = _load_scope(session, canonical_request)
-    _validate_persistent_scope(canonical_request, task, developer, reviewer)
-    _validate_developer_request(canonical_request)
-    handoff_context = _build_handoff_context(canonical_request, task)
-    _validate_developer_task_content(canonical_request, handoff_context)
-    return ValidatedWorkflowScope(
-        request=canonical_request,
-        task=task,
-        developer=developer,
-        reviewer=reviewer,
-        handoff_context=handoff_context,
-    )
+    result, error_code = _validate_workflow_request_result(session, request)
+    del session
+    del request
+    if error_code is not None:
+        del result
+        _raise_workflow_error(error_code)
+    assert result is not None
+    return result
+
+
+def _validate_workflow_request_result(
+    session: Session,
+    request: DeveloperReviewerWorkflowRequest,
+    *,
+    deadline: float | None = None,
+) -> tuple[ValidatedWorkflowScope | None, WorkflowErrorCode | None]:
+    """Return canonical scope or one detached stable failure without raising publicly."""
+    try:
+        if type(request) is not DeveloperReviewerWorkflowRequest:
+            return None, WorkflowErrorCode.INVALID_INPUT
+        canonical_request = _canonicalize_request(request)
+        if deadline is not None:
+            _configure_transaction_timeouts(session, deadline)
+        task, developer, reviewer = _load_scope(session, canonical_request)
+        _validate_persistent_scope(canonical_request, task, developer, reviewer)
+        _validate_developer_request(canonical_request)
+        _validate_reviewer_authority(canonical_request)
+        handoff_context = _build_handoff_context(canonical_request, task)
+        _validate_developer_task_content(canonical_request, handoff_context)
+        return (
+            ValidatedWorkflowScope(
+                request=canonical_request,
+                task=task,
+                developer=developer,
+                reviewer=reviewer,
+                handoff_context=handoff_context,
+            ),
+            None,
+        )
+    except WorkflowError as error:
+        error_code = error.code
+        _discard_exception(error)
+        del error
+        return _failed_preflight_result(session, deadline, error_code)
+    except SQLAlchemyError as error:
+        error_code = (
+            WorkflowErrorCode.TIMEOUT
+            if _is_database_timeout(error)
+            else WorkflowErrorCode.PERSISTENCE_FAILURE
+        )
+        _discard_exception(error)
+        del error
+        return _failed_preflight_result(session, deadline, error_code)
+    except Exception as error:
+        _discard_exception(error)
+        del error
+        return _failed_preflight_result(session, deadline, WorkflowErrorCode.INTERNAL_FAILURE)
+
+
+def _failed_preflight_result(
+    session: Session,
+    deadline: float | None,
+    error_code: WorkflowErrorCode,
+) -> tuple[None, WorkflowErrorCode]:
+    if deadline is None:
+        return None, error_code
+    try:
+        session.rollback()
+    except BaseException as error:
+        _discard_exception(error)
+        del error
+        return None, WorkflowErrorCode.PERSISTENCE_FAILURE
+    return None, error_code
 
 
 def _canonicalize_request(
@@ -67,6 +132,15 @@ def _validate_developer_request(request: DeveloperReviewerWorkflowRequest) -> No
         raise WorkflowError(WorkflowErrorCode.INVALID_INPUT) from None
 
 
+def _validate_reviewer_authority(request: DeveloperReviewerWorkflowRequest) -> None:
+    try:
+        validate_reviewer_profile_authority(request.reviewer_profile)
+    except ReviewerError as error:
+        _discard_exception(error)
+        del error
+        raise WorkflowError(WorkflowErrorCode.INVALID_AGENT) from None
+
+
 def _load_scope(
     session: Session, request: DeveloperReviewerWorkflowRequest
 ) -> tuple[Task, Agent, Agent]:
@@ -74,8 +148,15 @@ def _load_scope(
         task = session.get(Task, request.task_id)
         developer = session.get(Agent, request.developer_agent_id)
         reviewer = session.get(Agent, request.reviewer_agent_id)
-    except SQLAlchemyError:
-        raise WorkflowError(WorkflowErrorCode.PERSISTENCE_FAILURE) from None
+    except SQLAlchemyError as error:
+        code = (
+            WorkflowErrorCode.TIMEOUT
+            if _is_database_timeout(error)
+            else WorkflowErrorCode.PERSISTENCE_FAILURE
+        )
+        _discard_exception(error)
+        del error
+        raise WorkflowError(code) from None
     if task is None or developer is None or reviewer is None:
         raise WorkflowError(WorkflowErrorCode.INVALID_SCOPE)
     return task, developer, reviewer

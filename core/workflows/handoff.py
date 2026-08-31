@@ -6,7 +6,12 @@ from pydantic import ValidationError
 
 from core.developer import DeveloperResult
 from core.reviewer import ReviewCheck, ReviewerError, ReviewerRequest, validate_reviewer_request
-from core.workflows.errors import WorkflowError, WorkflowErrorCode
+from core.workflows.errors import (
+    WorkflowError,
+    WorkflowErrorCode,
+    _discard_exception,
+    _raise_workflow_error,
+)
 from core.workflows.types import WorkflowHandoffContext
 
 
@@ -16,24 +21,47 @@ def validate_reviewer_handoff(
     request: ReviewerRequest,
 ) -> ReviewerRequest:
     """Return only a fresh Reviewer request derived from the latest Developer evidence."""
-    if (
-        type(context) is not WorkflowHandoffContext
-        or type(developer_result) is not DeveloperResult
-        or type(request) is not ReviewerRequest
-    ):
-        raise WorkflowError(WorkflowErrorCode.UNSAFE_HANDOFF)
-    canonical_context = _canonicalize_context(context)
-    canonical_developer_result = _canonicalize_developer_result(developer_result)
-    canonical_request = _canonicalize_reviewer_request(request)
-    _require_exact_handoff(
-        canonical_context,
-        canonical_developer_result,
-        canonical_request,
-    )
+    result, error_code = _validate_reviewer_handoff_result(context, developer_result, request)
+    del context
+    del developer_result
+    del request
+    if error_code is not None:
+        del result
+        _raise_workflow_error(error_code)
+    assert result is not None
+    return result
+
+
+def _validate_reviewer_handoff_result(
+    context: WorkflowHandoffContext,
+    developer_result: DeveloperResult,
+    request: ReviewerRequest,
+) -> tuple[ReviewerRequest | None, WorkflowErrorCode | None]:
+    """Return a canonical handoff or one detached stable failure."""
     try:
-        return validate_reviewer_request(canonical_request).request
-    except ReviewerError:
-        raise WorkflowError(WorkflowErrorCode.UNSAFE_HANDOFF) from None
+        if (
+            type(context) is not WorkflowHandoffContext
+            or type(developer_result) is not DeveloperResult
+            or type(request) is not ReviewerRequest
+        ):
+            return None, WorkflowErrorCode.UNSAFE_HANDOFF
+        canonical_context = _canonicalize_context(context)
+        canonical_developer_result = _canonicalize_developer_result(developer_result)
+        canonical_request = _canonicalize_reviewer_request(request)
+        _require_exact_handoff(
+            canonical_context,
+            canonical_developer_result,
+            canonical_request,
+        )
+        return validate_reviewer_request(canonical_request).request, None
+    except (ReviewerError, WorkflowError) as error:
+        _discard_exception(error)
+        del error
+        return None, WorkflowErrorCode.UNSAFE_HANDOFF
+    except Exception as error:
+        _discard_exception(error)
+        del error
+        return None, WorkflowErrorCode.UNSAFE_HANDOFF
 
 
 def _canonicalize_context(context: WorkflowHandoffContext) -> WorkflowHandoffContext:

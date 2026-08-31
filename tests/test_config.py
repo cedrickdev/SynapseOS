@@ -76,3 +76,35 @@ def test_workspace_settings_reject_non_positive_limits(
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
+
+
+def test_write_settings_have_finite_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.write_max_input_bytes == 1_048_576
+    assert settings.write_max_existing_bytes == 4_194_304
+    assert settings.write_max_patch_operations == 128
+    assert settings.write_max_patch_text_bytes == 262_144
+    assert settings.write_max_diff_bytes == 262_144
+    assert settings.write_timeout_seconds == 10.0
+
+
+@pytest.mark.parametrize(
+    "environment_key",
+    [
+        "WRITE_MAX_INPUT_BYTES",
+        "WRITE_MAX_EXISTING_BYTES",
+        "WRITE_MAX_PATCH_OPERATIONS",
+        "WRITE_MAX_PATCH_TEXT_BYTES",
+        "WRITE_MAX_DIFF_BYTES",
+        "WRITE_TIMEOUT_SECONDS",
+    ],
+)
+def test_write_settings_reject_non_positive_limits(
+    environment_key: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(environment_key, "0")
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)

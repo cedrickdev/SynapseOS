@@ -7,22 +7,23 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 The repository has completed **Phase 1 — repository initialization**, **Phase 2 — fundamental data
 model**, **Phase 3 — task state machine**, **Phase 4 — LLM provider boundary**, **Phase 5 — agent
 core**, **Phase 6 — tool registry**, **Phase 7 — permission engine**, **Phase 8 — Skills
-Registry**, and **Phase 9 — workspace isolation**. It contains a minimal FastAPI application, typed
+Registry**, **Phase 9 — workspace isolation**, and **Phase 10 — transactional write tools**. It
+contains a minimal FastAPI application, typed
 SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
 bounded provider-neutral LLM contracts, an Ollama adapter, a bounded runtime agent with four
 strict structured operations, five bounded read-only repository tools, a PostgreSQL-backed
 permission engine with audited `ALLOW`/`DENY`/`ASK` decisions, a PostgreSQL Docker
 Compose service, a bounded local registry of five versioned instructional skills, managed
-per-project workspaces with audited bounded Git import and cleanup, and
-real-PostgreSQL integration tests.
+per-project workspaces with audited bounded Git import and cleanup, four permissioned
+compensatable UTF-8 file mutation tools, and real-PostgreSQL integration tests.
 
 Phase 7 authorizes tools exclusively from active persisted `AgentPermission` grants. Phase 8 can
 load and rank local `SKILL.md` packages, but `skill_ids` remain inert declarations and skill content
 is never automatically executed or injected into prompts. Phase 9 provides local filesystem
 isolation behind a backend-neutral contract; it is not an operating-system sandbox or execution
 container. The repository does not include
-autonomous loops, write tools, free-form shell, MCP access, provider routing, or multi-agent
-behavior. Phase 10 and later phases are not implemented. In particular, there is no write tool,
+autonomous loops, free-form shell, MCP access, provider routing, or multi-agent
+behavior. Phase 11 and later phases are not implemented. In particular, there is no shell runner,
 approval workflow, MCP integration,
 QA/security engine, provider router, or frontend. Do not implement work from a later phase unless
 the user explicitly starts that phase.
@@ -42,6 +43,7 @@ Current source layout:
 - `infrastructure/database/` — models, sessions, append-only guard, and repositories.
 - `infrastructure/skills/` — secure bounded loader for local skill packages.
 - `infrastructure/workspaces/` — isolated local workspace, Git, and audit adapters.
+- `infrastructure/tools/write.py` and `mutations.py` — bounded transactional file writes.
 - `skills/` — five repository-owned versioned V1 skill packages.
 - `alembic/` — PostgreSQL migrations.
 - `tests/` — unit and real-PostgreSQL integration tests.
@@ -68,10 +70,10 @@ For repository acceptance against the Docker PostgreSQL port, run:
 TEST_POSTGRES_PORT=55432 make test
 ```
 
-For the focused Phase 9 workspace and tool tests, run:
+For the focused Phase 10 write, workspace, and permission tests, run:
 
 ```bash
-.venv/bin/pytest tests/workspaces tests/tools -q
+.venv/bin/pytest tests/tools tests/workspaces tests/permissions tests/database/test_write_tool_execution.py -q
 ```
 
 Run a single test with:

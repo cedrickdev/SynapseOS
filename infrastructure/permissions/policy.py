@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from core.enums import Permission
+from core.enums import Permission, ToolRiskLevel
 from core.permissions import (
     PermissionDecision,
     PermissionOutcome,
@@ -30,6 +30,11 @@ _MINIMUM_AUTONOMY: dict[Permission, int] = {
     Permission.DATABASE_WRITE: 3,
     Permission.DEPLOYMENT_STAGING: 3,
     Permission.DEPLOYMENT_PRODUCTION: 4,
+}
+_MINIMUM_RISK_AUTONOMY: dict[ToolRiskLevel, int] = {
+    ToolRiskLevel.LOW: 0,
+    ToolRiskLevel.MEDIUM: 1,
+    ToolRiskLevel.HIGH: 2,
 }
 
 
@@ -110,10 +115,26 @@ class SQLAlchemyPermissionPolicy:
                 PermissionReasonCode.HUMAN_APPROVAL_REQUIRED,
                 "Human approval is required.",
             )
+        if validated.risk_level is ToolRiskLevel.CRITICAL:
+            return self._decision(
+                validated,
+                timestamp,
+                PermissionOutcome.ASK,
+                PermissionReasonCode.HUMAN_APPROVAL_REQUIRED,
+                "Human approval is required.",
+            )
         if any(
             autonomy_level < _MINIMUM_AUTONOMY[permission]
             for permission in validated.required_permissions
         ):
+            return self._decision(
+                validated,
+                timestamp,
+                PermissionOutcome.ASK,
+                PermissionReasonCode.AUTONOMY_APPROVAL_REQUIRED,
+                "Additional approval is required for this autonomy level.",
+            )
+        if autonomy_level < _MINIMUM_RISK_AUTONOMY[validated.risk_level]:
             return self._decision(
                 validated,
                 timestamp,

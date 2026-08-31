@@ -17,7 +17,7 @@ from core.tools.errors import (
 )
 from core.tools.executor import ToolExecutor
 from core.tools.registry import ToolDefinition, ToolRegistry
-from core.tools.tool import Tool
+from core.tools.tool import Tool, ToolTransaction, TransactionalToolOutput
 from core.tools.types import (
     JsonValue,
     ToolErrorCode,
@@ -46,5 +46,7 @@ __all__ = [
     "ToolResultStatus",
     "ToolRegistry",
     "ToolRiskLevel",
+    "ToolTransaction",
+    "TransactionalToolOutput",
     "ToolWorkspaceError",
 ]

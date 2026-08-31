@@ -33,6 +33,7 @@ from core.tools import (
     ToolResultStatus,
     ToolRiskLevel,
     ToolWorkspaceError,
+    TransactionalToolOutput,
 )
 from tests.permissions.fakes import RecordingPermissionAudit, RecordingPolicy
 from tests.tools.fakes import FakeTool
@@ -291,6 +292,114 @@ class _FailureTool(Tool[_NoInput]):
         if self.mode == "unexpected":
             raise RuntimeError("secret-runtime-marker")
         return {"bad": cast(JsonValue, object())}
+
+
+class _RecordingTransaction:
+    def __init__(self) -> None:
+        self.events: list[str] = ["mutated"]
+
+    def commit(self) -> None:
+        self.events.append("committed")
+
+    def rollback(self) -> None:
+        self.events.append("rolled_back")
+
+
+class _TransactionalTool(Tool[_NoInput]):
+    name = "transactional"
+    description = "Return one deterministic compensatable result."
+    input_type = _NoInput
+    required_permissions = frozenset({Permission.FILESYSTEM_READ})
+    risk_level = ToolRiskLevel.LOW
+    timeout_seconds = 1.0
+
+    def __init__(
+        self, output: Mapping[str, JsonValue], *, cancel_after_return: bool = False
+    ) -> None:
+        self.output = output
+        self.transaction = _RecordingTransaction()
+        self.calls = 0
+        self.cancel_after_return = cancel_after_return
+
+    async def execute(
+        self,
+        arguments: _NoInput,
+        context: ToolExecutionContext,
+    ) -> TransactionalToolOutput:
+        del arguments, context
+        self.calls += 1
+        if self.cancel_after_return:
+            task = asyncio.current_task()
+            assert task is not None
+            asyncio.get_running_loop().call_soon(task.cancel)
+        return TransactionalToolOutput(output=self.output, transaction=self.transaction)
+
+
+def test_executor_commits_transaction_only_after_successful_audit(tmp_path: Path) -> None:
+    tool = _TransactionalTool({"changed": True})
+    recorder = RecordingAuditRecorder()
+    context = _context(tmp_path, declared_tool_ids={"transactional"})
+
+    result = asyncio.run(
+        ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+            "transactional", {}, context
+        )
+    )
+
+    assert result.status is ToolResultStatus.SUCCEEDED
+    assert tool.calls == 1
+    assert recorder.finishes[0].outcome is ToolAuditOutcome.SUCCEEDED
+    assert tool.transaction.events == ["mutated", "committed"]
+
+
+def test_executor_rolls_back_transaction_when_success_audit_fails(tmp_path: Path) -> None:
+    tool = _TransactionalTool({"changed": True})
+    recorder = RecordingAuditRecorder(fail_finish=True)
+    context = _context(tmp_path, declared_tool_ids={"transactional"})
+
+    with pytest.raises(ToolAuditError):
+        asyncio.run(
+            ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+                "transactional", {}, context
+            )
+        )
+
+    assert tool.calls == 1
+    assert tool.transaction.events == ["mutated", "rolled_back"]
+
+
+def test_executor_rolls_back_transaction_when_output_is_invalid(tmp_path: Path) -> None:
+    tool = _TransactionalTool({"bad": cast(JsonValue, object())})
+    recorder = RecordingAuditRecorder()
+    context = _context(tmp_path, declared_tool_ids={"transactional"})
+
+    result = asyncio.run(
+        ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+            "transactional", {}, context
+        )
+    )
+
+    assert result.error_code is ToolErrorCode.OUTPUT_LIMIT
+    assert tool.transaction.events == ["mutated", "rolled_back"]
+
+
+def test_executor_rolls_back_transaction_and_audits_before_propagating_cancellation(
+    tmp_path: Path,
+) -> None:
+    tool = _TransactionalTool({"changed": True}, cancel_after_return=True)
+    recorder = RecordingAuditRecorder()
+    context = _context(tmp_path, declared_tool_ids={"transactional"})
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(
+            ToolExecutor(ToolRegistry([tool]), recorder, _permission_engine()).execute(
+                "transactional", {}, context
+            )
+        )
+
+    assert tool.calls == 1
+    assert tool.transaction.events == ["mutated", "rolled_back"]
+    assert recorder.finishes[0].outcome is ToolAuditOutcome.CANCELLED
 
 
 @pytest.mark.parametrize(

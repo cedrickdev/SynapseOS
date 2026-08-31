@@ -42,3 +42,4 @@ Trade-offs, risks, follow-ups.
 - [ADR-0007 — Database-backed permission authority](0007-database-backed-permission-authority.md)
 - [ADR-0008 — Local versioned Skills Registry](0008-local-versioned-skills-registry.md)
 - [ADR-0009 — Managed project workspaces](0009-managed-project-workspaces.md)
+- [ADR-0010 — Transactional write tools](0010-transactional-write-tools.md)

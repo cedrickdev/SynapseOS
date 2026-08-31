@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     workspace_max_depth: int = Field(default=64, ge=1, le=256)
     workspace_local_import_roots: Annotated[tuple[Path, ...], Field(max_length=32)] = ()
     workspace_remote_hosts: Annotated[tuple[str, ...], Field(max_length=32)] = ()
+    write_max_input_bytes: int = Field(default=1_048_576, ge=1, le=16_777_216)
+    write_max_existing_bytes: int = Field(default=4_194_304, ge=1, le=16_777_216)
+    write_max_patch_operations: int = Field(default=128, ge=1, le=1_024)
+    write_max_patch_text_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
+    write_max_diff_bytes: int = Field(default=262_144, ge=1, le=1_048_576)
+    write_timeout_seconds: float = Field(default=10.0, gt=0.0, le=60.0, allow_inf_nan=False)
 
 
 def get_settings() -> Settings:

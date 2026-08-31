@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_9-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_10-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,10 +48,11 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 9 — Workspace and isolation completed.** The repository now provides the persistence foundation, an
+**Phase 10 — Transactional write tools completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
-agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, and a
-bounded deterministic registry of versioned skills, and isolated audited project workspaces. Write tools, shell access, MCP, autonomous loops, multi-agent coordination, QA and security
+agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
+bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
+compensatable UTF-8 write tools. Shell access, MCP, autonomous loops, multi-agent coordination, QA and security
 engines, and the frontend remain intentionally unimplemented.
 
 What exists today:
@@ -80,6 +81,8 @@ What exists today:
 - A backend-neutral workspace contract and local manager with deterministic per-project roots,
   bounded local Git import and HTTPS clone, path containment, atomic staging, cleanup, cancellation,
   deny-by-default source allowlists, and append-only lifecycle audits.
+- Four permissioned file mutation tools with exact workspace enforcement, private temporary
+  backups, atomic replacement, bounded diffs, risk-aware authorization, audit, and rollback.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -160,10 +163,10 @@ The complete suite uses the Docker PostgreSQL service when it is exposed on the 
 TEST_POSTGRES_PORT=55432 make test
 ```
 
-The focused Phase 9 suite covers workspaces and neighboring read-only tool boundaries:
+The focused Phase 10 suite covers write transactions, tools, workspaces, and permissions:
 
 ```bash
-.venv/bin/pytest tests/workspaces tests/tools -q
+.venv/bin/pytest tests/tools tests/workspaces tests/permissions tests/database/test_write_tool_execution.py -q
 ```
 
 Run `make help` to list every available target.
@@ -185,7 +188,8 @@ validated pull request. The near-term sequence is:
 7. **Permission engine** — completed
 8. **Skills registry** — completed
 9. **Workspace and isolation** — completed
-10. Write tools — not started
+10. **Write tools** — completed
+11. Secure shell runner — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -200,6 +204,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Permission engine:** [`docs/permissions.md`](docs/permissions.md)
 - **Skills Registry:** [`docs/skills.md`](docs/skills.md)
 - **Managed project workspaces:** [`docs/workspaces.md`](docs/workspaces.md)
+- **Transactional write tools:** [`docs/write-tools.md`](docs/write-tools.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

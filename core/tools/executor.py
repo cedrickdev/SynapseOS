@@ -23,6 +23,7 @@ from core.tools.audit import (
 )
 from core.tools.errors import ToolAuditError, ToolError, ToolInputError
 from core.tools.registry import ToolRegistry
+from core.tools.tool import ToolTransaction, TransactionalToolOutput
 from core.tools.types import (
     JsonValue,
     ToolErrorCode,
@@ -47,6 +48,11 @@ _SAFE_MESSAGES: dict[ToolErrorCode, str] = {
     ToolErrorCode.AUDIT_FAILED: "Tool audit failed.",
     ToolErrorCode.TOOL_TIMED_OUT: "Tool execution timed out.",
     ToolErrorCode.CANCELLED: "Tool execution was cancelled.",
+    ToolErrorCode.TARGET_NOT_FOUND: "Requested file does not exist.",
+    ToolErrorCode.TARGET_CONFLICT: "Requested file already exists or changed.",
+    ToolErrorCode.PATCH_MISMATCH: "Requested patch does not match exactly once.",
+    ToolErrorCode.MUTATION_FAILED: "File mutation failed.",
+    ToolErrorCode.COMPENSATION_FAILED: "File mutation could not be restored safely.",
 }
 
 
@@ -199,8 +205,11 @@ class ToolExecutor:
                 ToolErrorCode.TOOL_FAILED,
             )
 
+        transaction: ToolTransaction | None = None
         try:
-            output = self._validated_output(raw_output)
+            raw_mapping, transaction = self._unwrap_output(raw_output)
+            await asyncio.sleep(0)
+            output = self._validated_output(raw_mapping)
             duration_ms = self._duration_ms(started_at)
             truncated = output.get("truncated") is True
             output_bytes = self._output_bytes(output)
@@ -212,9 +221,26 @@ class ToolExecutor:
                 truncated=truncated,
                 tool_call_id=handle.tool_call_id,
             )
+        except asyncio.CancelledError:
+            self._rollback(transaction)
+            try:
+                self._finish_audit(
+                    handle,
+                    ToolAuditFinish(
+                        outcome=ToolAuditOutcome.CANCELLED,
+                        duration_ms=self._duration_ms(started_at),
+                        truncated=False,
+                        output_field_count=0,
+                        output_bytes=0,
+                        error_code=ToolErrorCode.CANCELLED,
+                    ),
+                )
+            finally:
+                raise
         except (TypeError, ValueError, ValidationError) as error:
             error.__traceback__ = None
             del error, raw_output
+            self._rollback(transaction)
             return self._failure_result(
                 handle,
                 validated_name,
@@ -224,17 +250,58 @@ class ToolExecutor:
                 ToolErrorCode.OUTPUT_LIMIT,
             )
 
-        self._finish_audit(
-            handle,
-            ToolAuditFinish(
-                outcome=ToolAuditOutcome.SUCCEEDED,
-                duration_ms=duration_ms,
-                truncated=truncated,
-                output_field_count=len(output),
-                output_bytes=output_bytes,
-            ),
-        )
+        try:
+            self._finish_audit(
+                handle,
+                ToolAuditFinish(
+                    outcome=ToolAuditOutcome.SUCCEEDED,
+                    duration_ms=duration_ms,
+                    truncated=truncated,
+                    output_field_count=len(output),
+                    output_bytes=output_bytes,
+                ),
+            )
+        except ToolAuditError:
+            self._rollback(transaction)
+            raise
+        self._commit(transaction)
         return result
+
+    @staticmethod
+    def _unwrap_output(
+        raw_output: object,
+    ) -> tuple[object, ToolTransaction | None]:
+        if type(raw_output) is TransactionalToolOutput:
+            return raw_output.output, raw_output.transaction
+        return raw_output, None
+
+    @staticmethod
+    def _rollback(transaction: ToolTransaction | None) -> None:
+        if transaction is None:
+            return
+        try:
+            transaction.rollback()
+        except Exception as error:
+            error.__traceback__ = None
+            del error
+            raise ToolError(
+                ToolErrorCode.COMPENSATION_FAILED,
+                "File mutation could not be restored safely.",
+            ) from None
+
+    @staticmethod
+    def _commit(transaction: ToolTransaction | None) -> None:
+        if transaction is None:
+            return
+        try:
+            transaction.commit()
+        except Exception as error:
+            error.__traceback__ = None
+            del error
+            raise ToolError(
+                ToolErrorCode.COMPENSATION_FAILED,
+                "File mutation could not be finalized safely.",
+            ) from None
 
     @staticmethod
     def _validate_context(context: ToolExecutionContext) -> ToolExecutionContext:

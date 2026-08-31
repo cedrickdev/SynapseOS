@@ -43,3 +43,4 @@ Trade-offs, risks, follow-ups.
 - [ADR-0008 — Local versioned Skills Registry](0008-local-versioned-skills-registry.md)
 - [ADR-0009 — Managed project workspaces](0009-managed-project-workspaces.md)
 - [ADR-0010 — Transactional write tools](0010-transactional-write-tools.md)
+- [ADR-0011 — Secure command profiles](0011-secure-command-runner.md)

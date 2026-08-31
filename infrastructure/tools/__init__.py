@@ -1,7 +1,9 @@
 """Concrete bounded tool adapters for SynapseOS."""
 
+from core.commands import CommandPolicy, CommandRunner
 from core.tools import ToolRegistry
 from infrastructure.tools.audit import SQLAlchemyToolAuditRecorder
+from infrastructure.tools.command import RunCommandProfileInput, RunCommandProfileTool
 from infrastructure.tools.filesystem import (
     ListFilesInput,
     ListFilesTool,
@@ -31,8 +33,12 @@ from infrastructure.tools.write import (
 )
 
 
-def create_default_tool_registry(write_mutator: LocalTextMutator) -> ToolRegistry:
-    """Build the immutable registry of approved Phase 10 repository tools."""
+def create_default_tool_registry(
+    write_mutator: LocalTextMutator,
+    command_policy: CommandPolicy,
+    command_runner: CommandRunner,
+) -> ToolRegistry:
+    """Build the immutable registry of approved Phase 11 repository tools."""
     return ToolRegistry(
         [
             ReadFileTool(),
@@ -44,6 +50,7 @@ def create_default_tool_registry(write_mutator: LocalTextMutator) -> ToolRegistr
             CreateFileTool(write_mutator),
             PatchFileTool(write_mutator),
             DeleteFileTool(write_mutator),
+            RunCommandProfileTool(command_policy, command_runner),
         ]
     )
 
@@ -51,6 +58,8 @@ def create_default_tool_registry(write_mutator: LocalTextMutator) -> ToolRegistr
 __all__ = [
     "create_default_tool_registry",
     "SQLAlchemyToolAuditRecorder",
+    "RunCommandProfileInput",
+    "RunCommandProfileTool",
     "ListFilesInput",
     "ListFilesTool",
     "ReadFileInput",

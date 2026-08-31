@@ -882,21 +882,21 @@ Permettre certaines commandes sans offrir un shell totalement libre.
 
 ## Checklist
 
-- [ ] `CommandRunner`
-- [ ] allowlist
-- [ ] timeout
-- [ ] cwd workspace
-- [ ] capture stdout/stderr
-- [ ] exit code
-- [ ] limite output
-- [ ] audit
+- [x] `CommandRunner`
+- [x] allowlist
+- [x] timeout
+- [x] cwd workspace
+- [x] capture stdout/stderr
+- [x] exit code
+- [x] limite output
+- [x] audit
 
 ## Commandes initiales
 
-- [ ] tests
-- [ ] lint
-- [ ] build
-- [ ] git
+- [x] tests
+- [x] lint
+- [x] build
+- [x] git
 
 ## Prompt Claude Code — Phase 11
 

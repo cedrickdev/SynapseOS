@@ -1,5 +1,6 @@
 """Public Phase 17 QA Agent contracts."""
 
+from core.qa.analysis import QAAnalyzer
 from core.qa.errors import QAError, QAErrorCode
 from core.qa.ports import QATestRunner, ToolExecutorPort
 from core.qa.testing import PermissionedQATestRunner
@@ -25,6 +26,7 @@ from core.qa.validation import (
 
 __all__ = [
     "QAAnalysis",
+    "QAAnalyzer",
     "QACriterionAssessment",
     "QACriterionStatus",
     "QADecision",

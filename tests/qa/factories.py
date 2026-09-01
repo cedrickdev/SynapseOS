@@ -14,6 +14,7 @@ from core.qa import (
     QACriterionStatus,
     QARequest,
     QATestEvidence,
+    QATestExecution,
 )
 from core.reviewer import ReviewDecision, ReviewerResult
 from core.tools import ToolExecutionContext
@@ -139,4 +140,23 @@ def successful_test_evidence() -> QATestEvidence:
         exit_code=0,
         truncated=False,
         duration_ms=1.0,
+    )
+
+
+def successful_test_executions(
+    profiles: tuple[CommandProfileId, ...] = (CommandProfileId.PYTEST,),
+) -> tuple[QATestExecution, ...]:
+    """Build fresh bounded passing outputs for provider analysis."""
+    return tuple(
+        QATestExecution(
+            profile_id=profile_id,
+            status=CommandTerminalStatus.SUCCEEDED,
+            exit_code=0,
+            stdout="1 passed",
+            stderr="",
+            stdout_truncated=False,
+            stderr_truncated=False,
+            duration_ms=1.0,
+        )
+        for profile_id in profiles
     )

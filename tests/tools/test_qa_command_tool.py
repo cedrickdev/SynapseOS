@@ -10,9 +10,10 @@ from infrastructure.tools import RunQATestProfileInput
 
 @pytest.mark.parametrize("profile_id", ["pytest", "npm-test", "php-artisan-test"])
 def test_qa_command_input_accepts_only_test_profiles(profile_id: str) -> None:
-    assert RunQATestProfileInput.model_validate(
-        {"profile_id": profile_id}, strict=True
-    ).profile_id == profile_id
+    assert (
+        RunQATestProfileInput.model_validate({"profile_id": profile_id}, strict=True).profile_id
+        == profile_id
+    )
 
 
 @pytest.mark.parametrize(

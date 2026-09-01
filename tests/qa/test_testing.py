@@ -70,9 +70,7 @@ def command_tool_result(
 ) -> ToolResult:
     """Build one audited command-tool result with its exact public shape."""
     terminal_status = (
-        CommandTerminalStatus.SUCCEEDED
-        if exit_code == 0
-        else CommandTerminalStatus.FAILED
+        CommandTerminalStatus.SUCCEEDED if exit_code == 0 else CommandTerminalStatus.FAILED
     )
     output: dict[str, object] = {
         "profile_id": profile_id.value,
@@ -106,9 +104,7 @@ def command_tool_result(
 def test_runner_executes_each_profile_once_in_request_order(tmp_path: Path) -> None:
     """Preserve request order and invoke the fixed command tool once per profile."""
     profiles = (CommandProfileId.PYTEST, CommandProfileId.NPM_TEST)
-    request = validate_qa_request(
-        qa_request(tmp_path, required_test_profiles=profiles)
-    )
+    request = validate_qa_request(qa_request(tmp_path, required_test_profiles=profiles))
     executor = RecordingToolExecutor(tuple(command_tool_result(profile) for profile in profiles))
     runner = PermissionedQATestRunner(executor)
 
@@ -196,9 +192,7 @@ def test_runner_normalizes_tool_or_malformed_output_failure(
 
     with pytest.raises(QAError) as raised:
         asyncio.run(
-            PermissionedQATestRunner(executor).run(
-                validate_qa_request(qa_request(tmp_path))
-            )
+            PermissionedQATestRunner(executor).run(validate_qa_request(qa_request(tmp_path)))
         )
 
     assert raised.value.code is QAErrorCode.TEST_EXECUTION_FAILURE
@@ -212,9 +206,7 @@ def test_runner_propagates_cancellation_without_starting_later_profiles(
     """Stop immediately when the active command is cancelled."""
     profiles = (CommandProfileId.PYTEST, CommandProfileId.NPM_TEST)
     executor = RecordingToolExecutor((asyncio.CancelledError(),))
-    request = validate_qa_request(
-        qa_request(tmp_path, required_test_profiles=profiles)
-    )
+    request = validate_qa_request(qa_request(tmp_path, required_test_profiles=profiles))
 
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(PermissionedQATestRunner(executor).run(request))
@@ -230,9 +222,7 @@ def test_runner_normalizes_executor_exception_without_retry(tmp_path: Path) -> N
 
     with pytest.raises(QAError) as raised:
         asyncio.run(
-            PermissionedQATestRunner(executor).run(
-                validate_qa_request(qa_request(tmp_path))
-            )
+            PermissionedQATestRunner(executor).run(validate_qa_request(qa_request(tmp_path)))
         )
 
     assert raised.value.code is QAErrorCode.TEST_EXECUTION_FAILURE

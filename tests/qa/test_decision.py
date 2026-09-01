@@ -62,11 +62,7 @@ def test_failed_test_overrides_model_pass(tmp_path: Path) -> None:
     [
         (),
         successful_test_executions() * 2,
-        (
-            successful_test_executions()[0].model_copy(
-                update={"stdout_truncated": True}
-            ),
-        ),
+        (successful_test_executions()[0].model_copy(update={"stdout_truncated": True}),),
     ],
     ids=("missing", "duplicate", "truncated"),
 )

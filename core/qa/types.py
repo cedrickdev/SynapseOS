@@ -158,10 +158,7 @@ class QATestRecommendation(_ImmutableQAModel):
     @field_validator("criterion_indices")
     @classmethod
     def require_unique_bounded_indices(cls, value: tuple[int, ...]) -> tuple[int, ...]:
-        if (
-            len(set(value)) != len(value)
-            or any(index < 1 or index > 16 for index in value)
-        ):
+        if len(set(value)) != len(value) or any(index < 1 or index > 16 for index in value):
             raise ValueError("recommendation criterion indices must be unique and bounded")
         return value
 
@@ -175,9 +172,7 @@ class _QATestMetadata(_ImmutableQAModel):
     @model_validator(mode="after")
     def require_truthful_test_metadata(self) -> Self:
         expected = (
-            CommandTerminalStatus.SUCCEEDED
-            if self.exit_code == 0
-            else CommandTerminalStatus.FAILED
+            CommandTerminalStatus.SUCCEEDED if self.exit_code == 0 else CommandTerminalStatus.FAILED
         )
         if self.profile_id not in _TEST_PROFILES or self.status is not expected:
             raise ValueError("test execution metadata is inconsistent")

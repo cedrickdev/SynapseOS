@@ -33,9 +33,7 @@ def _policy_request(setup: ConcreteQASetup, **overrides: object) -> PolicyReques
         "task_id": context.task_id,
         "tool_name": "run_command_profile",
         "risk_level": ToolRiskLevel.HIGH,
-        "required_permissions": frozenset(
-            {Permission.SHELL_EXECUTE, Permission.TESTS_EXECUTE}
-        ),
+        "required_permissions": frozenset({Permission.SHELL_EXECUTE, Permission.TESTS_EXECUTE}),
         "correlation_id": context.correlation_id,
     }
     values.update(overrides)

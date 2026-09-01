@@ -101,9 +101,7 @@ def _validate_qa_workflow_request_result(
 
 def _canonicalize_qa_workflow_request(request: QAWorkflowRequest) -> QAWorkflowRequest:
     try:
-        return QAWorkflowRequest.model_validate(
-            request.model_dump(mode="python", warnings=False)
-        )
+        return QAWorkflowRequest.model_validate(request.model_dump(mode="python", warnings=False))
     except (TypeError, ValueError, ValidationError):
         raise QAWorkflowError(QAWorkflowErrorCode.INVALID_INPUT) from None
 
@@ -134,9 +132,7 @@ def _validate_persistent_qa_scope(
         raise QAWorkflowError(QAWorkflowErrorCode.INVALID_SCOPE)
     if developer.role != "Developer" or reviewer.role != "Reviewer" or qa.role != "QA":
         raise QAWorkflowError(QAWorkflowErrorCode.INVALID_ROLE)
-    if any(
-        agent.status not in _ACTIVE_AGENT_STATUSES for agent in (developer, reviewer, qa)
-    ):
+    if any(agent.status not in _ACTIVE_AGENT_STATUSES for agent in (developer, reviewer, qa)):
         raise QAWorkflowError(QAWorkflowErrorCode.INVALID_AGENT)
     nested = request.qa_request
     context = nested.execution_context

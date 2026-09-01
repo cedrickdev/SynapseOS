@@ -42,15 +42,11 @@ def test_concrete_qa_runs_one_real_pytest_with_persisted_authority(
     assert setup.marker not in result.model_dump_json()
     assert len(setup.provider.requests) == 1
     assert setup.marker in setup.provider.requests[0].messages[0].content
-    calls = list(
-        db_session.scalars(select(ToolCall).where(ToolCall.agent_run_id == setup.run.id))
-    )
+    calls = list(db_session.scalars(select(ToolCall).where(ToolCall.agent_run_id == setup.run.id)))
     assert len(calls) == 1
     assert calls[0].status is terminal_status
     events = list(
-        db_session.scalars(
-            select(AuditEvent).where(AuditEvent.agent_run_id == setup.run.id)
-        )
+        db_session.scalars(select(AuditEvent).where(AuditEvent.agent_run_id == setup.run.id))
     )
     assert [event.event_type for event in events].count("PERMISSION_EVALUATED") == 1
     assert [event.event_type for event in events].count("TOOL_EXECUTION") == 1

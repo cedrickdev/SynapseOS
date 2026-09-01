@@ -214,8 +214,7 @@ def _validate_analysis_scope(
         raise ValueError("QA analysis criterion coverage is incomplete")
     profiles = {item.profile_id for item in executions}
     if any(
-        not set(criterion.evidence_profiles).issubset(profiles)
-        for criterion in analysis.criteria
+        not set(criterion.evidence_profiles).issubset(profiles) for criterion in analysis.criteria
     ):
         raise ValueError("QA analysis cites unavailable test evidence")
 

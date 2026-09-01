@@ -113,9 +113,7 @@ def _stage_qa_started(session: Session, scope: ValidatedQAWorkflowScope) -> None
         QAEventType.QA_STARTED,
         {
             "qa_agent_id": scope.qa.slug,
-            "required_test_profile_count": len(
-                scope.request.qa_request.required_test_profiles
-            ),
+            "required_test_profile_count": len(scope.request.qa_request.required_test_profiles),
         },
     )
 
@@ -280,10 +278,7 @@ def _locked_expected_task(
         )
     if task is None:
         raise QAWorkflowError(QAWorkflowErrorCode.INVALID_SCOPE)
-    if (
-        task.status is not expected_status
-        or task.assigned_agent_id != scope.developer.id
-    ):
+    if task.status is not expected_status or task.assigned_agent_id != scope.developer.id:
         raise QAWorkflowError(QAWorkflowErrorCode.CONCURRENT_MODIFICATION)
     return task
 

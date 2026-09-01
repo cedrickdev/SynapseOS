@@ -94,9 +94,7 @@ def test_analysis_calls_provider_once_with_fresh_test_evidence(tmp_path: Path) -
     assert "PASSED|FAILED" in provider_request.system_prompt
     assert len(provider_request.messages) == 1
     assert provider_request.messages[0].role is LLMRole.USER
-    payload = json.loads(
-        provider_request.messages[0].content.removeprefix("QA evidence:\n")
-    )
+    payload = json.loads(provider_request.messages[0].content.removeprefix("QA evidence:\n"))
     assert payload["criteria"] == [
         {"criterion_index": 1, "text": "The existing test suite passes."}
     ]
@@ -155,9 +153,7 @@ def test_analysis_rejects_malformed_output_without_retry(
     content: str,
 ) -> None:
     """Fail closed on invalid structured output without repair or fallback."""
-    provider = FakeLLMProvider(
-        responses=[response(content), response(qa_analysis_content())]
-    )
+    provider = FakeLLMProvider(responses=[response(content), response(qa_analysis_content())])
 
     with pytest.raises(QAError) as raised:
         asyncio.run(

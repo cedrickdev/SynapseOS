@@ -115,9 +115,7 @@ def build_qa_result(
         canonical_analysis,
     )
     decision = (
-        QADecision.FAILED
-        if blocker_codes or canonical_analysis.findings
-        else QADecision.PASSED
+        QADecision.FAILED if blocker_codes or canonical_analysis.findings else QADecision.PASSED
     )
     sources = _canonical_text_evidence(canonical_request, canonical_executions)
     markers = _obvious_secret_markers(sources)

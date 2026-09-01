@@ -124,9 +124,7 @@ def test_completed_checkpoint_atomically_transitions_and_audits_result(
         "recommendation_count",
         "tests",
     }
-    assert completed.data["tests"] == [
-        {"profile_id": "pytest", "status": "SUCCEEDED"}
-    ]
+    assert completed.data["tests"] == [{"profile_id": "pytest", "status": "SUCCEEDED"}]
 
 
 def test_escalation_checkpoint_moves_started_failure_to_human(

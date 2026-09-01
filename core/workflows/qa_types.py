@@ -55,9 +55,7 @@ class QAWorkflowRequest(_ImmutableQAWorkflowModel):
 
     @model_validator(mode="after")
     def require_consistent_independent_scope(self) -> Self:
-        if len(
-            {self.developer_agent_id, self.reviewer_agent_id, self.qa_agent_id}
-        ) != 3:
+        if len({self.developer_agent_id, self.reviewer_agent_id, self.qa_agent_id}) != 3:
             raise ValueError("persistent workflow agent IDs must be distinct")
         if self.task_id != self.qa_request.task_id:
             raise ValueError("workflow task scope is inconsistent")

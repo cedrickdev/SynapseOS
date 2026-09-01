@@ -29,18 +29,14 @@ def test_concrete_qa_workflow_advances_to_security_with_fresh_evidence(
     """Run the complete independent QA stage without invoking Phase 18 Security."""
     setup = concrete_qa_setup(db_session, tmp_path)
 
-    result = asyncio.run(
-        QAWorkflowOrchestrator(db_session, setup.agent).run(setup.request)
-    )
+    result = asyncio.run(QAWorkflowOrchestrator(db_session, setup.agent).run(setup.request))
 
     assert result.outcome is QAWorkflowOutcome.PASSED
     assert result.task_status is TaskStatus.WAITING_SECURITY
     assert setup.task.status is TaskStatus.WAITING_SECURITY
     assert len(setup.provider.requests) == 1
     event_types = list(
-        db_session.scalars(
-            select(AuditEvent.event_type).where(AuditEvent.task_id == setup.task.id)
-        )
+        db_session.scalars(select(AuditEvent.event_type).where(AuditEvent.task_id == setup.task.id))
     )
     for required in (
         "QA_STARTED",
@@ -66,9 +62,7 @@ def test_denied_concrete_qa_execution_escalates_without_retry(
     assert setup.task.status is TaskStatus.WAITING_HUMAN
     assert setup.provider.requests == ()
     event_types = list(
-        db_session.scalars(
-            select(AuditEvent.event_type).where(AuditEvent.task_id == setup.task.id)
-        )
+        db_session.scalars(select(AuditEvent.event_type).where(AuditEvent.task_id == setup.task.id))
     )
     assert event_types.count("QA_STARTED") == 1
     assert event_types.count("TOOL_EXECUTION") == 1

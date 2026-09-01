@@ -10,9 +10,13 @@ from core.agents import AgentProfile
 from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
 from core.enums import AgentSeniority, AgentStatus, Permission
 from core.qa import (
+    QAAnalysis,
     QACriterionAssessment,
     QACriterionStatus,
+    QADecision,
+    QAFinding,
     QARequest,
+    QASeverity,
     QATestEvidence,
     QATestExecution,
 )
@@ -160,3 +164,47 @@ def successful_test_executions(
         )
         for profile_id in profiles
     )
+
+
+def failed_test_execution(
+    profile_id: CommandProfileId = CommandProfileId.PYTEST,
+) -> QATestExecution:
+    """Build one fresh completed test failure."""
+    return QATestExecution(
+        profile_id=profile_id,
+        status=CommandTerminalStatus.FAILED,
+        exit_code=1,
+        stdout="",
+        stderr="1 failed",
+        stdout_truncated=False,
+        stderr_truncated=False,
+        duration_ms=1.0,
+    )
+
+
+def qa_finding(**overrides: object) -> QAFinding:
+    """Build one actionable observed functional mismatch."""
+    values: dict[str, object] = {
+        "category": "functional.correctness",
+        "severity": QASeverity.HIGH,
+        "reproduction_steps": ("Run the focused regression test.",),
+        "expected_behavior": "The calculation returns the sum.",
+        "actual_behavior": "The calculation returns zero.",
+        "path": "src/add.py",
+    }
+    values.update(overrides)
+    return QAFinding.model_validate(values)
+
+
+def passing_qa_analysis(**overrides: object) -> QAAnalysis:
+    """Build one complete provider proposal with passing evidence."""
+    values: dict[str, object] = {
+        "decision": QADecision.PASSED,
+        "criteria": passed_criterion_assessments(),
+        "findings": (),
+        "recommendations": (),
+        "rationale": "Fresh deterministic evidence supports the criterion.",
+        "confidence": 0.90,
+    }
+    values.update(overrides)
+    return QAAnalysis.model_validate(values)

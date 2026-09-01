@@ -66,6 +66,20 @@ def test_validation_rejects_wrong_role_or_inactive_profile(
     assert raised.value.code is code
 
 
+@pytest.mark.parametrize("autonomy_level", [2, 3, 4, 5])
+def test_validation_rejects_qa_autonomy_above_read_and_test_scope(
+    tmp_path: Path,
+    autonomy_level: int,
+) -> None:
+    """Prevent a QA profile from inheriting commit, deployment, or broader autonomy."""
+    request = qa_request(tmp_path, profile=qa_profile(autonomy_level=autonomy_level))
+
+    with pytest.raises(QAError) as raised:
+        validate_qa_request(request)
+
+    assert raised.value.code is QAErrorCode.INVALID_PERMISSION
+
+
 @pytest.mark.parametrize("field", ["developer_id", "reviewer_id"])
 def test_validation_rejects_self_qa_model_copy(tmp_path: Path, field: str) -> None:
     """Prevent model-copy bypasses from merging author, reviewer, and QA identities."""

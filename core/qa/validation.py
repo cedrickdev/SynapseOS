@@ -97,6 +97,8 @@ def _validate_qa_profile_authority_result(
         return None, QAErrorCode.INVALID_ROLE
     if canonical_profile.status not in _ACTIVE_STATUSES:
         return None, QAErrorCode.INACTIVE_AGENT
+    if canonical_profile.autonomy_level not in {0, 1}:
+        return None, QAErrorCode.INVALID_PERMISSION
     try:
         permissions = frozenset(
             Permission(permission_id) for permission_id in canonical_profile.permission_ids

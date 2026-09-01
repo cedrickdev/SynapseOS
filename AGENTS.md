@@ -9,7 +9,8 @@ model**, **Phase 3 — task state machine**, **Phase 4 — LLM provider boundary
 core**, **Phase 6 — tool registry**, **Phase 7 — permission engine**, **Phase 8 — Skills
 Registry**, **Phase 9 — workspace isolation**, **Phase 10 — transactional write tools**, and
 **Phase 11 — secure command profiles**, **Phase 13 — Loop Engineering V1**, **Phase 14 —
-Developer Agent**, **Phase 15 — Reviewer Agent**, and **Phase 16 — Developer–Reviewer workflow**.
+Developer Agent**, **Phase 15 — Reviewer Agent**, **Phase 16 — Developer–Reviewer workflow**, and
+**Phase 17 — QA Agent**.
 Phase 12 remains deliberately unimplemented.
 It contains a minimal FastAPI application, typed
 SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
@@ -23,7 +24,9 @@ a bounded provider-neutral single-agent loop with sanitized append-only step aud
 Developer role using deterministic skill context and real secure repository tools, an independent
 read-only Reviewer role with one-shot analysis and deterministic approval gating, real-PostgreSQL
 integration tests, and a bounded audited Developer–Reviewer workflow with fresh correction-cycle
-handoffs and concrete-agent integration coverage.
+handoffs and concrete-agent integration coverage, plus an independent bounded QA role with
+test-only delegated authority, one-shot analysis, a deterministic gate, and an audited persistent
+QA workflow stage.
 
 Phase 7 authorizes tools exclusively from active persisted `AgentPermission` grants. Phase 8 can
 load and rank local `SKILL.md` packages. Phase 14 may inject only selected, complete, bounded skill
@@ -31,10 +34,12 @@ instructions into ephemeral Developer context; skills remain subordinate data an
 authority or execute directly. Phase 9 provides local filesystem
 isolation behind a backend-neutral contract; it is not an operating-system sandbox or execution
 container. Phase 11 command execution is an application-level fixed-profile boundary, not a
-hostile-code sandbox. The repository does not include a free-form shell, MCP access, provider
-routing, QA/Security execution, or frontend. Phase 12 remains deliberately unimplemented. Phase
-16 provides only the explicit Developer–Reviewer workflow documented in
-`docs/developer-reviewer-workflow.md`; Phase 17 and later phases are not implemented. Do not
+hostile-code sandbox. Phase 17 adds a separate test-only permission policy for an active QA agent
+on a Developer-owned `WAITING_QA` task; it authorizes only the closed QA test adapter when both
+persisted grants are active. The repository does not include a free-form shell, MCP access,
+provider routing, Security execution, or frontend. Phase 12 remains deliberately unimplemented.
+Phase 17 provides only the QA behavior documented in `docs/qa-agent.md`; Phase 18 and later phases
+are not implemented. Do not
 implement work from a later phase unless the user explicitly starts that phase.
 
 Important files:
@@ -57,11 +62,13 @@ Current source layout:
 - `core/runtime/` and `infrastructure/runtime/` — bounded one-agent loop and runtime-step audit.
 - `core/developer/` — Phase 14 role validation, skill context, evidence, reporting, and composition.
 - `core/reviewer/` — Phase 15 read-only validation, analysis, gate, scoring, and composition.
-- `core/workflows/` — Phase 16 explicit bounded Developer–Reviewer orchestration, fresh handoff validation, checkpoints, and safe errors.
+- `core/qa/` — Phase 17 independent authority, test execution, analysis, gate, and composition.
+- `core/workflows/` — Phase 16 Developer–Reviewer orchestration and the separate Phase 17 QA stage.
 - `skills/` — five repository-owned versioned V1 skill packages.
 - `alembic/` — PostgreSQL migrations.
 - `tests/` — unit and real-PostgreSQL integration tests.
-- `docs/developer-reviewer-workflow.md` — Phase 16 flow, contracts, checkpoints, safety boundary, and Phase 17 exclusions.
+- `docs/developer-reviewer-workflow.md` — Phase 16 flow, contracts, checkpoints, safety boundary, and phase handoff.
+- `docs/qa-agent.md` — Phase 17 contracts, delegated authority, deterministic gate, workflow, and safety boundary.
 
 ## Development commands
 
@@ -107,6 +114,15 @@ For the focused Phase 16 concrete-agent PostgreSQL integration tests, run:
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_integration.py -q
+```
+
+For the focused Phase 17 QA Agent and PostgreSQL integration tests, run:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/qa \
+  tests/workflows/test_qa_integration.py \
+  tests/database/test_qa_permission_policy.py \
+  tests/tools/test_qa_command_tool.py -q
 ```
 
 Run a single test with:

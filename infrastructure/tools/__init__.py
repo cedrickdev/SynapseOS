@@ -3,7 +3,12 @@
 from core.commands import CommandPolicy, CommandRunner
 from core.tools import ToolRegistry
 from infrastructure.tools.audit import SQLAlchemyToolAuditRecorder
-from infrastructure.tools.command import RunCommandProfileInput, RunCommandProfileTool
+from infrastructure.tools.command import (
+    RunCommandProfileInput,
+    RunCommandProfileTool,
+    RunQATestProfileInput,
+    RunQATestProfileTool,
+)
 from infrastructure.tools.filesystem import (
     ListFilesInput,
     ListFilesTool,
@@ -60,6 +65,8 @@ __all__ = [
     "SQLAlchemyToolAuditRecorder",
     "RunCommandProfileInput",
     "RunCommandProfileTool",
+    "RunQATestProfileInput",
+    "RunQATestProfileTool",
     "ListFilesInput",
     "ListFilesTool",
     "ReadFileInput",

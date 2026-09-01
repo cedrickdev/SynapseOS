@@ -198,8 +198,32 @@ def test_timeout_cleanup_is_stable_across_repeated_short_lived_groups(tmp_path: 
             "signal.pause()"
         )
 
+        async def started_factory(
+            *args: object,
+            marker: Path = pid_file,
+            **kwargs: object,
+        ) -> Any:
+            factory = cast(Callable[..., Awaitable[Any]], asyncio.create_subprocess_exec)
+            process = await factory(*args, **kwargs)
+            try:
+                async with asyncio.timeout(1.0):
+                    while not marker.exists():
+                        if process.returncode is not None:
+                            raise RuntimeError("stress process exited before its start marker")
+                        await asyncio.sleep(0.001)
+            except BaseException:
+                if process.returncode is None:
+                    process.kill()
+                await process.wait()
+                raise
+            return process
+
         with pytest.raises(CommandError) as captured:
-            asyncio.run(LocalCommandRunner().run(_spec(tmp_path, code, timeout=0.05)))
+            asyncio.run(
+                LocalCommandRunner(process_factory=started_factory).run(
+                    _spec(tmp_path, code, timeout=0.05)
+                )
+            )
 
         assert captured.value.code is CommandErrorCode.TIMED_OUT
         with pytest.raises(ProcessLookupError):

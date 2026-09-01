@@ -291,7 +291,10 @@ SQLAlchemy session and rejects before external work when:
 - the task or any required agent does not exist;
 - the task is not exactly `WAITING_SECURITY`;
 - persisted roles, active states, identities, project scope, assignment, workspace, correlation,
-  QA report, tests, source, or diff do not match;
+  QA report, or tests do not match;
+- caller-supplied source or diff scope is malformed, duplicated, outside its bounds, or inconsistent
+  with its declared normalized paths; persistent preflight does not claim PostgreSQL authenticates
+  source bytes that are not stored in the database;
 - Security is not independent from Developer, Reviewer, and QA;
 - another invocation has already advanced the task.
 

@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from core.enums import AgentStatus, TaskStatus
 from core.qa import QAError, validate_qa_request
+from core.workflows.deadline import _configure_transaction_timeouts
+from core.workflows.errors import WorkflowError, WorkflowErrorCode
 from core.workflows.qa_errors import (
     QAWorkflowError,
     QAWorkflowErrorCode,
@@ -51,11 +53,15 @@ def validate_qa_workflow_request(
 def _validate_qa_workflow_request_result(
     session: Session,
     request: QAWorkflowRequest,
+    *,
+    deadline: float | None = None,
 ) -> tuple[ValidatedQAWorkflowScope | None, QAWorkflowErrorCode | None]:
     try:
         if type(request) is not QAWorkflowRequest:
             return None, QAWorkflowErrorCode.INVALID_INPUT
         canonical_request = _canonicalize_qa_workflow_request(request)
+        if deadline is not None:
+            _configure_transaction_timeouts(session, deadline)
         task, developer, reviewer, qa = _load_qa_scope(session, canonical_request)
         _validate_persistent_qa_scope(canonical_request, task, developer, reviewer, qa)
         _validate_nested_qa_request(canonical_request)
@@ -78,6 +84,15 @@ def _validate_qa_workflow_request_result(
         _discard_qa_workflow_exception(error)
         del error
         return None, QAWorkflowErrorCode.PERSISTENCE_FAILURE
+    except WorkflowError as error:
+        code = (
+            QAWorkflowErrorCode.TIMEOUT
+            if error.code is WorkflowErrorCode.TIMEOUT
+            else QAWorkflowErrorCode.PERSISTENCE_FAILURE
+        )
+        _discard_qa_workflow_exception(error)
+        del error
+        return None, code
     except Exception as error:
         _discard_qa_workflow_exception(error)
         del error

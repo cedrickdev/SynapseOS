@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from core.commands import CommandCategory, CommandProfileId, CommandTerminalStatus
 from core.enums import AgentSeniority, AgentStatus, ProjectStatus, TaskStatus
-from core.qa import QADecision, QARequest, QAResult
+from core.qa import QADecision, QAFinding, QARequest, QAResult, QASeverity
 from core.reviewer import ReviewCheck
 from core.tools import ToolExecutionContext
 from core.workflows import QAWorkflowRequest
@@ -31,6 +31,28 @@ def passed_qa_result(request: QARequest) -> QAResult:
         recommendations=(),
         tests=(successful_test_evidence(),),
         rationale="Fresh deterministic evidence supports the criterion.",
+        confidence=0.90,
+        correlation_id=request.correlation_id,
+    )
+
+
+def failed_qa_result(request: QARequest) -> QAResult:
+    """Build one actionable functional QA failure for workflow tests."""
+    passed = passed_qa_result(request)
+    finding = QAFinding(
+        category="functional.correctness",
+        severity=QASeverity.HIGH,
+        reproduction_steps=("Run the focused regression test.",),
+        expected_behavior="The calculation returns the sum.",
+        actual_behavior="The calculation returns zero.",
+    )
+    return QAResult(
+        decision=QADecision.FAILED,
+        criteria=passed.criteria,
+        findings=(finding,),
+        recommendations=(),
+        tests=passed.tests,
+        rationale="The observed behavior differs from the criterion.",
         confidence=0.90,
         correlation_id=request.correlation_id,
     )

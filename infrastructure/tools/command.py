@@ -30,6 +30,7 @@ type ProfileLiteral = Literal[
     "git-diff-staged",
     "git-log",
 ]
+type QATestProfileLiteral = Literal["pytest", "npm-test", "php-artisan-test"]
 
 
 class RunCommandProfileInput(BaseModel):
@@ -40,12 +41,16 @@ class RunCommandProfileInput(BaseModel):
     profile_id: ProfileLiteral
 
 
-class RunCommandProfileTool(Tool[RunCommandProfileInput]):
-    """Resolve and run one already-authorized built-in command profile."""
+class RunQATestProfileInput(RunCommandProfileInput):
+    """One test-only profile selection for delegated independent QA."""
+
+    profile_id: QATestProfileLiteral
+
+
+class _RunCommandProfileTool[InputT: RunCommandProfileInput](Tool[InputT]):
+    """Share exact command execution without widening either input contract."""
 
     name = "run_command_profile"
-    description = "Run one bounded built-in command profile in the managed project workspace."
-    input_type = RunCommandProfileInput
     required_permissions = frozenset({Permission.SHELL_EXECUTE, Permission.TESTS_EXECUTE})
     risk_level = ToolRiskLevel.HIGH
     timeout_seconds = 30.0
@@ -56,7 +61,7 @@ class RunCommandProfileTool(Tool[RunCommandProfileInput]):
 
     async def execute(
         self,
-        arguments: RunCommandProfileInput,
+        arguments: InputT,
         context: ToolExecutionContext,
     ) -> dict[str, JsonValue]:
         acquired = False
@@ -98,6 +103,20 @@ class RunCommandProfileTool(Tool[RunCommandProfileInput]):
             "terminal_status": result.status.value,
             "truncated": truncated,
         }
+
+
+class RunCommandProfileTool(_RunCommandProfileTool[RunCommandProfileInput]):
+    """Resolve and run one already-authorized built-in command profile."""
+
+    description = "Run one bounded built-in command profile in the managed project workspace."
+    input_type = RunCommandProfileInput
+
+
+class RunQATestProfileTool(_RunCommandProfileTool[RunQATestProfileInput]):
+    """Expose the command adapter under a test-profile-only input contract."""
+
+    description = "Run one bounded built-in test profile for independent QA."
+    input_type = RunQATestProfileInput
 
 
 def _raise_tool_error(code: CommandErrorCode) -> None:

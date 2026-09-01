@@ -267,9 +267,7 @@ def test_validation_rejects_write_authority() -> None:
 
 
 def test_validation_requires_exact_context_scope() -> None:
-    request = qa_request(
-        execution_context=qa_execution_context(correlation_id=uuid4())
-    )
+    request = qa_request(execution_context=qa_execution_context(correlation_id=uuid4()))
     with pytest.raises(QAError) as raised:
         validate_qa_request(request)
     assert raised.value.code is QAErrorCode.INVALID_SCOPE
@@ -740,14 +738,21 @@ git commit -m "feat(workflow): orchestrate audited QA gate"
 
 **Files:**
 - Create: `tests/qa/test_integration.py`
+- Create: `tests/qa/integration_fixtures.py`
 - Create: `tests/workflows/test_qa_integration.py`
-- Modify: `tests/qa/factories.py`
-- Modify: `tests/workflows/qa_factories.py`
+- Create: `tests/database/test_qa_permission_policy.py`
+- Create: `tests/tools/test_qa_command_tool.py`
+- Create: `infrastructure/permissions/qa_policy.py`
+- Modify: `infrastructure/permissions/__init__.py`
+- Modify: `infrastructure/tools/command.py`
+- Modify: `infrastructure/tools/__init__.py`
 
 **Interfaces:**
 - Consumes: concrete `QAAgent`, `PermissionedQATestRunner`, `ToolExecutor`,
-  `RunCommandProfileTool`, PostgreSQL permission/audit repositories, `FakeLLMProvider`, and
+  secure command policy/runner, PostgreSQL permission/audit repositories, `FakeLLMProvider`, and
   `QAWorkflowOrchestrator`.
+- Produces: `SQLAlchemyQAPermissionPolicy` and `RunQATestProfileTool`, retaining the existing tool
+  name while restricting its schema to Phase 17 test profiles.
 - Produces: acceptance evidence for the complete Phase 17 data path.
 
 - [ ] **Step 1: Write failing concrete integration tests**
@@ -767,8 +772,11 @@ TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/qa/test_integration.py \
 - [ ] **Step 3: Add only the minimal composition/factory fixes required by integration**
 
 Do not add an API endpoint, background worker, dependency container, migration, browser runner,
-Security runner, or free-form command path. Wire existing concrete objects directly in tests and
-fix only Phase 17 public exports or canonical conversion defects exposed by the real path.
+Security runner, or free-form command path. Wire existing concrete objects directly in tests. The
+general Phase 7 policy cannot authorize a non-assigned autonomy-0/1 QA agent without weakening its
+global invariant, so add one separate deny-by-default QA policy requiring the exact role, state,
+run, Developer assignment, risk, tool, and persisted grants. Pair it with a test-only command input
+schema so the delegation cannot authorize lint, build, or Git profiles.
 
 - [ ] **Step 4: Verify focused and full suites**
 

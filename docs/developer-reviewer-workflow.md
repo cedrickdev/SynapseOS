@@ -146,9 +146,10 @@ The caller remains responsible for the surrounding session and dependency lifecy
 deployment must supply the existing bounded `DeveloperAgent`, read-only `ReviewerAgent`, and a
 handoff builder that obtains current repository evidence through approved repository boundaries.
 
-## Phase 17 exclusions
+## Phase boundary
 
 Phase 16 does not implement or invoke a QA agent, Security agent, merge or pull-request automation,
 event bus, background worker, scheduler, reputation update, memory write, deployment, or generic
-workflow language. `WAITING_QA` is a handoff boundary only. Phase 17 owns QA validation and any
-future transition out of that state; no Phase 17 behavior is present in this workflow.
+workflow language. `WAITING_QA` is its handoff boundary. The separate Phase 17
+`QAWorkflowOrchestrator` documented in [`qa-agent.md`](qa-agent.md) may consume that durable state;
+the Phase 16 orchestrator itself still never invokes QA or performs a later transition.

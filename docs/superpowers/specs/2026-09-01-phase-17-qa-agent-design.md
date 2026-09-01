@@ -90,7 +90,8 @@ phase does not weaken the QA read/test boundary to anticipate it.
 scope and one `CommandProfileId`. For each required profile it:
 
 1. resolves the exact application-owned command profile for the managed workspace;
-2. authorizes the persisted QA agent through the existing permission engine;
+2. authorizes the persisted QA agent through the existing permission engine and a QA-specific,
+   deny-by-default SQLAlchemy policy;
 3. executes the profile exactly once through the existing bounded command runner;
 4. returns one canonical `QATestExecution` with profile ID, terminal status, exit code, duration,
    truncation flags, and bounded transient output;
@@ -105,6 +106,18 @@ another profile or provider call begins.
 Fresh stdout and stderr are already bounded by the command boundary. They are transient input to
 the QA analysis and are discarded after the result is built. They are never copied into audit data,
 public errors, result metadata, or persistent history.
+
+The general Phase 7 policy intentionally binds tool authority to the assigned task owner and its
+normal autonomy thresholds. Phase 17 preserves the Developer assignment and QA autonomy 0–1, so it
+uses `SQLAlchemyQAPermissionPolicy` rather than weakening that general policy. The adapter allows
+only an active persistent QA run on a `WAITING_QA` task, with a distinct active Developer assignee
+and exact active `shell.execute` plus `tests.execute` grants. It denies every other tool, risk,
+permission, role, status, state, assignment, run, or project scope.
+
+The registry used by QA contains `RunQATestProfileTool`. It retains the existing
+`run_command_profile` name and secure command implementation while narrowing the validated input
+schema to `pytest`, `npm-test`, and `php-artisan-test`. This second boundary prevents the delegated
+policy from becoming authority for lint, build, Git, or other fixed profiles.
 
 ## Provider analysis contract
 

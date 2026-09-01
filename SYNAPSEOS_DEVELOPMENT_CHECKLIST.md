@@ -1216,11 +1216,11 @@ Valider fonctionnellement le travail.
 
 ## Responsabilités
 
-- [ ] analyser critères d'acceptation
-- [ ] vérifier tests existants
-- [ ] proposer tests manquants
-- [ ] exécuter suite de tests
-- [ ] valider ou rejeter
+- [x] analyser critères d'acceptation
+- [x] vérifier tests existants
+- [x] proposer tests manquants
+- [x] exécuter suite de tests
+- [x] valider ou rejeter
 
 ## Prompt Claude Code — Phase 17
 

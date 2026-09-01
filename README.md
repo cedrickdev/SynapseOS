@@ -2,7 +2,7 @@
 
 > The operating system for autonomous AI organizations.
 
-[![Status](https://img.shields.io/badge/status-Phase_16-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
+[![Status](https://img.shields.io/badge/status-Phase_17-orange)](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code_style-ruff-blueviolet)](https://docs.astral.sh/ruff/)
 [![Types: mypy](https://img.shields.io/badge/types-mypy-blue)](https://mypy-lang.org/)
@@ -48,13 +48,13 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 16 — Developer ↔ Reviewer workflow completed.** The repository now provides the persistence foundation, an
+**Phase 17 — QA Agent completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
 free-form shell, MCP, general-purpose multi-agent orchestration beyond the explicit
-Developer–Reviewer workflow, QA and security engines, and the frontend remain intentionally
+Developer–Reviewer and QA stages, a Security engine, and the frontend remain intentionally
 unimplemented.
 
 What exists today:
@@ -101,6 +101,10 @@ What exists today:
 - A bounded Developer ↔ Reviewer workflow that assigns one persistent READY task, commits audited
   checkpoints, obtains fresh handoff evidence for each correction cycle, and ends at WAITING_QA on
   approval or WAITING_HUMAN on review-cycle exhaustion.
+- An independent QA role that runs only fixed test profiles through exact persisted grants,
+  performs one bounded provider analysis, applies a deterministic acceptance gate, and advances
+  `WAITING_QA` to `WAITING_SECURITY`, `CHANGES_REQUESTED`, or `WAITING_HUMAN` through audited
+  row-locked checkpoints.
 - A full tooling baseline: `pytest`, `Ruff`, `mypy` (strict), plus `Dockerfile` and
   `docker-compose.yml` for the API + PostgreSQL.
 
@@ -147,8 +151,8 @@ make dev         # run the API with autoreload on http://localhost:8000
 ```text
 apps/api/                 # FastAPI application (Platform API)
 core/                     # Domain and application boundaries
-  agents/ commands/ developer/ reviewer/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
-  workflows/               # Explicit bounded Developer ↔ Reviewer orchestration
+  agents/ commands/ developer/ reviewer/ qa/ tasks/ runtime/ memory/ skills/ tools/ scoring/ permissions/ workspaces/
+  workflows/               # Explicit Developer ↔ Reviewer and QA workflow stages
   config.py               # Application settings (env-driven)
 infrastructure/           # Adapters to the outside world
   database/               # SQLAlchemy models, sessions, repositories, and append-only guard
@@ -208,6 +212,16 @@ created through Alembic:
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_integration.py -q
 ```
 
+The focused Phase 17 suite composes the concrete QA Agent, delegated persisted permissions, a real
+fixed test process, and the QA workflow against Alembic-managed PostgreSQL:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/qa \
+  tests/workflows/test_qa_integration.py \
+  tests/database/test_qa_permission_policy.py \
+  tests/tools/test_qa_command_tool.py -q
+```
+
 Run `make help` to list every available target.
 
 **Working agreement:** changes are test-driven (write the failing test first), and `make check`
@@ -234,7 +248,8 @@ validated pull request. The near-term sequence is:
 14. **Developer Agent** — completed
 15. **Reviewer Agent** — completed
 16. **Developer ↔ Reviewer workflow** — completed
-17. QA Agent — not started
+17. **QA Agent** — completed
+18. Security Agent V1 — not started
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -255,6 +270,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Developer Agent:** [`docs/developer-agent.md`](docs/developer-agent.md)
 - **Reviewer Agent:** [`docs/reviewer-agent.md`](docs/reviewer-agent.md)
 - **Developer ↔ Reviewer workflow:** [`docs/developer-reviewer-workflow.md`](docs/developer-reviewer-workflow.md)
+- **QA Agent and workflow:** [`docs/qa-agent.md`](docs/qa-agent.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

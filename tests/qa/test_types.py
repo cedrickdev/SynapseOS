@@ -293,3 +293,34 @@ def test_passed_result_requires_successful_criteria_and_tests() -> None:
             confidence=0.9,
             correlation_id=CORRELATION_ID,
         )
+
+
+def test_passed_result_requires_complete_untruncated_test_evidence() -> None:
+    """Prevent a structural PASS from laundering incomplete deterministic evidence."""
+    truncated_test = successful_test_evidence().model_copy(update={"truncated": True})
+    unsupported_criterion = passed_criterion_assessments()[0].model_copy(
+        update={"evidence_profiles": ()}
+    )
+
+    with pytest.raises(ValidationError):
+        QAResult(
+            decision=QADecision.PASSED,
+            criteria=passed_criterion_assessments(),
+            findings=(),
+            recommendations=(),
+            tests=(truncated_test,),
+            rationale="Truncated evidence cannot support a pass.",
+            confidence=0.9,
+            correlation_id=CORRELATION_ID,
+        )
+    with pytest.raises(ValidationError):
+        QAResult(
+            decision=QADecision.PASSED,
+            criteria=(unsupported_criterion,),
+            findings=(),
+            recommendations=(),
+            tests=(successful_test_evidence(),),
+            rationale="Every passed criterion requires deterministic evidence.",
+            confidence=0.9,
+            correlation_id=CORRELATION_ID,
+        )

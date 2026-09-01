@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from core.commands import CommandProfileId
 from core.enums import TaskStatus
 from core.qa import QAError, QAErrorCode, QARequest, QAResult
 from core.workflows import (
@@ -125,6 +126,37 @@ def test_malformed_qa_result_escalates_without_functional_failure(
         update={"correlation_id": request.qa_request.execution_context.agent_run_id}
     )
     runner = RecordingQARunner(malformed)
+
+    with pytest.raises(QAWorkflowError) as raised:
+        asyncio.run(QAWorkflowOrchestrator(db_session, runner).run(request))
+
+    assert raised.value.code is QAWorkflowErrorCode.COLLABORATOR_FAILURE
+    assert task.status is TaskStatus.WAITING_HUMAN
+    assert len(runner.calls) == 1
+
+
+def test_qa_result_must_match_the_requested_test_profile_scope(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Reject a valid-looking PASS backed by a different fixed test profile."""
+    task, _, _, _, request = persisted_qa_workflow_request(db_session, tmp_path)
+    passed = passed_qa_result(request.qa_request)
+    mismatched = QAResult(
+        decision=passed.decision,
+        criteria=(
+            passed.criteria[0].model_copy(
+                update={"evidence_profiles": (CommandProfileId.NPM_TEST,)}
+            ),
+        ),
+        findings=passed.findings,
+        recommendations=passed.recommendations,
+        tests=(passed.tests[0].model_copy(update={"profile_id": CommandProfileId.NPM_TEST}),),
+        rationale=passed.rationale,
+        confidence=passed.confidence,
+        correlation_id=passed.correlation_id,
+    )
+    runner = RecordingQARunner(mismatched)
 
     with pytest.raises(QAWorkflowError) as raised:
         asyncio.run(QAWorkflowOrchestrator(db_session, runner).run(request))

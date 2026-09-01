@@ -318,10 +318,17 @@ class QAResult(_QAAssessmentSet):
             raise ValueError("test evidence profiles must be unique")
         if self.decision is QADecision.FAILED and not self.findings:
             raise ValueError("failed QA results require an actionable finding")
+        test_profiles = {test.profile_id for test in self.tests}
         if self.decision is QADecision.PASSED and (
             self.findings
             or any(item.status is not QACriterionStatus.PASSED for item in self.criteria)
             or any(test.status is not CommandTerminalStatus.SUCCEEDED for test in self.tests)
+            or any(test.truncated for test in self.tests)
+            or any(
+                not criterion.evidence_profiles
+                or not set(criterion.evidence_profiles).issubset(test_profiles)
+                for criterion in self.criteria
+            )
         ):
-            raise ValueError("passed QA results require successful evidence")
+            raise ValueError("passed QA results require complete successful evidence")
         return self

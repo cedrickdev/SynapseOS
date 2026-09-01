@@ -132,8 +132,7 @@ async def _invoke_qa(
         if type(result) is not QAResult:
             raise TypeError("QA result must be a QAResult")
         canonical = QAResult.model_validate(result.model_dump(mode="python", warnings=False))
-        if canonical.correlation_id != scope.request.correlation_id:
-            raise ValueError("QA result scope is invalid")
+        _validate_qa_result_scope(canonical, scope)
         return canonical
     except asyncio.CancelledError:
         del qa, scope
@@ -142,6 +141,19 @@ async def _invoke_qa(
         _discard_qa_workflow_exception(error)
         del error, qa, scope
     _raise_qa_workflow_error(QAWorkflowErrorCode.COLLABORATOR_FAILURE)
+
+
+def _validate_qa_result_scope(
+    result: QAResult,
+    scope: ValidatedQAWorkflowScope,
+) -> None:
+    request = scope.request.qa_request
+    if (
+        result.correlation_id != scope.request.correlation_id
+        or len(result.criteria) != len(request.acceptance_criteria)
+        or tuple(test.profile_id for test in result.tests) != request.required_test_profiles
+    ):
+        raise ValueError("QA result scope is invalid")
 
 
 def _workflow_result(

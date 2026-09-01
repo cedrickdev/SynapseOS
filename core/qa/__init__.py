@@ -14,6 +14,12 @@ from core.qa.types import (
     QATestExecution,
     QATestRecommendation,
 )
+from core.qa.validation import (
+    QA_TOOL_IDS,
+    ValidatedQARequest,
+    validate_qa_profile_authority,
+    validate_qa_request,
+)
 
 __all__ = [
     "QAAnalysis",
@@ -26,7 +32,11 @@ __all__ = [
     "QARequest",
     "QAResult",
     "QASeverity",
+    "QA_TOOL_IDS",
     "QATestEvidence",
     "QATestExecution",
     "QATestRecommendation",
+    "ValidatedQARequest",
+    "validate_qa_profile_authority",
+    "validate_qa_request",
 ]

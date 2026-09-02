@@ -316,6 +316,13 @@ class SecurityResult(_ImmutableSecurityModel):
 
     @model_validator(mode="after")
     def require_truthful_terminal_shape(self) -> Self:
+        has_confirmed_high_impact_finding = any(
+            finding.confirmation is SecurityConfirmation.CONFIRMED
+            and finding.severity in {SecuritySeverity.HIGH, SecuritySeverity.CRITICAL}
+            for finding in self.findings
+        )
+        if self.decision is not SecurityDecision.BLOCK and has_confirmed_high_impact_finding:
+            raise ValueError("confirmed high-impact findings require a blocked Security result")
         if self.decision is SecurityDecision.PASS:
             if (
                 self.findings
@@ -327,10 +334,6 @@ class SecurityResult(_ImmutableSecurityModel):
         elif self.decision is SecurityDecision.WARN:
             if not self.findings and not self.uncertainty_reasons:
                 raise ValueError("warn Security results require a finding or uncertainty")
-        elif not any(
-            finding.confirmation is SecurityConfirmation.CONFIRMED
-            and finding.severity in {SecuritySeverity.HIGH, SecuritySeverity.CRITICAL}
-            for finding in self.findings
-        ):
+        elif not has_confirmed_high_impact_finding:
             raise ValueError("blocked Security results require a confirmed high-impact finding")
         return self

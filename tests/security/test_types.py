@@ -368,6 +368,25 @@ def test_pass_result_requires_empty_findings_and_complete_scanner(
         SecurityResult.model_validate(values)
 
 
+@pytest.mark.parametrize("decision", [SecurityDecision.PASS, SecurityDecision.WARN])
+@pytest.mark.parametrize("severity", [SecuritySeverity.HIGH, SecuritySeverity.CRITICAL])
+def test_non_block_result_rejects_confirmed_high_impact_finding(
+    decision: SecurityDecision,
+    severity: SecuritySeverity,
+) -> None:
+    """Require the deterministic veto whenever confirmed high-impact evidence exists."""
+    with pytest.raises(ValidationError):
+        SecurityResult(
+            decision=decision,
+            findings=(confirmed_finding(severity),),
+            scanner=complete_scanner_summary(finding_count=1),
+            uncertainty_reasons=(),
+            rationale="Confirmed deterministic evidence requires a block.",
+            confidence=0.95,
+            correlation_id=CORRELATION_ID,
+        )
+
+
 def test_warn_result_requires_a_finding_or_uncertainty() -> None:
     """Prevent an unexplained WARN from masquerading as a truthful result."""
     with pytest.raises(ValidationError):

@@ -315,6 +315,60 @@ def test_validation_rejects_forged_pydantic_subclasses(tmp_path: Path) -> None:
     assert nested_error.value.code is SecurityErrorCode.INVALID_INPUT
 
 
+@pytest.mark.parametrize(
+    ("field", "mutable_value"),
+    [
+        (
+            "permission_ids",
+            {Permission.FILESYSTEM_READ.value, Permission.GIT_READ.value},
+        ),
+        (
+            "tool_ids",
+            {"read_file", "list_files", "search_text", "git_status", "git_diff"},
+        ),
+        ("skill_ids", {"security-review"}),
+    ],
+)
+def test_request_validation_rejects_mutable_forged_profile_capabilities(
+    tmp_path: Path,
+    field: str,
+    mutable_value: set[str],
+) -> None:
+    profile = security_profile().model_copy(update={field: mutable_value})
+    request = security_request(tmp_path).model_copy(update={"profile": profile})
+
+    with pytest.raises(SecurityError) as raised:
+        validate_security_request(request)
+
+    assert raised.value.code is SecurityErrorCode.INVALID_INPUT
+
+
+@pytest.mark.parametrize(
+    ("field", "mutable_value"),
+    [
+        (
+            "permission_ids",
+            {Permission.FILESYSTEM_READ.value, Permission.GIT_READ.value},
+        ),
+        (
+            "tool_ids",
+            {"read_file", "list_files", "search_text", "git_status", "git_diff"},
+        ),
+        ("skill_ids", {"security-review"}),
+    ],
+)
+def test_profile_authority_rejects_mutable_forged_capabilities(
+    field: str,
+    mutable_value: set[str],
+) -> None:
+    profile = security_profile().model_copy(update={field: mutable_value})
+
+    with pytest.raises(SecurityError) as raised:
+        validate_security_profile_authority(profile)
+
+    assert raised.value.code is SecurityErrorCode.INVALID_INPUT
+
+
 def test_validation_error_traceback_does_not_retain_request_or_profile(
     tmp_path: Path,
 ) -> None:

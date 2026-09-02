@@ -89,6 +89,8 @@ def _validate_security_profile_authority_result(
 ) -> tuple[frozenset[Permission] | None, SecurityErrorCode | None]:
     if type(profile) is not AgentProfile:
         return None, SecurityErrorCode.INVALID_INPUT
+    if not _has_canonical_profile_capability_types(profile):
+        return None, SecurityErrorCode.INVALID_INPUT
     try:
         canonical_profile = AgentProfile.model_validate(
             profile.model_dump(mode="python", warnings=False)
@@ -127,12 +129,24 @@ def _has_canonical_nested_types(request: SecurityRequest) -> bool:
     try:
         return (
             type(request.profile) is AgentProfile
+            and _has_canonical_profile_capability_types(request.profile)
             and type(request.qa_result) is QAResult
             and type(request.execution_context) is ToolExecutionContext
             and type(request.tests) is tuple
             and all(type(item) is QATestEvidence for item in request.tests)
             and type(request.affected_files) is tuple
             and all(type(item) is SecuritySourceFile for item in request.affected_files)
+        )
+    except Exception:
+        return False
+
+
+def _has_canonical_profile_capability_types(profile: AgentProfile) -> bool:
+    try:
+        return (
+            type(profile.permission_ids) is frozenset
+            and type(profile.tool_ids) is frozenset
+            and type(profile.skill_ids) is frozenset
         )
     except Exception:
         return False

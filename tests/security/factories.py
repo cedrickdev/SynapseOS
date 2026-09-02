@@ -31,12 +31,16 @@ PROJECT_ID = UUID("20000000-0000-0000-0000-000000000002")
 AGENT_RUN_ID = UUID("30000000-0000-0000-0000-000000000003")
 CORRELATION_ID = UUID("40000000-0000-0000-0000-000000000004")
 OTHER_CORRELATION_ID = UUID("50000000-0000-0000-0000-000000000005")
+DEVELOPER_SLUG = "developer-01"
+REVIEWER_SLUG = "reviewer-01"
+QA_SLUG = "qa-01"
+SECURITY_SLUG = "security-01"
 
 
 def security_profile(**overrides: object) -> AgentProfile:
     """Build one bounded read-only Security profile."""
     values: dict[str, object] = {
-        "id": "security-01",
+        "id": SECURITY_SLUG,
         "name": "Security One",
         "role": "Security",
         "department": "security",
@@ -58,7 +62,7 @@ def security_execution_context(workspace_root: Path, **overrides: object) -> Too
     """Build one execution context sharing the Security request scope."""
     values: dict[str, object] = {
         "workspace_root": workspace_root,
-        "agent_id": "security-01",
+        "agent_id": SECURITY_SLUG,
         "agent_run_id": AGENT_RUN_ID,
         "project_id": PROJECT_ID,
         "task_id": TASK_ID,
@@ -228,10 +232,10 @@ def security_request(workspace_root: Path, **overrides: object) -> SecurityReque
     values: dict[str, object] = {
         "task_id": TASK_ID,
         "project_id": PROJECT_ID,
-        "developer_id": "developer-01",
-        "reviewer_id": "reviewer-01",
-        "qa_id": "qa-01",
-        "security_id": "security-01",
+        "developer_id": DEVELOPER_SLUG,
+        "reviewer_id": REVIEWER_SLUG,
+        "qa_id": QA_SLUG,
+        "security_id": SECURITY_SLUG,
         "profile": security_profile(),
         "task_title": "Harden the authorization boundary",
         "task_description": "Validate the reviewed change using bounded security evidence.",
@@ -248,3 +252,22 @@ def security_request(workspace_root: Path, **overrides: object) -> SecurityReque
     }
     values.update(overrides)
     return SecurityRequest.model_validate(values)
+
+
+def security_request_for_profile(
+    workspace_root: Path,
+    profile: AgentProfile,
+    **overrides: object,
+) -> SecurityRequest:
+    """Build a request whose execution declarations exactly match one profile."""
+    values: dict[str, object] = {
+        "security_id": profile.id,
+        "profile": profile,
+        "execution_context": security_execution_context(
+            workspace_root,
+            agent_id=profile.id,
+            declared_tool_ids=profile.tool_ids,
+        ),
+    }
+    values.update(overrides)
+    return security_request(workspace_root, **values)

@@ -17,6 +17,12 @@ from core.security.types import (
     SecuritySeverity,
     SecuritySourceFile,
 )
+from core.security.validation import (
+    SECURITY_TOOL_IDS,
+    ValidatedSecurityRequest,
+    validate_security_profile_authority,
+    validate_security_request,
+)
 
 __all__ = [
     "SanitizedSecuritySource",
@@ -35,4 +41,8 @@ __all__ = [
     "SecurityScannerSummary",
     "SecuritySeverity",
     "SecuritySourceFile",
+    "SECURITY_TOOL_IDS",
+    "ValidatedSecurityRequest",
+    "validate_security_profile_authority",
+    "validate_security_request",
 ]

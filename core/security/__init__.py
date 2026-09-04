@@ -1,6 +1,13 @@
 """Public Phase 18 Security Agent contracts."""
 
 from core.security.errors import SecurityError, SecurityErrorCode
+from core.security.ports import SecurityScannerPort
+from core.security.redaction import (
+    MAX_SECRET_FINDINGS,
+    REDACTED_SECRET,
+    SECRET_PATTERN_SOURCE_ID,
+    sanitize_security_source,
+)
 from core.security.types import (
     SanitizedSecuritySource,
     SecurityAnalysis,
@@ -37,12 +44,17 @@ __all__ = [
     "SecurityRequest",
     "SecurityResult",
     "SecurityScannerFinding",
+    "SecurityScannerPort",
     "SecurityScannerReport",
     "SecurityScannerSummary",
     "SecuritySeverity",
     "SecuritySourceFile",
+    "MAX_SECRET_FINDINGS",
+    "REDACTED_SECRET",
+    "SECRET_PATTERN_SOURCE_ID",
     "SECURITY_TOOL_IDS",
     "ValidatedSecurityRequest",
     "validate_security_profile_authority",
     "validate_security_request",
+    "sanitize_security_source",
 ]

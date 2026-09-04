@@ -23,6 +23,8 @@ from core.security import (
     SecurityScannerSummary,
     SecuritySeverity,
     SecuritySourceFile,
+    ValidatedSecurityRequest,
+    validate_security_request,
 )
 from core.tools import ToolExecutionContext
 
@@ -271,3 +273,11 @@ def security_request_for_profile(
     }
     values.update(overrides)
     return security_request(workspace_root, **values)
+
+
+def validated_security_request(
+    workspace_root: Path,
+    **overrides: object,
+) -> ValidatedSecurityRequest:
+    """Build and validate one canonical least-privilege Security request."""
+    return validate_security_request(security_request(workspace_root, **overrides))

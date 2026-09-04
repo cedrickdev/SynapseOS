@@ -72,6 +72,82 @@ def test_quoted_credential_assignments_are_redacted_and_confirmed(
     assert finding.confirmation is SecurityConfirmation.CONFIRMED
 
 
+@pytest.mark.parametrize(
+    ("quote", "secret"),
+    [
+        ('"', "prefix'opposite-quote-secret-suffix"),
+        ("'", 'prefix"opposite-quote-secret-suffix'),
+    ],
+)
+def test_quoted_credential_values_with_opposite_quotes_are_fully_redacted(
+    tmp_path: Path,
+    quote: str,
+    secret: str,
+) -> None:
+    content = f"token = {quote}{secret}{quote}"
+    request = security_request(
+        tmp_path,
+        affected_files=(source_file(content=content),),
+    )
+
+    sanitized = sanitize_security_source(request)
+
+    assert sanitized.files[0].content == f"token = {quote}{REDACTED_SECRET}{quote}"
+    assert secret not in repr(sanitized)
+    assert "opposite-quote-secret-suffix" not in repr(sanitized)
+    assert len(sanitized.findings) == 1
+
+
+@pytest.mark.parametrize(
+    ("quote", "secret"),
+    [
+        ('"', r"prefix\"escaped-quote-secret-suffix"),
+        ("'", r"prefix\'escaped-quote-secret-suffix"),
+    ],
+)
+def test_quoted_credential_values_with_escaped_active_quotes_are_fully_redacted(
+    tmp_path: Path,
+    quote: str,
+    secret: str,
+) -> None:
+    content = f"token = {quote}{secret}{quote}"
+    request = security_request(
+        tmp_path,
+        affected_files=(source_file(content=content),),
+    )
+
+    sanitized = sanitize_security_source(request)
+
+    assert sanitized.files[0].content == f"token = {quote}{REDACTED_SECRET}{quote}"
+    assert secret not in repr(sanitized)
+    assert "escaped-quote-secret-suffix" not in repr(sanitized)
+    assert len(sanitized.findings) == 1
+
+
+def test_encrypted_private_key_is_redacted_as_confirmed_critical_evidence(
+    tmp_path: Path,
+) -> None:
+    secret = (
+        "-----BEGIN ENCRYPTED PRIVATE KEY-----\n"
+        "encrypted-private-material\n"
+        "-----END ENCRYPTED PRIVATE KEY-----"
+    )
+    request = security_request(
+        tmp_path,
+        affected_files=(source_file(path="config/key.pem", content=secret),),
+    )
+
+    sanitized = sanitize_security_source(request)
+
+    assert sanitized.files[0].content == REDACTED_SECRET
+    assert secret not in repr(sanitized)
+    assert "encrypted-private-material" not in repr(sanitized)
+    assert len(sanitized.findings) == 1
+    finding = sanitized.findings[0]
+    assert finding.severity is SecuritySeverity.CRITICAL
+    assert finding.confirmation is SecurityConfirmation.CONFIRMED
+
+
 def test_redaction_covers_diff_and_files_in_deterministic_location_order(tmp_path: Path) -> None:
     request = security_request(
         tmp_path,

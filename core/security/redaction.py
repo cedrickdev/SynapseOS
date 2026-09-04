@@ -20,8 +20,10 @@ REDACTED_SECRET = "[REDACTED_SECRET]"
 SECRET_PATTERN_SOURCE_ID = "synapseos.secret-patterns"
 MAX_SECRET_FINDINGS = 64
 _DIFF_PATH = "diff.patch"
-_PRIVATE_KEY_LABEL = r"(?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY"
+_PRIVATE_KEY_LABEL = r"(?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY"
 _CREDENTIAL_KEYS = r"(?:api_key|apikey|client_secret|password|secret|token)"
+_DOUBLE_QUOTED_CREDENTIAL_VALUE = r'(?:\\[^\r\n]|[^"\\\r\n])+'
+_SINGLE_QUOTED_CREDENTIAL_VALUE = r"(?:\\[^\r\n]|[^'\\\r\n])+"
 _SECRET_PATTERN = re.compile(
     rf"(?P<private_key>"
     rf"-----BEGIN (?P<private_key_label>{_PRIVATE_KEY_LABEL})-----"
@@ -36,9 +38,8 @@ _SECRET_PATTERN = re.compile(
     rf"(?![A-Za-z0-9_])"
     rf"\s*(?:=|:)\s*"
     rf")"
-    rf"(?P<credential_quote>[\"'])"
-    rf"(?P<credential_value>[^\r\n\"']+)"
-    rf"(?P=credential_quote)"
+    rf'(?:"(?P<credential_double_value>{_DOUBLE_QUOTED_CREDENTIAL_VALUE})"'
+    rf"|'(?P<credential_single_value>{_SINGLE_QUOTED_CREDENTIAL_VALUE})')"
     rf")",
     flags=re.IGNORECASE | re.DOTALL,
 )
@@ -97,7 +98,7 @@ def _sanitize_text(text: str, *, location: str, state: _RedactionState) -> str:
         if match.group("private_key") is not None:
             return REDACTED_SECRET
         prefix = match.group("credential_prefix")
-        quote = match.group("credential_quote")
+        quote = '"' if match.group("credential_double_value") is not None else "'"
         return f"{prefix}{quote}{REDACTED_SECRET}{quote}"
 
     sanitized = _SECRET_PATTERN.sub(replace, text)

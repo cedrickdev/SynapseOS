@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from pathlib import Path
 from uuid import UUID
@@ -9,6 +10,7 @@ from uuid import UUID
 from core.agents import AgentProfile
 from core.commands import CommandProfileId, CommandTerminalStatus
 from core.enums import AgentSeniority, AgentStatus, Permission
+from core.llm import LLMModelMetadata, LLMResponse
 from core.qa import QACriterionAssessment, QACriterionStatus, QADecision, QAResult, QATestEvidence
 from core.security import (
     SecurityAnalysis,
@@ -227,6 +229,25 @@ def passing_analysis(**overrides: object) -> SecurityAnalysis:
     return SecurityAnalysis.model_validate(values)
 
 
+def security_analysis_response(
+    decision: SecurityDecision = SecurityDecision.PASS,
+    **overrides: object,
+) -> LLMResponse:
+    """Return one hand-checked strict provider response for Security analysis."""
+    values: dict[str, object] = {
+        "decision": decision.value,
+        "findings": [],
+        "uncertainty_reasons": [],
+        "rationale": "The bounded evidence supports a pass proposal.",
+        "confidence": 0.90,
+    }
+    values.update(overrides)
+    return LLMResponse(
+        content=json.dumps(values, allow_nan=False, separators=(",", ":"), sort_keys=True),
+        model=LLMModelMetadata(provider="fake", model="security-v1"),
+    )
+
+
 def security_request(workspace_root: Path, **overrides: object) -> SecurityRequest:
     """Build one valid strict Security request."""
     evidence = successful_qa_test_evidence()
@@ -254,6 +275,21 @@ def security_request(workspace_root: Path, **overrides: object) -> SecurityReque
     }
     values.update(overrides)
     return SecurityRequest.model_validate(values)
+
+
+def security_request_with_obvious_secret(workspace_root: Path) -> SecurityRequest:
+    """Build one request whose source secret must never cross the provider boundary."""
+    secret = "raw-secret-value-longer-than-redaction-mask"
+    return security_request(
+        workspace_root,
+        diff=f'+token = "{secret}"\n',
+        affected_files=(
+            source_file(
+                path="config/settings.py",
+                content=f'API_KEY = "{secret}"\n',
+            ),
+        ),
+    )
 
 
 def security_request_for_profile(

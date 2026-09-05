@@ -29,6 +29,17 @@ from core.workflows.qa_validation import (
     ValidatedQAWorkflowScope,
     validate_qa_workflow_request,
 )
+from core.workflows.security_errors import SecurityWorkflowError, SecurityWorkflowErrorCode
+from core.workflows.security_ports import SecurityRunner
+from core.workflows.security_types import (
+    SecurityWorkflowOutcome,
+    SecurityWorkflowRequest,
+    SecurityWorkflowResult,
+)
+from core.workflows.security_validation import (
+    ValidatedSecurityWorkflowScope,
+    validate_security_workflow_request,
+)
 from core.workflows.types import (
     DeveloperReviewerWorkflowRequest,
     DeveloperReviewerWorkflowResult,
@@ -51,6 +62,12 @@ __all__ = [
     "QAWorkflowOrchestrator",
     "QAWorkflowRequest",
     "QAWorkflowResult",
+    "SecurityRunner",
+    "SecurityWorkflowError",
+    "SecurityWorkflowErrorCode",
+    "SecurityWorkflowOutcome",
+    "SecurityWorkflowRequest",
+    "SecurityWorkflowResult",
     "WorkflowError",
     "WorkflowErrorCode",
     "WorkflowEventType",
@@ -70,7 +87,9 @@ __all__ = [
     "WorkflowOrchestrator",
     "ValidatedWorkflowScope",
     "ValidatedQAWorkflowScope",
+    "ValidatedSecurityWorkflowScope",
     "validate_reviewer_handoff",
     "validate_workflow_request",
     "validate_qa_workflow_request",
+    "validate_security_workflow_request",
 ]

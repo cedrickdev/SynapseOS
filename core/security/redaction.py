@@ -52,6 +52,11 @@ class _RedactionState:
     match_count: int = 0
 
 
+def contains_obvious_secret(text: str) -> bool:
+    """Return whether bounded text matches one existing Task 3 secret shape."""
+    return _SECRET_PATTERN.search(text) is not None
+
+
 def sanitize_security_source(request: SecurityRequest) -> SanitizedSecuritySource:
     """Return bounded sanitized source without retaining or persisting matched values."""
     if type(request) is not SecurityRequest:

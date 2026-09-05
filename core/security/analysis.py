@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from core.agents import AgentOutputValidationError, decode_structured_output
 from core.llm import LLMMessage, LLMProvider, LLMRequest, LLMResponse, LLMRole
 from core.security.errors import SecurityError, SecurityErrorCode
-from core.security.redaction import sanitize_security_source
+from core.security.redaction import contains_obvious_secret, sanitize_security_source
 from core.security.types import (
     SanitizedSecuritySource,
     SecurityAnalysis,
@@ -87,6 +87,7 @@ class SecurityAnalyzer:
     ) -> SecurityAnalysis | SecurityError:
         try:
             validated = validate_security_request(request)
+            _reject_provider_bound_metadata_secrets(validated.request)
             canonical_source = _canonicalize_sanitized_source(sanitized_source)
             expected_source = sanitize_security_source(validated.request)
             if canonical_source != expected_source:
@@ -157,6 +158,16 @@ class SecurityAnalyzer:
             return failure
         del content, response, provider_request, self
         return analysis
+
+
+def _reject_provider_bound_metadata_secrets(request: SecurityRequest) -> None:
+    metadata = (
+        request.task_title,
+        request.task_description,
+        *request.acceptance_criteria,
+    )
+    if any(contains_obvious_secret(value) for value in metadata):
+        raise ValueError("Security task metadata contains an obvious secret")
 
 
 def _canonicalize_sanitized_source(source: object) -> SanitizedSecuritySource:

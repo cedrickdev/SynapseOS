@@ -8,9 +8,29 @@ from pathlib import Path
 
 import pytest
 
+import core.security.redaction as security_redaction
 from core.security import SecurityConfirmation, SecuritySeverity
 from core.security.redaction import REDACTED_SECRET, sanitize_security_source
 from tests.security.factories import security_request, source_file
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('token = "metadata-secret"', True),
+        (
+            "-----BEGIN PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY-----",
+            True,
+        ),
+        ("api_key = os.environ['API_KEY']", False),
+    ],
+)
+def test_obvious_secret_predicate_reuses_all_task_3_detector_shapes(
+    text: str,
+    expected: bool,
+) -> None:
+    """Catch predicates narrowed away from Task 3 credential or private-key detection."""
+    assert security_redaction.contains_obvious_secret(text) is expected
 
 
 def test_private_key_is_redacted_without_retaining_its_value(tmp_path: Path) -> None:

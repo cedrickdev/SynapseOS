@@ -1,6 +1,8 @@
 """Public Phase 18 Security Agent contracts."""
 
+from core.security.agent import SecurityAgent
 from core.security.analysis import SecurityAnalyzer
+from core.security.decision import build_security_result
 from core.security.errors import SecurityError, SecurityErrorCode
 from core.security.ports import SecurityScannerPort
 from core.security.redaction import (
@@ -33,6 +35,8 @@ from core.security.validation import (
 )
 
 __all__ = [
+    "SecurityAgent",
+    "build_security_result",
     "SanitizedSecuritySource",
     "SecurityAnalysis",
     "SecurityAnalysisFinding",

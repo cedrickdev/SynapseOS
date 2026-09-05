@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -10,7 +11,7 @@ from uuid import UUID
 from core.agents import AgentProfile
 from core.commands import CommandProfileId, CommandTerminalStatus
 from core.enums import AgentSeniority, AgentStatus, Permission
-from core.llm import LLMModelMetadata, LLMResponse
+from core.llm import LLMModelMetadata, LLMRequest, LLMResponse
 from core.qa import QACriterionAssessment, QACriterionStatus, QADecision, QAResult, QATestEvidence
 from core.security import (
     SecurityAnalysis,
@@ -317,3 +318,65 @@ def validated_security_request(
 ) -> ValidatedSecurityRequest:
     """Build and validate one canonical least-privilege Security request."""
     return validate_security_request(security_request(workspace_root, **overrides))
+
+
+class RecordingSecurityScanner:
+    """Controlled scanner boundary with observable calls and caller-owned lifecycle."""
+
+    def __init__(
+        self,
+        events: list[str],
+        *,
+        report: SecurityScannerReport | None = None,
+        error: BaseException | None = None,
+        delay: float = 0.0,
+    ) -> None:
+        self.events = events
+        self.report = report if report is not None else complete_scanner_report()
+        self.error = error
+        self.delay = delay
+        self.requests: list[ValidatedSecurityRequest] = []
+        self.closed = False
+
+    async def scan(self, request: ValidatedSecurityRequest) -> SecurityScannerReport:
+        self.events.append("scanner")
+        self.requests.append(request)
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.error is not None:
+            raise self.error
+        return self.report
+
+    async def close(self) -> None:
+        self.closed = True
+
+
+class RecordingSecurityProvider:
+    """Controlled provider boundary recording the actual outgoing payload."""
+
+    def __init__(
+        self,
+        events: list[str],
+        *,
+        response: LLMResponse | None = None,
+        error: BaseException | None = None,
+        delay: float = 0.0,
+    ) -> None:
+        self.events = events
+        self.response = response if response is not None else security_analysis_response()
+        self.error = error
+        self.delay = delay
+        self.requests: list[LLMRequest] = []
+        self.closed = False
+
+    async def generate(self, request: LLMRequest) -> LLMResponse:
+        self.events.append("provider")
+        self.requests.append(request)
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.error is not None:
+            raise self.error
+        return self.response
+
+    async def close(self) -> None:
+        self.closed = True

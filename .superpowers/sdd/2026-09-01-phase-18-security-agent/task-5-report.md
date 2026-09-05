@@ -160,3 +160,61 @@ rerun successfully. No failed check is omitted from this report.
 
 Only the assigned six Python paths and this report are included in the Task 5
 commit. The pre-existing `.venv` and all other work are preserved.
+
+## Fix round 1/5 — short source fragments
+
+Reviewer base: `ad6b568`. The scanner disclosure check treated every nonblank
+source line as a substring signature. A one-character source line (`a`) therefore
+matched ordinary scanner metadata such as `authorization` and raised
+`SCANNER_FAILURE` before the required provider call.
+
+### RED — focused regression before production edits
+
+Test: `tests/security/test_agent.py::test_short_source_line_does_not_reject_ordinary_scanner_metadata`
+
+Command:
+`.venv/bin/pytest tests/security/test_agent.py::test_short_source_line_does_not_reject_ordinary_scanner_metadata -q`
+
+Exit: 1. Output: `F [100%]`; the test failed at `SecurityAgent.run` with
+`core.security.errors.SecurityError: Security scanner failed.` This is the expected
+failure: source line `a` collided with valid scanner explanation
+`Authorization controls were reviewed.` and the provider was not reached.
+
+### Minimal fix and GREEN
+
+`core/security/decision.py` now preserves exact canonical whole-source echo
+detection for fragments of every size, but allows substring matching only for a
+trimmed fragment of at least eight characters with at least four distinct
+characters. The independent `contains_obvious_secret` check remains first and
+unchanged. `core/security/agent.py` continues to use the shared predicate and did
+not require modification. The deferred private-import minor was not changed.
+
+Focused GREEN command: the same focused pytest command exited 0 with `. [100%]`.
+
+Final commands and exact outputs (all exit 0):
+
+```text
+.venv/bin/pytest tests/security -o addopts='' -q
+........................................................................ [ 32%]
+........................................................................ [ 65%]
+........................................................................ [ 97%]
+.....                                                                    [100%]
+221 passed in 0.37s
+
+make lint
+.venv/bin/ruff check .
+All checks passed!
+
+make typecheck
+.venv/bin/mypy .
+Success: no issues found in 299 source files
+
+.venv/bin/ruff format --check core/security/decision.py core/security/agent.py tests/security/test_agent.py
+3 files already formatted
+
+git diff --check
+(no output)
+```
+
+The pre-existing untracked `.venv` was preserved. No files outside the assigned
+fix-round write scope were modified.

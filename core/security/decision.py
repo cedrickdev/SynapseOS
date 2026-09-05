@@ -30,6 +30,8 @@ from core.security.types import (
 from core.security.validation import validate_security_request
 
 _MAX_FINDINGS = 64
+_MIN_SOURCE_SUBSTRING_LENGTH = 8
+_MIN_SOURCE_SUBSTRING_DISTINCT_CHARS = 4
 _SEVERITY_ORDER = {severity: rank for rank, severity in enumerate(SecuritySeverity)}
 
 
@@ -241,7 +243,20 @@ def sensitive_source_text(request: SecurityRequest) -> tuple[str, ...]:
 
 def contains_sensitive_text(value: str, sources: tuple[str, ...]) -> bool:
     """Reject obvious credential shapes and literal source echoes, without claiming full DLP."""
-    return contains_obvious_secret(value) or any(source in value for source in sources)
+    if contains_obvious_secret(value):
+        return True
+    canonical_value = value.strip()
+    for source in sources:
+        canonical_source = source.strip()
+        if canonical_value == canonical_source:
+            return True
+        if (
+            len(canonical_source) >= _MIN_SOURCE_SUBSTRING_LENGTH
+            and len(set(canonical_source)) >= _MIN_SOURCE_SUBSTRING_DISTINCT_CHARS
+            and canonical_source in value
+        ):
+            return True
+    return False
 
 
 def _public_text(value: str, sources: tuple[str, ...], replacement: str) -> str:

@@ -22,6 +22,7 @@ from tests.security.factories import (
     scanner_finding,
     security_request,
     security_request_with_obvious_secret,
+    source_file,
 )
 
 
@@ -134,6 +135,35 @@ def test_scanner_failure_never_reaches_provider(tmp_path: Path, case: str) -> No
     assert raised.value.__context__ is None
     assert raised.value.__cause__ is None
     assert not scanner.closed and not provider.closed
+
+
+def test_short_source_line_does_not_reject_ordinary_scanner_metadata(tmp_path: Path) -> None:
+    from core.security.agent import SecurityAgent
+
+    events: list[str] = []
+    request = security_request(
+        tmp_path,
+        diff="a",
+        affected_files=(source_file(content="a"),),
+    )
+    scanner = RecordingSecurityScanner(
+        events,
+        report=complete_scanner_report(
+            findings=(scanner_finding(explanation="Authorization controls were reviewed."),)
+        ),
+    )
+    provider = RecordingSecurityProvider(events)
+
+    asyncio.run(
+        SecurityAgent(
+            provider,
+            scanner,
+            trusted_source_ids=frozenset({"security-scanner"}),
+        ).run(request)
+    )
+
+    assert events == ["scanner", "provider"]
+    assert len(provider.requests) == 1
 
 
 @pytest.mark.parametrize("trusted", [True, False])

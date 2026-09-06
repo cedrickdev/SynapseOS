@@ -226,6 +226,30 @@ canonical value representable without relaxing any other Security text field,
 `SecurityRequest.task_description` alone now accepts a bounded empty string. The real-PostgreSQL
 regression proves a valid `NULL` task description returns canonical `""`.
 
+Scope clarification: `core/security/types.py` is not involved in persisted profile score
+authentication and is not necessary for that finding. Score authentication is implemented wholly
+inside `core/workflows/security_validation.py`, where both persisted scores are converted to finite
+canonical `Decimal` values before comparison. The cross-scope Security type edit is retained only
+because it is strictly necessary for the separate required nullable-description finding: the
+workflow contract revalidates its nested `SecurityRequest`, and the prior nonblank field constraint
+made canonical `task.description or ""` impossible to represent.
+
+This necessity was verified with a controlled mutation check. Temporarily restoring the prior
+nonblank `SecurityRequest.task_description` constraint produced:
+
+```text
+$ TEST_POSTGRES_PORT=55433 .venv/bin/pytest tests/workflows/test_security_validation.py -q -k 'nullable_persistent_description or reputation_score or reliability_score'
+F..                                                                      [100%]
+```
+
+Both forged persisted-score mismatch regressions remained green, directly proving the Security
+type edit is unnecessary for profile score authentication. Only the valid PostgreSQL
+NULL-description regression failed, at `SecurityRequest` construction with
+`task_description: String should have at least 1 character`. The committed bounded-empty field
+constraint was then restored. A Task 6-only bypass would require constructing a nested request that
+fails its own public schema revalidation, contradicting the requirement to use a canonical
+`SecurityWorkflowRequest`; that workaround was therefore not used.
+
 The disconnected runner double was removed. Rejection and acceptance paths directly instrument
 the caller-owned SQLAlchemy session so any `commit()` or `close()` call fails immediately, while
 the existing task-state, assignment, audit-count, and active-transaction assertions remain. A

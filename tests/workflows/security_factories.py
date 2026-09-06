@@ -9,13 +9,66 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from core.enums import AgentSeniority, AgentStatus, ProjectStatus, TaskStatus
-from core.security import SecurityRequest
+from core.security import (
+    SecurityDecision,
+    SecurityRequest,
+    SecurityResult,
+    SecuritySeverity,
+)
 from core.tools import ToolExecutionContext
 from core.workflows import SecurityWorkflowRequest
 from core.workspaces import WorkspaceLimits
 from infrastructure.database.models import Agent, Project, Task
 from infrastructure.workspaces import ManagedWorkspaceFilesystem
-from tests.security.factories import security_profile, security_request, source_file
+from tests.security.factories import (
+    complete_scanner_summary,
+    confirmed_finding,
+    security_profile,
+    security_request,
+    source_file,
+    suspected_finding,
+)
+
+
+def passing_security_result(request: SecurityRequest) -> SecurityResult:
+    """Build one hand-checked PASS result for a persistent Security request."""
+    return SecurityResult(
+        decision=SecurityDecision.PASS,
+        findings=(),
+        scanner=complete_scanner_summary(),
+        uncertainty_reasons=(),
+        rationale="The complete bounded evidence supports passing the Security gate.",
+        confidence=0.91,
+        correlation_id=request.correlation_id,
+    )
+
+
+def warning_security_result(request: SecurityRequest) -> SecurityResult:
+    """Build one hand-checked WARN result without a confirmed blocker."""
+    finding = suspected_finding(SecuritySeverity.MEDIUM)
+    return SecurityResult(
+        decision=SecurityDecision.WARN,
+        findings=(finding,),
+        scanner=complete_scanner_summary(finding_count=1),
+        uncertainty_reasons=("One bounded authorization concern requires human review.",),
+        rationale="The evidence is not sufficient for an automatic terminal decision.",
+        confidence=0.72,
+        correlation_id=request.correlation_id,
+    )
+
+
+def blocking_security_result(request: SecurityRequest) -> SecurityResult:
+    """Build one hand-checked BLOCK result with a confirmed high finding."""
+    finding = confirmed_finding(SecuritySeverity.HIGH)
+    return SecurityResult(
+        decision=SecurityDecision.BLOCK,
+        findings=(finding,),
+        scanner=complete_scanner_summary(finding_count=1),
+        uncertainty_reasons=(),
+        rationale="A confirmed high-impact finding blocks completion.",
+        confidence=0.96,
+        correlation_id=request.correlation_id,
+    )
 
 
 def persisted_security_workflow_request(

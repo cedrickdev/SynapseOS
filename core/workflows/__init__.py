@@ -29,7 +29,14 @@ from core.workflows.qa_validation import (
     ValidatedQAWorkflowScope,
     validate_qa_workflow_request,
 )
+from core.workflows.security_audit import (
+    SecurityEventType,
+    commit_security_completed_checkpoint,
+    commit_security_escalated_checkpoint,
+    commit_security_started_checkpoint,
+)
 from core.workflows.security_errors import SecurityWorkflowError, SecurityWorkflowErrorCode
+from core.workflows.security_orchestrator import SecurityWorkflowOrchestrator
 from core.workflows.security_ports import SecurityRunner
 from core.workflows.security_types import (
     SecurityWorkflowOutcome,
@@ -63,9 +70,11 @@ __all__ = [
     "QAWorkflowRequest",
     "QAWorkflowResult",
     "SecurityRunner",
+    "SecurityEventType",
     "SecurityWorkflowError",
     "SecurityWorkflowErrorCode",
     "SecurityWorkflowOutcome",
+    "SecurityWorkflowOrchestrator",
     "SecurityWorkflowRequest",
     "SecurityWorkflowResult",
     "WorkflowError",
@@ -82,6 +91,9 @@ __all__ = [
     "commit_qa_completed_checkpoint",
     "commit_qa_escalated_checkpoint",
     "commit_qa_started_checkpoint",
+    "commit_security_completed_checkpoint",
+    "commit_security_escalated_checkpoint",
+    "commit_security_started_checkpoint",
     "WorkflowHandoffContext",
     "WorkflowOutcome",
     "WorkflowOrchestrator",

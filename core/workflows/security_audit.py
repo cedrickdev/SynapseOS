@@ -9,7 +9,7 @@ from enum import StrEnum
 from functools import partial
 from typing import NoReturn
 
-from sqlalchemy import func, select
+from sqlalchemy import func, literal, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -303,8 +303,9 @@ def _has_unmatched_security_start(
     session: Session,
     scope: ValidatedSecurityWorkflowScope,
 ) -> bool:
-    correlation_id = session.scalar(
-        select(AuditEvent.correlation_id)
+    has_unmatched_start = session.scalar(
+        select(literal(True))
+        .select_from(AuditEvent)
         .where(
             AuditEvent.task_id == scope.task.id,
             AuditEvent.resource_type == "SECURITY_WORKFLOW",
@@ -324,7 +325,7 @@ def _has_unmatched_security_start(
         )
         .limit(1)
     )
-    return correlation_id is not None
+    return has_unmatched_start is True
 
 
 def _has_current_security_event(

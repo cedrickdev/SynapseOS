@@ -118,6 +118,33 @@ def test_started_checkpoint_rejects_any_unmatched_start_across_correlations(
     assert [event.correlation_id for event in _security_events(db_session)] == [stale_correlation]
 
 
+def test_started_checkpoint_rejects_unmatched_legacy_null_correlation(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """A legacy NULL-correlation start remains an active claim on the Security stage."""
+    task, _, _, _, security, request = persisted_security_workflow_request(db_session, tmp_path)
+    _stage_historical_event(
+        db_session,
+        task_id=task.id,
+        project_id=task.project_id,
+        actor_id=security.slug,
+        event_type=SecurityEventType.SECURITY_STARTED,
+        correlation_id=None,
+    )
+    db_session.commit()
+    scope = validate_security_workflow_request(db_session, request)
+
+    with pytest.raises(SecurityWorkflowError) as raised:
+        commit_security_started_checkpoint(db_session, scope)
+
+    assert raised.value.code is SecurityWorkflowErrorCode.INVALID_STATE
+    events = _security_events(db_session)
+    assert [(event.event_type, event.correlation_id) for event in events] == [
+        (SecurityEventType.SECURITY_STARTED.value, None)
+    ]
+
+
 def test_started_checkpoint_allows_historical_matched_terminal_pair(
     db_session: Session,
     tmp_path: Path,

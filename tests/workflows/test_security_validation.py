@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from decimal import Decimal
+from inspect import signature
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -11,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from core.commands import CommandTerminalStatus
-from core.enums import AgentStatus, Permission, TaskStatus
+from core.enums import AgentSeniority, AgentStatus, Permission, TaskStatus
 from core.qa import QADecision
 from core.workflows import (
     SecurityWorkflowError,
@@ -21,12 +25,40 @@ from core.workflows import (
 )
 from infrastructure.database.models import AuditEvent, Task
 from tests.security.factories import security_request
-from tests.workflows.security_factories import (
-    RecordingSecurityRunner,
-    persisted_security_workflow_request,
-)
+from tests.workflows.security_factories import persisted_security_workflow_request
 
 pytest_plugins = ("tests.database.conftest",)
+
+
+class RecordingForbiddenSession:
+    """Record any persistence access made before request canonicalization."""
+
+    def __init__(self) -> None:
+        self.accesses: list[str] = []
+
+    def scalar(self, *_args: object, **_kwargs: object) -> None:
+        self.accesses.append("scalar")
+        raise AssertionError("database access must follow canonicalization")
+
+
+@contextmanager
+def guard_session_lifecycle(session: Session):  # type: ignore[no-untyped-def]
+    """Fail immediately if public preflight commits or closes its caller-owned session."""
+    with (
+        patch.object(
+            session,
+            "commit",
+            side_effect=AssertionError("preflight must not commit"),
+        ) as commit,
+        patch.object(
+            session,
+            "close",
+            side_effect=AssertionError("preflight must not close"),
+        ) as close,
+    ):
+        yield
+    commit.assert_not_called()
+    close.assert_not_called()
 
 
 def assert_rejected_without_side_effects(
@@ -34,22 +66,63 @@ def assert_rejected_without_side_effects(
     task: Task,
     request: SecurityWorkflowRequest,
     expected_code: SecurityWorkflowErrorCode,
-    runner: RecordingSecurityRunner,
 ) -> None:
-    """Ensure persistent preflight never transitions, audits, commits, or invokes Security."""
+    """Ensure persistent preflight never transitions, audits, commits, or closes."""
     original_status = task.status
     original_assignment = task.assigned_agent_id
     audit_count = session.scalar(select(func.count()).select_from(AuditEvent))
 
-    with pytest.raises(SecurityWorkflowError) as raised:
-        validate_security_workflow_request(session, request)
+    with guard_session_lifecycle(session):
+        with pytest.raises(SecurityWorkflowError) as raised:
+            validate_security_workflow_request(session, request)
 
-    assert raised.value.code is expected_code
-    assert task.status is original_status
-    assert task.assigned_agent_id == original_assignment
-    assert session.scalar(select(func.count()).select_from(AuditEvent)) == audit_count
-    assert runner.requests == []
+        assert raised.value.code is expected_code
+        assert task.status is original_status
+        assert task.assigned_agent_id == original_assignment
+        assert session.scalar(select(func.count()).select_from(AuditEvent)) == audit_count
     assert session.in_transaction()
+
+
+def test_security_preflight_public_api_has_no_collaborator_parameter() -> None:
+    """Keep collaborator execution structurally outside the public validation boundary."""
+    assert tuple(signature(validate_security_workflow_request).parameters) == (
+        "session",
+        "request",
+    )
+
+
+@pytest.mark.parametrize("case", ["profile-name", "context-agent", "source-content"])
+def test_security_preflight_canonicalizes_invalid_nested_scalars_before_database_access(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    """Reject malformed nested scalars before persistent state can be trusted."""
+    nested = security_request(tmp_path)
+    if case == "profile-name":
+        profile = nested.profile.model_copy(update={"name": 7})
+        nested = nested.model_copy(update={"profile": profile})
+    elif case == "context-agent":
+        context = nested.execution_context.model_copy(update={"agent_id": 7})
+        nested = nested.model_copy(update={"execution_context": context})
+    else:
+        source = nested.affected_files[0].model_copy(update={"content": b"forged"})
+        nested = nested.model_copy(update={"affected_files": (source,)})
+    request = SecurityWorkflowRequest.model_construct(
+        task_id=nested.task_id,
+        developer_agent_id=uuid4(),
+        reviewer_agent_id=uuid4(),
+        qa_agent_id=uuid4(),
+        security_agent_id=uuid4(),
+        security_request=nested,
+        correlation_id=nested.correlation_id,
+    )
+    session = RecordingForbiddenSession()
+
+    with pytest.raises(SecurityWorkflowError) as raised:
+        validate_security_workflow_request(session, request)  # type: ignore[arg-type]
+
+    assert raised.value.code is SecurityWorkflowErrorCode.INVALID_INPUT
+    assert session.accesses == []
 
 
 def test_security_preflight_rejects_forged_non_uuid_scope_before_persistence(
@@ -85,7 +158,8 @@ def test_security_preflight_returns_canonical_persistent_scope(
         db_session, tmp_path
     )
 
-    validated = validate_security_workflow_request(db_session, request)
+    with guard_session_lifecycle(db_session):
+        validated = validate_security_workflow_request(db_session, request)
 
     assert validated.request is not request
     assert validated.request.security_request is not request.security_request
@@ -98,6 +172,43 @@ def test_security_preflight_returns_canonical_persistent_scope(
         task.project_id
     )
     assert db_session.in_transaction()
+
+
+def test_security_preflight_uses_canonical_workspace_scalar(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Use the reconstructed Path rather than a forged pre-canonicalization scalar."""
+    task, _, _, _, _, request = persisted_security_workflow_request(db_session, tmp_path)
+    context = request.security_request.execution_context.model_copy(
+        update={"workspace_root": str(request.security_request.execution_context.workspace_root)}
+    )
+    nested = request.security_request.model_copy(update={"execution_context": context})
+    forged = request.model_copy(update={"security_request": nested})
+
+    with guard_session_lifecycle(db_session):
+        validated = validate_security_workflow_request(db_session, forged)
+
+    assert validated.task is task
+    assert isinstance(validated.request.security_request.execution_context.workspace_root, Path)
+
+
+def test_security_preflight_accepts_nullable_persistent_description(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Canonicalize a nullable stored task description to the bounded empty string."""
+    task, _, _, _, _, request = persisted_security_workflow_request(
+        db_session,
+        tmp_path,
+        task_overrides={"description": None},
+    )
+
+    with guard_session_lifecycle(db_session):
+        validated = validate_security_workflow_request(db_session, request)
+
+    assert task.description is None
+    assert validated.request.security_request.task_description == ""
 
 
 def test_security_preflight_does_not_claim_database_authenticates_source_bytes(
@@ -126,7 +237,6 @@ def test_security_preflight_rejects_missing_persistent_scope(
 ) -> None:
     """Require the persistent task and all four independent agents."""
     task, _, _, _, _, request = persisted_security_workflow_request(db_session, tmp_path)
-    runner = RecordingSecurityRunner()
     if missing == "task":
         missing_id = uuid4()
         context = request.security_request.execution_context.model_copy(
@@ -144,7 +254,6 @@ def test_security_preflight_rejects_missing_persistent_scope(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_SCOPE,
-        runner,
     )
 
 
@@ -164,7 +273,6 @@ def test_security_preflight_requires_waiting_security(
         task,
         request,
         SecurityWorkflowErrorCode.INVALID_STATE,
-        RecordingSecurityRunner(),
     )
 
 
@@ -182,7 +290,6 @@ def test_security_preflight_preserves_developer_assignment(
         task,
         request,
         SecurityWorkflowErrorCode.INVALID_SCOPE,
-        RecordingSecurityRunner(),
     )
 
 
@@ -218,7 +325,6 @@ def test_security_preflight_requires_exact_active_persistent_roles(
         task,
         request,
         SecurityWorkflowErrorCode(code),
-        RecordingSecurityRunner(),
     )
 
 
@@ -237,7 +343,6 @@ def test_security_preflight_rejects_reused_persistent_uuid(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_INPUT,
-        RecordingSecurityRunner(),
     )
 
 
@@ -257,7 +362,6 @@ def test_security_preflight_rejects_reused_nested_slug(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_INPUT,
-        RecordingSecurityRunner(),
     )
 
 
@@ -290,7 +394,6 @@ def test_security_preflight_rejects_nested_identity_and_scope_mismatch(
         task,
         forged,
         SecurityWorkflowErrorCode(code),
-        RecordingSecurityRunner(),
     )
 
 
@@ -300,6 +403,12 @@ def test_security_preflight_rejects_nested_identity_and_scope_mismatch(
         ("id", "other-security"),
         ("role", "Reviewer"),
         ("status", AgentStatus.OFFLINE),
+        ("name", "Forged Security"),
+        ("department", "engineering"),
+        ("seniority", AgentSeniority.PRINCIPAL),
+        ("autonomy_level", 1),
+        ("reputation_score", Decimal("0.7000")),
+        ("reliability_score", Decimal("0.8000")),
     ],
 )
 def test_security_preflight_rejects_profile_persistence_mismatch(
@@ -319,7 +428,6 @@ def test_security_preflight_rejects_profile_persistence_mismatch(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_SCOPE,
-        RecordingSecurityRunner(),
     )
 
 
@@ -347,7 +455,6 @@ def test_security_preflight_rejects_persistent_task_text_mismatch(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_SCOPE,
-        RecordingSecurityRunner(),
     )
 
 
@@ -376,8 +483,11 @@ def test_security_preflight_rejects_execution_context_mismatch(
         db_session,
         task,
         forged,
-        SecurityWorkflowErrorCode.INVALID_SCOPE,
-        RecordingSecurityRunner(),
+        (
+            SecurityWorkflowErrorCode.INVALID_INPUT
+            if case == "correlation"
+            else SecurityWorkflowErrorCode.INVALID_SCOPE
+        ),
     )
 
 
@@ -404,7 +514,6 @@ def test_security_preflight_rejects_affected_file_scope_mismatch(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_SCOPE,
-        RecordingSecurityRunner(),
     )
 
 
@@ -442,8 +551,7 @@ def test_security_preflight_requires_successful_qa_and_test_evidence(
         db_session,
         task,
         forged,
-        SecurityWorkflowErrorCode.INVALID_SCOPE,
-        RecordingSecurityRunner(),
+        SecurityWorkflowErrorCode.INVALID_INPUT,
     )
 
 
@@ -470,7 +578,6 @@ def test_security_preflight_rejects_invalid_security_authority(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_AGENT,
-        RecordingSecurityRunner(),
     )
 
 
@@ -491,5 +598,4 @@ def test_security_preflight_rejects_mutable_forged_capability_declarations(
         task,
         forged,
         SecurityWorkflowErrorCode.INVALID_INPUT,
-        RecordingSecurityRunner(),
     )

@@ -2,30 +2,20 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
 from core.enums import AgentSeniority, AgentStatus, ProjectStatus, TaskStatus
-from core.security import SecurityRequest, SecurityResult
+from core.security import SecurityRequest
 from core.tools import ToolExecutionContext
 from core.workflows import SecurityWorkflowRequest
 from core.workspaces import WorkspaceLimits
 from infrastructure.database.models import Agent, Project, Task
 from infrastructure.workspaces import ManagedWorkspaceFilesystem
 from tests.security.factories import security_profile, security_request, source_file
-
-
-class RecordingSecurityRunner:
-    """A runner double whose calls make accidental preflight execution observable."""
-
-    def __init__(self) -> None:
-        self.requests: list[SecurityRequest] = []
-
-    async def run(self, request: SecurityRequest) -> SecurityResult:
-        self.requests.append(request)
-        raise AssertionError("persistent preflight must not invoke Security")
 
 
 def persisted_security_workflow_request(
@@ -140,6 +130,8 @@ def persisted_security_workflow_request(
         seniority=security.seniority,
         status=security.status,
         autonomy_level=security.autonomy_level,
+        reputation_score=Decimal(str(security.reputation_score)),
+        reliability_score=Decimal(str(security.reliability_score)),
     )
     base = security_request(root)
     context = ToolExecutionContext(

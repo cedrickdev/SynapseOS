@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from core.agents import AgentProfile
 from core.commands import CommandTerminalStatus
 from core.enums import AgentStatus, TaskStatus
 from core.qa import QADecision
@@ -71,20 +73,20 @@ def _validate_security_workflow_request_result(
 ) -> tuple[ValidatedSecurityWorkflowScope | None, SecurityWorkflowErrorCode | None]:
     try:
         _validate_raw_workflow_request(request)
+        canonical_request = _canonicalize_security_workflow_request(request)
         if deadline is not None:
             _configure_transaction_timeouts(session, deadline)
-        task, developer, reviewer, qa, security = _load_security_scope(session, request)
+        task, developer, reviewer, qa, security = _load_security_scope(session, canonical_request)
         _validate_persistent_security_scope(
-            request,
+            canonical_request,
             task,
             developer,
             reviewer,
             qa,
             security,
         )
-        _validate_successful_qa_evidence(request.security_request)
-        _validate_nested_security_request(request.security_request)
-        canonical_request = _canonicalize_security_workflow_request(request)
+        _validate_successful_qa_evidence(canonical_request.security_request)
+        _validate_nested_security_request(canonical_request.security_request)
         return (
             ValidatedSecurityWorkflowScope(
                 request=canonical_request,
@@ -123,32 +125,15 @@ def _validate_security_workflow_request_result(
 def _validate_raw_workflow_request(request: SecurityWorkflowRequest) -> None:
     try:
         nested = request.security_request
-        persistent_ids = (
-            request.developer_agent_id,
-            request.reviewer_agent_id,
-            request.qa_agent_id,
-            request.security_agent_id,
-        )
-        nested_slugs = (
-            nested.developer_id,
-            nested.reviewer_id,
-            nested.qa_id,
-            nested.security_id,
-        )
         valid = (
             type(request) is SecurityWorkflowRequest
             and _has_exact_security_request_types(nested)
             and type(request.task_id) is UUID
             and type(request.correlation_id) is UUID
-            and type(nested.task_id) is UUID
-            and type(nested.project_id) is UUID
-            and type(nested.correlation_id) is UUID
-            and all(type(item) is UUID for item in persistent_ids)
-            and len(set(persistent_ids)) == 4
-            and all(type(item) is str for item in nested_slugs)
-            and len(set(nested_slugs)) == 4
-            and request.task_id == nested.task_id
-            and request.correlation_id == nested.correlation_id
+            and type(request.developer_agent_id) is UUID
+            and type(request.reviewer_agent_id) is UUID
+            and type(request.qa_agent_id) is UUID
+            and type(request.security_agent_id) is UUID
         )
     except Exception:
         valid = False
@@ -217,19 +202,46 @@ def _validate_persistent_security_scope(
         or nested.qa_id != qa.slug
         or nested.security_id != security.slug
         or len({agent.slug for agent in agents}) != 4
-        or profile.id != security.slug
-        or profile.role != security.role
-        or profile.status is not security.status
+        or not _profile_matches_persistent_security_agent(profile, security)
         or context.agent_id != security.slug
         or context.task_id != task.id
         or context.project_id != task.project_id
         or context.correlation_id != request.correlation_id
         or nested.task_title != task.title
-        or nested.task_description != task.description
+        or nested.task_description != (task.description or "")
         or nested.acceptance_criteria != tuple(task.acceptance_criteria)
         or not _has_valid_managed_workspace_scope(nested, task.project_id)
     ):
         raise SecurityWorkflowError(SecurityWorkflowErrorCode.INVALID_SCOPE)
+
+
+def _profile_matches_persistent_security_agent(
+    profile: AgentProfile,
+    security: Agent,
+) -> bool:
+    try:
+        canonical_reputation = _canonical_decimal_score(security.reputation_score)
+        canonical_reliability = _canonical_decimal_score(security.reliability_score)
+        return (
+            profile.id == security.slug
+            and profile.name == security.name
+            and profile.role == security.role
+            and profile.department == security.department
+            and profile.seniority is security.seniority
+            and profile.status is security.status
+            and profile.autonomy_level == security.autonomy_level
+            and profile.reputation_score == canonical_reputation
+            and profile.reliability_score == canonical_reliability
+        )
+    except (AttributeError, InvalidOperation, TypeError, ValueError):
+        return False
+
+
+def _canonical_decimal_score(value: object) -> Decimal:
+    score = Decimal(str(value))
+    if not score.is_finite():
+        raise ValueError("persistent agent score must be finite")
+    return score
 
 
 def _has_valid_managed_workspace_scope(request: SecurityRequest, project_id: object) -> bool:

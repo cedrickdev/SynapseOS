@@ -61,6 +61,7 @@ Text8192 = Annotated[
     Field(min_length=1, max_length=8_192),
     AfterValidator(_require_nonblank),
 ]
+TaskDescription8192 = Annotated[str, Field(max_length=8_192)]
 Text16384 = Annotated[
     str,
     Field(min_length=1, max_length=16_384),
@@ -212,7 +213,7 @@ class SecurityRequest(_ImmutableSecurityModel):
     security_id: Identifier
     profile: AgentProfile
     task_title: Text255
-    task_description: Text8192
+    task_description: TaskDescription8192
     acceptance_criteria: Annotated[tuple[Text1024, ...], Field(min_length=1, max_length=16)]
     diff: Annotated[str, Field(min_length=1, max_length=16_384)]
     affected_files: Annotated[tuple[SecuritySourceFile, ...], Field(min_length=1, max_length=16)]

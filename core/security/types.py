@@ -28,6 +28,12 @@ def _require_nonblank(value: str) -> str:
     return value
 
 
+def _require_empty_or_nonblank(value: str) -> str:
+    if value:
+        return _require_nonblank(value)
+    return value
+
+
 def _require_normalized_relative_path(value: str) -> str:
     path = PurePosixPath(value)
     windows_path = PureWindowsPath(value)
@@ -61,7 +67,11 @@ Text8192 = Annotated[
     Field(min_length=1, max_length=8_192),
     AfterValidator(_require_nonblank),
 ]
-TaskDescription8192 = Annotated[str, Field(max_length=8_192)]
+TaskDescription8192 = Annotated[
+    str,
+    Field(max_length=8_192),
+    AfterValidator(_require_empty_or_nonblank),
+]
 Text16384 = Annotated[
     str,
     Field(min_length=1, max_length=16_384),

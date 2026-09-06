@@ -149,6 +149,19 @@ def test_request_rejects_unknown_fields_without_echoing_input(tmp_path: Path) ->
     assert sensitive_value not in str(raised.value)
 
 
+def test_request_accepts_empty_task_description(tmp_path: Path) -> None:
+    """Represent the canonical value derived from a nullable persisted description."""
+    request = security_request(tmp_path, task_description="")
+
+    assert request.task_description == ""
+
+
+def test_request_rejects_whitespace_only_task_description(tmp_path: Path) -> None:
+    """Reject missing semantic description content unless the value is exactly empty."""
+    with pytest.raises(ValidationError):
+        security_request(tmp_path, task_description=" \t\n")
+
+
 @pytest.mark.parametrize(
     ("field", "forged_value"),
     [

@@ -305,3 +305,74 @@ $ git diff --check
 
 The deferred `exact_type_check` typing Minor was intentionally not addressed. The untracked
 `.venv` remained preserved and excluded from staging.
+
+## Fix round 2/5 — reject whitespace-only Security task descriptions
+
+Scoped re-review found that the fix-round-1 `TaskDescription8192` constraint allowed any string up
+to 8,192 characters, including whitespace-only text. The required contract is exactly empty text
+for a nullable persisted description, or bounded text containing at least one non-whitespace
+character.
+
+Two direct `SecurityRequest` contract regressions were added before production changes: one keeps
+the canonical empty-string case accepted, and one rejects the literal `" \t\n"`. The focused RED
+was:
+
+```text
+$ .venv/bin/pytest tests/security/test_types.py -q -k 'task_description'
+.F                                                                       [100%]
+FAILED tests/security/test_types.py::test_request_rejects_whitespace_only_task_description
+E Failed: DID NOT RAISE ValidationError
+```
+
+The passing empty-description case in the same RED run proved that the prior nullable-description
+fix remained intact. The production correction was limited to a conditional after-validator on
+`TaskDescription8192`: exactly `""` is returned unchanged, while every non-empty value reuses the
+existing nonblank validation. The same focused command then passed:
+
+```text
+$ .venv/bin/pytest tests/security/test_types.py -q -k 'task_description'
+..                                                                       [100%]
+```
+
+Focused Security type plus real-PostgreSQL Task 6 workflow validation passed:
+
+```text
+$ TEST_POSTGRES_PORT=55433 .venv/bin/pytest tests/security/test_types.py tests/workflows/test_security_validation.py -q
+........................................................................ [ 64%]
+.......................................                                  [100%]
+```
+
+The complete Security and workflow regression areas passed:
+
+```text
+$ TEST_POSTGRES_PORT=55433 .venv/bin/pytest tests/security tests/workflows -q
+........................................................................ [ 15%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 60%]
+........................................................................ [ 75%]
+........................................................................ [ 90%]
+................................................                         [100%]
+```
+
+Fresh static and formatting verification:
+
+```text
+$ .venv/bin/ruff format core/security/types.py tests/security/test_types.py
+2 files left unchanged
+
+$ make lint
+All checks passed!
+
+$ make typecheck
+Success: no issues found in 306 source files
+
+$ .venv/bin/ruff format --check core/security/types.py tests/security/test_types.py
+2 files already formatted
+
+$ git diff --check
+(no output; exit 0)
+```
+
+No subagent was used. Prior Task 6 fixes and the untracked `.venv` were preserved. Deferred
+unrelated Minors, including `exact_type_check` typing, were not addressed.

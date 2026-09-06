@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -88,8 +89,6 @@ def test_started_checkpoint_commits_allowlisted_scalars_without_transition(
     assert event.actor_id == security.slug
     assert event.correlation_id == request.correlation_id
     assert event.data == {
-        "acceptance_criterion_count": 1,
-        "affected_file_count": 1,
         "security_agent_id": security.slug,
     }
 
@@ -146,6 +145,72 @@ def test_started_checkpoint_allows_historical_matched_terminal_pair(
     assert Counter(event.correlation_id for event in _security_events(db_session)) == Counter(
         {old_correlation: 2, request.correlation_id: 1}
     )
+
+
+def test_security_lifecycle_uses_bounded_queries_with_large_matched_history(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Matched history is checked through bounded scalar SQL, never materialized rows."""
+    task, _, _, _, security, request = persisted_security_workflow_request(db_session, tmp_path)
+    task_id = task.id
+    correlation_id = request.correlation_id
+    result = passing_security_result(request.security_request)
+    for _ in range(128):
+        historical_correlation = uuid4()
+        for event_type in (
+            SecurityEventType.SECURITY_STARTED,
+            SecurityEventType.SECURITY_ESCALATED,
+        ):
+            _stage_historical_event(
+                db_session,
+                task_id=task.id,
+                project_id=task.project_id,
+                actor_id=security.slug,
+                event_type=event_type,
+                correlation_id=historical_correlation,
+            )
+    db_session.commit()
+    scope = validate_security_workflow_request(db_session, request)
+    original_execute = db_session.execute
+    original_scalar = db_session.scalar
+    audit_scalar_statements: list[str] = []
+
+    def reject_bulk_audit_result(statement: Any, *args: Any, **kwargs: Any) -> Any:
+        rendered = str(statement.compile(dialect=db_session.get_bind().dialect)).lower()
+        if AuditEvent.__tablename__ in rendered:
+            raise AssertionError("Security lifecycle rows must not be materialized")
+        return original_execute(statement, *args, **kwargs)
+
+    def record_bounded_scalar(statement: Any, *args: Any, **kwargs: Any) -> Any:
+        rendered = str(statement.compile(dialect=db_session.get_bind().dialect)).lower()
+        if AuditEvent.__tablename__ in rendered:
+            audit_scalar_statements.append(rendered)
+            assert " limit " in rendered or "count(" in rendered
+        return original_scalar(statement, *args, **kwargs)
+
+    monkeypatch.setattr(db_session, "execute", reject_bulk_audit_result)
+    monkeypatch.setattr(db_session, "scalar", record_bounded_scalar)
+
+    commit_security_started_checkpoint(db_session, scope)
+    commit_security_completed_checkpoint(db_session, scope, result=result)
+
+    assert 3 <= len(audit_scalar_statements) <= 5
+    with Session(db_session.get_bind()) as verification_session:
+        assert [
+            verification_session.scalar(
+                select(func.count(AuditEvent.id)).where(
+                    AuditEvent.task_id == task_id,
+                    AuditEvent.event_type == event_type.value,
+                    AuditEvent.correlation_id == correlation_id,
+                )
+            )
+            for event_type in (
+                SecurityEventType.SECURITY_STARTED,
+                SecurityEventType.SECURITY_COMPLETED,
+            )
+        ] == [1, 1]
 
 
 @pytest.mark.parametrize(

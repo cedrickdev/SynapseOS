@@ -9,7 +9,7 @@ from enum import StrEnum
 from functools import partial
 from typing import NoReturn
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -113,20 +113,14 @@ def _stage_security_started(
     session: Session,
     scope: ValidatedSecurityWorkflowScope,
 ) -> None:
-    lifecycle_rows = _security_lifecycle_rows(session, scope)
-    if _has_unmatched_security_start(lifecycle_rows) or any(
-        correlation_id == scope.request.correlation_id for _, correlation_id, _ in lifecycle_rows
-    ):
+    if _has_unmatched_security_start(session, scope) or _has_current_security_event(session, scope):
         raise SecurityWorkflowError(SecurityWorkflowErrorCode.INVALID_STATE)
-    request = scope.request.security_request
     _stage_security_event(
         session,
         scope,
         SecurityEventType.SECURITY_STARTED,
         {
             "security_agent_id": scope.security.slug,
-            "acceptance_criterion_count": len(request.acceptance_criteria),
-            "affected_file_count": len(request.affected_files),
         },
     )
 
@@ -305,58 +299,77 @@ def _locked_expected_task(
     return task
 
 
-def _security_lifecycle_rows(
+def _has_unmatched_security_start(
     session: Session,
     scope: ValidatedSecurityWorkflowScope,
-) -> list[tuple[str, object, str | None]]:
-    rows = session.execute(
-        select(AuditEvent.event_type, AuditEvent.correlation_id, AuditEvent.actor_id).where(
+) -> bool:
+    correlation_id = session.scalar(
+        select(AuditEvent.correlation_id)
+        .where(
             AuditEvent.task_id == scope.task.id,
             AuditEvent.resource_type == "SECURITY_WORKFLOW",
             AuditEvent.event_type.in_([item.value for item in SecurityEventType]),
         )
+        .group_by(AuditEvent.correlation_id)
+        .having(
+            func.count().filter(AuditEvent.event_type == SecurityEventType.SECURITY_STARTED.value)
+            > func.count().filter(
+                AuditEvent.event_type.in_(
+                    [
+                        SecurityEventType.SECURITY_COMPLETED.value,
+                        SecurityEventType.SECURITY_ESCALATED.value,
+                    ]
+                )
+            )
+        )
+        .limit(1)
     )
-    return [(event_type, correlation_id, actor_id) for event_type, correlation_id, actor_id in rows]
+    return correlation_id is not None
 
 
-def _has_unmatched_security_start(rows: list[tuple[str, object, str | None]]) -> bool:
-    starts = Counter(
-        correlation_id
-        for event_type, correlation_id, _ in rows
-        if event_type == SecurityEventType.SECURITY_STARTED.value
+def _has_current_security_event(
+    session: Session,
+    scope: ValidatedSecurityWorkflowScope,
+) -> bool:
+    event_id = session.scalar(
+        select(AuditEvent.id)
+        .where(
+            AuditEvent.task_id == scope.task.id,
+            AuditEvent.resource_type == "SECURITY_WORKFLOW",
+            AuditEvent.correlation_id == scope.request.correlation_id,
+            AuditEvent.event_type.in_([item.value for item in SecurityEventType]),
+        )
+        .limit(1)
     )
-    terminals = Counter(
-        correlation_id
-        for event_type, correlation_id, _ in rows
-        if event_type
-        in {
-            SecurityEventType.SECURITY_COMPLETED.value,
-            SecurityEventType.SECURITY_ESCALATED.value,
-        }
-    )
-    return any(count > terminals[correlation_id] for correlation_id, count in starts.items())
+    return event_id is not None
 
 
 def _require_matching_start(
     session: Session,
     scope: ValidatedSecurityWorkflowScope,
 ) -> None:
-    rows = _security_lifecycle_rows(session, scope)
     correlation_id = scope.request.correlation_id
-    starts = sum(
-        event_type == SecurityEventType.SECURITY_STARTED.value
-        and event_correlation_id == correlation_id
-        and actor_id == scope.security.slug
-        for event_type, event_correlation_id, actor_id in rows
+    starts = session.scalar(
+        select(func.count(AuditEvent.id)).where(
+            AuditEvent.task_id == scope.task.id,
+            AuditEvent.resource_type == "SECURITY_WORKFLOW",
+            AuditEvent.correlation_id == correlation_id,
+            AuditEvent.actor_id == scope.security.slug,
+            AuditEvent.event_type == SecurityEventType.SECURITY_STARTED.value,
+        )
     )
-    terminals = sum(
-        event_correlation_id == correlation_id
-        and event_type
-        in {
-            SecurityEventType.SECURITY_COMPLETED.value,
-            SecurityEventType.SECURITY_ESCALATED.value,
-        }
-        for event_type, event_correlation_id, _ in rows
+    terminals = session.scalar(
+        select(func.count(AuditEvent.id)).where(
+            AuditEvent.task_id == scope.task.id,
+            AuditEvent.resource_type == "SECURITY_WORKFLOW",
+            AuditEvent.correlation_id == correlation_id,
+            AuditEvent.event_type.in_(
+                [
+                    SecurityEventType.SECURITY_COMPLETED.value,
+                    SecurityEventType.SECURITY_ESCALATED.value,
+                ]
+            ),
+        )
     )
     if starts != 1 or terminals != 0:
         raise SecurityWorkflowError(SecurityWorkflowErrorCode.INVALID_STATE)

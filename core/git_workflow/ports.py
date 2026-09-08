@@ -6,11 +6,13 @@ from pathlib import Path
 from typing import Protocol
 
 from core.git_workflow.types import (
+    CreateTaskBranchRequest,
     GitDiffRequest,
     GitDiffResult,
     GitHistoryRequest,
     GitHistoryResult,
     GitRepositoryStatus,
+    TaskBranchResult,
 )
 
 
@@ -40,3 +42,10 @@ class GitProvider(Protocol):
         timeout_seconds: float,
     ) -> GitHistoryResult: ...
 
+    async def create_task_branch(
+        self,
+        workspace_root: Path,
+        request: CreateTaskBranchRequest,
+        *,
+        timeout_seconds: float,
+    ) -> TaskBranchResult: ...

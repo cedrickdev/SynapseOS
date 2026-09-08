@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from core.git_workflow import (
+    CreateTaskBranchRequest,
     GitCommitSummary,
     GitDiffMode,
     GitDiffRequest,
@@ -22,6 +23,7 @@ from core.git_workflow import (
     GitRepositoryStatus,
     GitWorkflowError,
     GitWorkflowErrorCode,
+    TaskBranchResult,
 )
 from core.tools import ToolWorkspaceError
 from infrastructure.tools.paths import relative_workspace_path, resolve_workspace_path
@@ -60,6 +62,7 @@ class _BoundedOutput:
 
 @dataclass(frozen=True, slots=True)
 class _ProcessResult:
+    exit_code: int
     stdout: _BoundedOutput
     stderr: _BoundedOutput
 
@@ -286,12 +289,86 @@ class LocalGitProvider:
             output_bytes=result.stdout.total_bytes,
         )
 
+    async def create_task_branch(
+        self,
+        workspace_root: Path,
+        request: CreateTaskBranchRequest,
+        *,
+        timeout_seconds: float,
+    ) -> TaskBranchResult:
+        """Create and switch to one clean dedicated task branch exactly once."""
+        root = self._require_repository(workspace_root)
+        if type(request) is not CreateTaskBranchRequest:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_REQUEST,
+                "Git branch request is invalid.",
+            )
+        initial = await self.status(root, timeout_seconds=timeout_seconds)
+        if (
+            initial.detached
+            or not initial.clean
+            or initial.operation_in_progress
+            or initial.head_sha is None
+        ):
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_STATE,
+                "Git repository state does not allow branch creation.",
+            )
+        if initial.branch != request.base_branch:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.PROTECTED_BRANCH,
+                "Task branches must start from the protected base.",
+            )
+        await self._run(
+            ("check-ref-format", "--branch", request.branch),
+            root,
+            timeout_seconds,
+            self._limits.stderr_bytes,
+        )
+        existing = await self._run(
+            ("show-ref", "--verify", "--quiet", f"refs/heads/{request.branch}"),
+            root,
+            timeout_seconds,
+            self._limits.stderr_bytes,
+            accepted_exit_codes=frozenset({0, 1}),
+        )
+        if existing.exit_code == 0:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.BRANCH_EXISTS,
+                "Task branch already exists.",
+            )
+        rechecked = await self.status(root, timeout_seconds=timeout_seconds)
+        if rechecked != initial:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.STALE_STATE,
+                "Git repository state changed during branch preparation.",
+            )
+        await self._run(
+            ("switch", "-c", request.branch),
+            root,
+            timeout_seconds,
+            self._limits.stderr_bytes,
+        )
+        completed = await self.status(root, timeout_seconds=timeout_seconds)
+        if completed.branch != request.branch or completed.head_sha != initial.head_sha:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.STALE_STATE,
+                "Git branch creation result is invalid.",
+            )
+        return TaskBranchResult(
+            branch=request.branch,
+            base_branch=request.base_branch,
+            head_sha=initial.head_sha,
+        )
+
     async def _run(
         self,
         arguments: tuple[str, ...],
         workspace_root: Path,
         timeout_seconds: float,
         stdout_limit: int,
+        *,
+        accepted_exit_codes: frozenset[int] = frozenset({0}),
     ) -> _ProcessResult:
         process: asyncio.subprocess.Process | None = None
         stdout_task: asyncio.Task[_BoundedOutput] | None = None
@@ -321,12 +398,12 @@ class LocalGitProvider:
                     stdout_task,
                     stderr_task,
                 )
-            if exit_code != 0:
+            if exit_code not in accepted_exit_codes:
                 raise GitWorkflowError(
                     GitWorkflowErrorCode.GIT_FAILED,
                     "Git operation failed.",
                 )
-            return _ProcessResult(stdout=stdout, stderr=stderr)
+            return _ProcessResult(exit_code=exit_code, stdout=stdout, stderr=stderr)
         except asyncio.CancelledError:
             if process is not None:
                 await _stop_process(process)

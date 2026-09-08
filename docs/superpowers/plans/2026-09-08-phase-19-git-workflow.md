@@ -223,7 +223,7 @@ git commit -m "feat(git): add bounded local read provider"
 - Produces `validate_write_authority(context) -> None` and canonical branch validation.
 - Produces `LocalGitProvider.create_task_branch(...) -> TaskBranchResult`.
 
-- [ ] **Step 1: Write failing authorization and branch-state tests**
+- [x] **Step 1: Write failing authorization and branch-state tests**
 
 ```python
 def test_developer_creates_exact_task_branch_once(tmp_path: Path) -> None:
@@ -246,17 +246,17 @@ def test_branch_creation_rejects_unsafe_repository_state(tmp_path: Path, state: 
 Also prove a Reviewer, missing `git.write`, mismatched task, and protected-head request are rejected
 before Git mutation.
 
-- [ ] **Step 2: Run branch tests and verify RED**
+- [x] **Step 2: Run branch tests and verify RED**
 
 Expected: provider method is absent or returns unsupported-operation error.
 
-- [ ] **Step 3: Implement validation and fixed branch creation**
+- [x] **Step 3: Implement validation and fixed branch creation**
 
 Validate status twice around the mutation, derive the branch internally, call
 `git check-ref-format --branch`, reject existing refs with `show-ref --verify --quiet`, then execute
 one `switch -c <derived-branch>`. Validate resulting branch and unchanged starting commit.
 
-- [ ] **Step 4: Run focused and regression tests, then commit**
+- [x] **Step 4: Run focused and regression tests, then commit**
 
 ```bash
 .venv/bin/pytest tests/git_workflow/test_branch_creation.py \

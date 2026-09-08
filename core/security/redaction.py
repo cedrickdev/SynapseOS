@@ -24,6 +24,12 @@ _PRIVATE_KEY_LABEL = r"(?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY"
 _CREDENTIAL_KEYS = r"(?:api_key|apikey|client_secret|password|secret|token)"
 _DOUBLE_QUOTED_CREDENTIAL_VALUE = r'(?:\\[^\r\n]|[^"\\\r\n])+'
 _SINGLE_QUOTED_CREDENTIAL_VALUE = r"(?:\\[^\r\n]|[^'\\\r\n])+"
+_UNQUOTED_CREDENTIAL_VALUE = (
+    r"(?!(?:null|none|true|false)\b)"
+    r"(?![A-Za-z_][A-Za-z0-9_]*\s*(?:\.|\[|\())"
+    r"(?![$({\[])"
+    r"[^\s\"'`,;#()\[\]{}]+"
+)
 _SECRET_PATTERN = re.compile(
     rf"(?P<private_key>"
     rf"-----BEGIN (?P<private_key_label>{_PRIVATE_KEY_LABEL})-----"
@@ -39,7 +45,8 @@ _SECRET_PATTERN = re.compile(
     rf"\s*(?:=|:)\s*"
     rf")"
     rf'(?:"(?P<credential_double_value>{_DOUBLE_QUOTED_CREDENTIAL_VALUE})"'
-    rf"|'(?P<credential_single_value>{_SINGLE_QUOTED_CREDENTIAL_VALUE})')"
+    rf"|'(?P<credential_single_value>{_SINGLE_QUOTED_CREDENTIAL_VALUE})'"
+    rf"|(?P<credential_unquoted_value>{_UNQUOTED_CREDENTIAL_VALUE}))"
     rf")",
     flags=re.IGNORECASE | re.DOTALL,
 )
@@ -103,8 +110,11 @@ def _sanitize_text(text: str, *, location: str, state: _RedactionState) -> str:
         if match.group("private_key") is not None:
             return REDACTED_SECRET
         prefix = match.group("credential_prefix")
-        quote = '"' if match.group("credential_double_value") is not None else "'"
-        return f"{prefix}{quote}{REDACTED_SECRET}{quote}"
+        if match.group("credential_double_value") is not None:
+            return f'{prefix}"{REDACTED_SECRET}"'
+        if match.group("credential_single_value") is not None:
+            return f"{prefix}'{REDACTED_SECRET}'"
+        return f"{prefix}{REDACTED_SECRET}"
 
     sanitized = _SECRET_PATTERN.sub(replace, text)
     bounded, truncated = _bound_text(

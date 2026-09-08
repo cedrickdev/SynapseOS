@@ -388,10 +388,7 @@ def _canonicalize_result(
     except Exception:
         del scope, result
         raise SecurityWorkflowError(SecurityWorkflowErrorCode.INVALID_INPUT) from None
-    if (
-        canonical.correlation_id != scope.request.correlation_id
-        or canonical.scanner.finding_count != len(canonical.findings)
-    ):
+    if canonical.correlation_id != scope.request.correlation_id:
         del scope, result, canonical
         raise SecurityWorkflowError(SecurityWorkflowErrorCode.INVALID_SCOPE)
     del scope, result

@@ -92,6 +92,23 @@ def test_quoted_credential_assignments_are_redacted_and_confirmed(
     assert finding.confirmation is SecurityConfirmation.CONFIRMED
 
 
+def test_unquoted_credential_assignment_is_redacted_before_provider_use(
+    tmp_path: Path,
+) -> None:
+    """Cover common dotenv and shell-style credentials without quotes."""
+    secret = "sk-live-unquoted-redaction-marker"
+    request = security_request(
+        tmp_path,
+        affected_files=(source_file(path="config/runtime.env", content=f"API_KEY={secret}\n"),),
+    )
+
+    sanitized = sanitize_security_source(request)
+
+    assert secret not in sanitized.files[0].content
+    assert sanitized.files[0].content == "API_KEY=[REDACTED_SECRET]\n"
+    assert sanitized.findings[0].category == "secret.credential-assignment"
+
+
 @pytest.mark.parametrize(
     ("quote", "secret"),
     [

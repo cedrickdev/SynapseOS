@@ -153,9 +153,7 @@ def _validate_security_result_scope(
     result: SecurityResult,
     scope: ValidatedSecurityWorkflowScope,
 ) -> None:
-    if result.correlation_id != scope.request.correlation_id or result.scanner.finding_count != len(
-        result.findings
-    ):
+    if result.correlation_id != scope.request.correlation_id:
         raise ValueError("Security result scope is invalid")
 
 

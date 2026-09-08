@@ -11,7 +11,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
 
 from core.commands import CommandTerminalStatus
@@ -172,6 +172,42 @@ def test_security_preflight_returns_canonical_persistent_scope(
         task.project_id
     )
     assert db_session.in_transaction()
+
+
+def test_rejected_preflight_does_not_hold_task_row_lock(
+    database_engine: Engine,
+    tmp_path: Path,
+) -> None:
+    """Allow another workflow to lock the task after a rejected preflight."""
+    seed = Session(database_engine)
+    task, _, _, _, security, request = persisted_security_workflow_request(
+        seed,
+        tmp_path,
+        developer_overrides={"slug": "lock-developer-01"},
+        reviewer_overrides={"slug": "lock-reviewer-01"},
+        qa_overrides={"slug": "lock-qa-01"},
+        security_overrides={"slug": "lock-security-01"},
+    )
+    security.role = "Developer"
+    task_id = task.id
+    seed.commit()
+    seed.close()
+
+    validation_session = Session(database_engine)
+    with pytest.raises(SecurityWorkflowError):
+        validate_security_workflow_request(validation_session, request)
+
+    concurrent = Session(database_engine)
+    try:
+        locked = concurrent.scalar(
+            select(Task).where(Task.id == task_id).with_for_update(nowait=True)
+        )
+        assert locked is not None
+    finally:
+        concurrent.rollback()
+        concurrent.close()
+        validation_session.rollback()
+        validation_session.close()
 
 
 def test_security_preflight_uses_canonical_workspace_scalar(

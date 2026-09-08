@@ -102,6 +102,30 @@ def test_concrete_security_workflow_routes_exact_decision_and_persists_metadata_
         assert source_file.content not in persisted
 
 
+def test_concrete_security_workflow_accepts_local_redaction_finding_count(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Do not confuse total public findings with the scanner-only summary count."""
+    task, _, _, _, _, request = persisted_security_workflow_request(db_session, tmp_path)
+    diff = (
+        "--- a/src/auth.py\n"
+        "+++ b/src/auth.py\n"
+        "@@ -1 +1 @@\n"
+        '+API_KEY="local-redaction-marker-value"\n'
+    )
+    security_request = request.security_request.model_copy(update={"diff": diff})
+    request = request.model_copy(update={"security_request": security_request})
+    setup = concrete_security_setup(tmp_path, request=security_request)
+
+    result = asyncio.run(SecurityWorkflowOrchestrator(db_session, setup.agent).run(request))
+
+    assert result.security_result.decision is SecurityDecision.BLOCK
+    assert result.security_result.scanner.finding_count == 0
+    assert len(result.security_result.findings) == 1
+    assert task.status is TaskStatus.CHANGES_REQUESTED
+
+
 @pytest.mark.parametrize("failure", ["scanner", "provider"])
 def test_concrete_security_workflow_escalates_failures_without_duplicate_work(
     db_session: Session,

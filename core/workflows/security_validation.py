@@ -156,7 +156,7 @@ def _load_security_scope(
     session: Session,
     request: SecurityWorkflowRequest,
 ) -> tuple[Task, Agent, Agent, Agent, Agent]:
-    task = session.scalar(select(Task).where(Task.id == request.task_id).with_for_update())
+    task = session.scalar(select(Task).where(Task.id == request.task_id))
     developer = session.get(Agent, request.developer_agent_id)
     reviewer = session.get(Agent, request.reviewer_agent_id)
     qa = session.get(Agent, request.qa_agent_id)

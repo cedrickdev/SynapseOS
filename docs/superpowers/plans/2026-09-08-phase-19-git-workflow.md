@@ -58,7 +58,7 @@ Alembic, pytest, Ruff, and strict mypy.
 - Produces `GitWorkflowContext`, `GitIdentity`, operation request/result models,
   `PullRequestPreparation`, `MergeEvidence`, and `MergeValidationResult`.
 
-- [ ] **Step 1: Write failing branch and immutable-contract tests**
+- [x] **Step 1: Write failing branch and immutable-contract tests**
 
 ```python
 def test_task_branch_is_derived_from_canonical_task_scope() -> None:
@@ -85,7 +85,7 @@ def test_context_and_nested_authority_are_frozen_and_strict() -> None:
         context.actor.permission_ids.add(Permission.NETWORK_ACCESS)
 ```
 
-- [ ] **Step 2: Run Task 1 tests and verify RED**
+- [x] **Step 2: Run Task 1 tests and verify RED**
 
 Run:
 
@@ -95,7 +95,7 @@ Run:
 
 Expected: collection fails because `core.git_workflow` does not exist.
 
-- [ ] **Step 3: Implement the minimal strict contracts**
+- [x] **Step 3: Implement the minimal strict contracts**
 
 Implement `ConfigDict(frozen=True, extra="forbid")` models, exact-type validators for nested
 authority/evidence objects, finite fields, tuple/frozenset copying, timezone-aware timestamps, SHA
@@ -103,7 +103,7 @@ patterns, safe identifier patterns, and deterministic branch derivation. Model `
 the persistent agent UUID, canonical `AgentProfile`, and exact permission set; require matching
 logical identity and an active profile.
 
-- [ ] **Step 4: Run Task 1 tests and verify GREEN**
+- [x] **Step 4: Run Task 1 tests and verify GREEN**
 
 Run the Task 1 file, then:
 
@@ -112,7 +112,7 @@ Run the Task 1 file, then:
 .venv/bin/mypy core/git_workflow tests/git_workflow
 ```
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add core/git_workflow tests/git_workflow

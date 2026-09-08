@@ -10,7 +10,7 @@ core**, **Phase 6 — tool registry**, **Phase 7 — permission engine**, **Phas
 Registry**, **Phase 9 — workspace isolation**, **Phase 10 — transactional write tools**, and
 **Phase 11 — secure command profiles**, **Phase 13 — Loop Engineering V1**, **Phase 14 —
 Developer Agent**, **Phase 15 — Reviewer Agent**, **Phase 16 — Developer–Reviewer workflow**,
-**Phase 17 — QA Agent**, and **Phase 18 — Security Agent V1**.
+**Phase 17 — QA Agent**, **Phase 18 — Security Agent V1**, and **Phase 19 — Git Workflow**.
 Phase 12 remains deliberately unimplemented.
 It contains a minimal FastAPI application, typed
 SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
@@ -37,9 +37,9 @@ container. Phase 11 command execution is an application-level fixed-profile boun
 hostile-code sandbox. Phase 17 adds a separate test-only permission policy for an active QA agent
 on a Developer-owned `WAITING_QA` task; it authorizes only the closed QA test adapter when both
 persisted grants are active. The repository does not include a free-form shell, MCP access,
-provider routing, external scanner adapters, Phase 19 Git workflow behavior, or frontend. Phase 12
-remains deliberately unimplemented. Phase 18 provides only the bounded Security behavior
-documented in `docs/security-agent.md`; Phase 19 and later phases are not implemented. Do not
+provider routing, external scanner adapters, remote Git providers, persisted pull requests, or a
+frontend. Phase 12 remains deliberately unimplemented. Phase 19 provides only the bounded local
+Git workflow documented in `docs/git-workflow.md`; Phase 20 and later phases are not implemented. Do not
 implement work from a later phase unless the user explicitly starts that phase.
 
 Important files:
@@ -57,6 +57,8 @@ Current source layout:
 - `infrastructure/database/` — models, sessions, append-only guard, and repositories.
 - `infrastructure/skills/` — secure bounded loader for local skill packages.
 - `infrastructure/workspaces/` — isolated local workspace, Git, and audit adapters.
+- `core/git_workflow/` — Phase 19 contracts, validation, orchestration, and provider ports.
+- `infrastructure/git/` — bounded local Git provider, commit policy, audit, and composition.
 - `infrastructure/tools/write.py` and `mutations.py` — bounded transactional file writes.
 - `core/commands/` and `infrastructure/commands/` — fixed command contracts, policy, and runner.
 - `core/runtime/` and `infrastructure/runtime/` — bounded one-agent loop and runtime-step audit.
@@ -71,6 +73,7 @@ Current source layout:
 - `docs/developer-reviewer-workflow.md` — Phase 16 flow, contracts, checkpoints, safety boundary, and phase handoff.
 - `docs/qa-agent.md` — Phase 17 contracts, delegated authority, deterministic gate, workflow, and safety boundary.
 - `docs/security-agent.md` — Phase 18 contracts, read authority, deterministic veto, workflow, and exclusions.
+- `docs/git-workflow.md` — Phase 19 operations, safety guarantees, merge gate, and exclusions.
 
 ## Development commands
 
@@ -132,6 +135,13 @@ For the focused Phase 18 Security Agent and PostgreSQL integration tests, run:
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/security tests/workflows \
   tests/database/test_security_permission_policy.py -q
+```
+
+For the focused Phase 19 local Git and PostgreSQL integration tests, run:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/git_workflow \
+  tests/database/test_git_workflow_audit.py -q
 ```
 
 Run a single test with:

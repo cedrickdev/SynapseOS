@@ -1327,15 +1327,15 @@ Faire fonctionner les agents comme une vraie équipe de développement.
 
 ## Checklist
 
-- [ ] branche par Task
-- [ ] convention noms
-- [ ] commits
-- [ ] status
-- [ ] diff
-- [ ] historique
-- [ ] PR abstraction
-- [ ] author/reviewer
-- [ ] protections
+- [x] branche par Task
+- [x] convention noms
+- [x] commits
+- [x] status
+- [x] diff
+- [x] historique
+- [x] PR abstraction
+- [x] author/reviewer
+- [x] protections
 
 ## Convention
 

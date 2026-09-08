@@ -48,14 +48,14 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 18 — Security Agent V1 completed.** The repository now provides the persistence foundation, an
+**Phase 19 — Git Workflow completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
 free-form shell, MCP, general-purpose multi-agent orchestration beyond the explicit
-Developer–Reviewer, QA, and Security stages, external scanner adapters, and the frontend remain
-intentionally unimplemented.
+Developer–Reviewer, QA, and Security stages, external scanner adapters, remote Git providers,
+persisted pull requests, and the frontend remain intentionally unimplemented.
 
 What exists today:
 
@@ -98,6 +98,9 @@ What exists today:
 - An independent read-only Reviewer role with one bounded provider call, strict structured
   findings, explicit required-check evidence, a deterministic approval gate, and a deterministic
   per-review score. Failed or missing mandatory checks can never be approved.
+- A bounded provider-neutral local Git workflow with dedicated task branches, explicit-path
+  Conventional Commits, structured status/diff/history, checksum-bound pull-request preparation,
+  deterministic independent merge requirements, and metadata-only append-only auditing.
 - A bounded Developer ↔ Reviewer workflow that assigns one persistent READY task, commits audited
   checkpoints, obtains fresh handoff evidence for each correction cycle, and ends at WAITING_QA on
   approval or WAITING_HUMAN on review-cycle exhaustion.
@@ -161,6 +164,7 @@ infrastructure/           # Adapters to the outside world
   commands/               # Fixed profile policy and bounded local process runner
   tools/                  # Bounded filesystem, Git, path, and audit adapters
   workspaces/             # Audited isolated local workspace lifecycle
+  git/                    # Bounded local Git provider, policy, audit, and composition
 skills/                   # Five versioned built-in V1 skill packages
 alembic/                  # Versioned PostgreSQL migrations
 tests/                    # Unit and real-PostgreSQL integration tests
@@ -258,6 +262,7 @@ validated pull request. The near-term sequence is:
 16. **Developer ↔ Reviewer workflow** — completed
 17. **QA Agent** — completed
 18. **Security Agent V1** — completed
+19. **Git Workflow** — completed
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -280,6 +285,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Developer ↔ Reviewer workflow:** [`docs/developer-reviewer-workflow.md`](docs/developer-reviewer-workflow.md)
 - **QA Agent and workflow:** [`docs/qa-agent.md`](docs/qa-agent.md)
 - **Security Agent and workflow:** [`docs/security-agent.md`](docs/security-agent.md)
+- **Git Workflow:** [`docs/git-workflow.md`](docs/git-workflow.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

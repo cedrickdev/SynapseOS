@@ -12,7 +12,11 @@ from datetime import datetime
 from pathlib import Path
 
 from core.git_workflow import (
+    CommitPolicyDecision,
+    CommitPolicyResult,
+    CommitRequest,
     CreateTaskBranchRequest,
+    GitCommitResult,
     GitCommitSummary,
     GitDiffMode,
     GitDiffRequest,
@@ -24,7 +28,9 @@ from core.git_workflow import (
     GitWorkflowError,
     GitWorkflowErrorCode,
     TaskBranchResult,
+    is_protected_branch,
 )
+from core.git_workflow.ports import GitCommitPolicy
 from core.tools import ToolWorkspaceError
 from infrastructure.tools.paths import relative_workspace_path, resolve_workspace_path
 
@@ -360,6 +366,233 @@ class LocalGitProvider:
             base_branch=request.base_branch,
             head_sha=initial.head_sha,
         )
+
+    async def commit_changes(
+        self,
+        workspace_root: Path,
+        request: CommitRequest,
+        policy: GitCommitPolicy,
+        *,
+        timeout_seconds: float,
+    ) -> GitCommitResult:
+        """Commit only explicit paths on the exact dedicated task branch."""
+        root = self._require_repository(workspace_root)
+        if type(request) is not CommitRequest:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_REQUEST,
+                "Git commit request is invalid.",
+            )
+        initial = await self.status(root, timeout_seconds=timeout_seconds)
+        if initial.branch != request.expected_branch:
+            code = (
+                GitWorkflowErrorCode.PROTECTED_BRANCH
+                if initial.branch is not None and is_protected_branch(initial.branch)
+                else GitWorkflowErrorCode.INVALID_STATE
+            )
+            raise GitWorkflowError(code, "Git commit branch is not allowed.")
+        if (
+            initial.detached
+            or initial.head_sha is None
+            or initial.staged_count != 0
+            or initial.operation_in_progress
+        ):
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_STATE,
+                "Git repository state does not allow a commit.",
+            )
+        paths = self._resolve_paths(root, request.paths)
+        staged = False
+        committed = False
+        try:
+            await self._run(
+                ("add", "--all", "--", *paths),
+                root,
+                timeout_seconds,
+                self._limits.stderr_bytes,
+            )
+            staged = True
+            staged_diff = await self.diff(
+                root,
+                GitDiffRequest(mode=GitDiffMode.STAGED, paths=paths),
+                timeout_seconds=timeout_seconds,
+            )
+            if staged_diff.truncated:
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.RESOURCE_LIMIT,
+                    "Git staged change exceeds its safe inspection limit.",
+                )
+            if not staged_diff.patch:
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.EMPTY_CHANGE,
+                    "Git commit has no selected change.",
+                )
+            try:
+                policy_result = policy.inspect(staged_diff.patch)
+            except Exception as error:
+                error.__traceback__ = None
+                del error
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.INVALID_REQUEST,
+                    "Git commit policy failed safely.",
+                ) from None
+            if type(policy_result) is not CommitPolicyResult:
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.INVALID_REQUEST,
+                    "Git commit policy result is invalid.",
+                )
+            if policy_result.decision is CommitPolicyDecision.DENY:
+                code = (
+                    GitWorkflowErrorCode.SECRET_DETECTED
+                    if policy_result.reason_code == "SECRET_DETECTED"
+                    else GitWorkflowErrorCode.INVALID_STATE
+                )
+                raise GitWorkflowError(code, "Git commit was denied by policy.")
+            rechecked = await self.status(root, timeout_seconds=timeout_seconds)
+            if (
+                rechecked.branch != initial.branch
+                or rechecked.head_sha != initial.head_sha
+                or rechecked.operation_in_progress
+                or rechecked.staged_count == 0
+            ):
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.STALE_STATE,
+                    "Git repository state changed during commit preparation.",
+                )
+            await self._run(
+                (
+                    "-c",
+                    f"user.name={request.identity.display_name}",
+                    "-c",
+                    f"user.email={request.identity.email}",
+                    "-c",
+                    "commit.gpgSign=false",
+                    "commit",
+                    "--no-gpg-sign",
+                    "-m",
+                    request.subject,
+                ),
+                root,
+                timeout_seconds,
+                self._limits.status_bytes,
+            )
+            committed = True
+        except asyncio.CancelledError:
+            if staged and not committed:
+                await self._restore_index(root, paths, timeout_seconds)
+            raise
+        except GitWorkflowError:
+            if staged and not committed:
+                await self._restore_index(root, paths, timeout_seconds)
+            raise
+        except Exception as error:
+            error.__traceback__ = None
+            del error
+            if staged and not committed:
+                await self._restore_index(root, paths, timeout_seconds)
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.GIT_FAILED,
+                "Git commit failed safely.",
+            ) from None
+
+        commit_sha = await self._read_scalar(
+            root,
+            ("rev-parse", "HEAD"),
+            timeout_seconds,
+        )
+        parent_line = await self._read_scalar(
+            root,
+            ("rev-list", "--parents", "-n", "1", "HEAD"),
+            timeout_seconds,
+        )
+        subject = await self._read_scalar(
+            root,
+            ("show", "-s", "--format=%s", "HEAD"),
+            timeout_seconds,
+        )
+        parents = parent_line.split()
+        if (
+            len(parents) != 2
+            or parents[0] != commit_sha
+            or parents[1] != initial.head_sha
+            or subject != request.subject
+        ):
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.STALE_STATE,
+                "Git commit result is invalid.",
+            )
+        return GitCommitResult(
+            branch=request.expected_branch,
+            commit_sha=commit_sha,
+            parent_sha=parents[1],
+            subject=subject,
+            changed_path_count=len(paths),
+        )
+
+    def _resolve_paths(self, root: Path, requested_paths: tuple[str, ...]) -> tuple[str, ...]:
+        paths: list[str] = []
+        for requested_path in requested_paths:
+            try:
+                resolved = resolve_workspace_path(
+                    root,
+                    requested_path,
+                    must_exist=False,
+                    expected_kind="any",
+                )
+                paths.append(relative_workspace_path(root, resolved))
+            except ToolWorkspaceError as error:
+                error.__traceback__ = None
+                del error
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.UNSAFE_PATH,
+                    "Git path is not allowed.",
+                ) from None
+        return tuple(paths)
+
+    async def _restore_index(
+        self,
+        root: Path,
+        paths: tuple[str, ...],
+        timeout_seconds: float,
+    ) -> None:
+        try:
+            await self._run(
+                ("reset", "--quiet", "HEAD", "--", *paths),
+                root,
+                timeout_seconds,
+                self._limits.stderr_bytes,
+            )
+        except (GitWorkflowError, asyncio.CancelledError) as error:
+            error.__traceback__ = None
+            del error
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.COMPENSATION_FAILED,
+                "Git index could not be restored safely.",
+            ) from None
+
+    async def _read_scalar(
+        self,
+        root: Path,
+        arguments: tuple[str, ...],
+        timeout_seconds: float,
+    ) -> str:
+        result = await self._run(
+            arguments,
+            root,
+            timeout_seconds,
+            self._limits.stderr_bytes,
+        )
+        if result.stdout.truncated:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git scalar output exceeded its safe limit.",
+            )
+        value = self._decode(result.stdout.content).strip()
+        if not value or "\x00" in value or "\n" in value:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.GIT_FAILED,
+                "Git scalar output is invalid.",
+            )
+        return value
 
     async def _run(
         self,

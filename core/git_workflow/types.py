@@ -88,6 +88,13 @@ class MergeDecision(StrEnum):
     BLOCK = "BLOCK"
 
 
+class CommitPolicyDecision(StrEnum):
+    """Deterministic staged-content policy outcome."""
+
+    ALLOW = "ALLOW"
+    DENY = "DENY"
+
+
 class MergeReasonCode(StrEnum):
     """Stable reasons why local merge requirements are blocked."""
 
@@ -498,6 +505,21 @@ class GitCommitResult(_ImmutableGitModel):
     changed_path_count: Annotated[int, Field(ge=1, le=_MAX_PATHS)]
 
 
+class CommitPolicyResult(_ImmutableGitModel):
+    """Metadata-only result of staged patch inspection."""
+
+    decision: CommitPolicyDecision
+    reason_code: Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{0,63}$")] | None = None
+
+    @model_validator(mode="after")
+    def require_consistent_policy_result(self) -> Self:
+        if self.decision is CommitPolicyDecision.ALLOW and self.reason_code is not None:
+            raise ValueError("allowed commit policy cannot contain reason")
+        if self.decision is CommitPolicyDecision.DENY and self.reason_code is None:
+            raise ValueError("denied commit policy requires reason")
+        return self
+
+
 class PreparePullRequestRequest(_ImmutableGitModel):
     """Local-only pull-request preparation request."""
 
@@ -589,4 +611,3 @@ def is_protected_branch(branch: str) -> bool:
 def is_valid_sha(value: str) -> bool:
     """Return whether one value is a bounded lowercase Git object id."""
     return bool(_SHA_PATTERN.fullmatch(value))
-

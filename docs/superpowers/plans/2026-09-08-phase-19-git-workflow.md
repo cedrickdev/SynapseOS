@@ -285,7 +285,7 @@ git commit -m "feat(git): create isolated task branches"
 - Produces `ObviousSecretCommitPolicy` backed by the existing bounded Phase 18 secret patterns.
 - Produces `LocalGitProvider.commit_changes(...) -> GitCommitResult`.
 
-- [ ] **Step 1: Write failing policy and commit tests**
+- [x] **Step 1: Write failing policy and commit tests**
 
 ```python
 def test_commit_stages_only_explicit_paths_and_uses_conventional_subject(tmp_path: Path) -> None:
@@ -306,11 +306,11 @@ Add RED tests for protected branch, wrong task branch, pre-staged content, empty
 path, symlink escape, empty/truncated patch, obvious secret, failed commit compensation, malicious
 summary, hook execution attempt, signing/config inheritance, and unrelated-file preservation.
 
-- [ ] **Step 2: Run commit tests and verify RED**
+- [x] **Step 2: Run commit tests and verify RED**
 
 Expected: commit provider and policy are missing.
 
-- [ ] **Step 3: Implement the minimum policy and commit transaction**
+- [x] **Step 3: Implement the minimum policy and commit transaction**
 
 Require clean index; snapshot selected index entries; stage only explicit paths using
 `git add --all -- <paths>`; generate a bounded staged patch; reject policy failures; commit once
@@ -318,7 +318,7 @@ with a workflow-rendered subject and command-local identity. On failure, restore
 entries without changing worktree content. Validate `HEAD` advanced by exactly one non-merge commit
 whose subject matches the request.
 
-- [ ] **Step 4: Run commit, security-redaction, and Git regression tests**
+- [x] **Step 4: Run commit, security-redaction, and Git regression tests**
 
 ```bash
 .venv/bin/pytest tests/git_workflow/test_commit_policy.py \
@@ -326,7 +326,7 @@ whose subject matches the request.
   tests/security/test_redaction.py tests/tools/test_git_tools.py -q
 ```
 
-- [ ] **Step 5: Commit Task 4**
+- [x] **Step 5: Commit Task 4**
 
 ```bash
 git add core/git_workflow infrastructure/git tests/git_workflow

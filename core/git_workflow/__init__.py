@@ -3,6 +3,8 @@
 from core.git_workflow.errors import GitWorkflowError, GitWorkflowErrorCode
 from core.git_workflow.types import (
     CommitKind,
+    CommitPolicyDecision,
+    CommitPolicyResult,
     CommitRequest,
     CreateTaskBranchRequest,
     GitAuthority,
@@ -35,6 +37,8 @@ from core.git_workflow.types import (
 
 __all__ = [
     "CommitKind",
+    "CommitPolicyDecision",
+    "CommitPolicyResult",
     "CommitRequest",
     "CreateTaskBranchRequest",
     "GitAuthority",

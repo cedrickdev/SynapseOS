@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import Protocol
 
 from core.git_workflow.types import (
+    CommitPolicyResult,
+    CommitRequest,
     CreateTaskBranchRequest,
+    GitCommitResult,
     GitDiffRequest,
     GitDiffResult,
     GitHistoryRequest,
@@ -14,6 +17,12 @@ from core.git_workflow.types import (
     GitRepositoryStatus,
     TaskBranchResult,
 )
+
+
+class GitCommitPolicy(Protocol):
+    """Inspect one bounded staged patch without side effects."""
+
+    def inspect(self, staged_patch: str) -> CommitPolicyResult: ...
 
 
 class GitProvider(Protocol):
@@ -49,3 +58,12 @@ class GitProvider(Protocol):
         *,
         timeout_seconds: float,
     ) -> TaskBranchResult: ...
+
+    async def commit_changes(
+        self,
+        workspace_root: Path,
+        request: CommitRequest,
+        policy: GitCommitPolicy,
+        *,
+        timeout_seconds: float,
+    ) -> GitCommitResult: ...

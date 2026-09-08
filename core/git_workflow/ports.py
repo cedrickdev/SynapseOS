@@ -16,6 +16,10 @@ from core.git_workflow.types import (
     GitHistoryRequest,
     GitHistoryResult,
     GitRepositoryStatus,
+    GitWorkflowContext,
+    MergeReasonCode,
+    PreparePullRequestRequest,
+    PullRequestPreparation,
     TaskBranchResult,
 )
 
@@ -74,3 +78,20 @@ class GitProvider(Protocol):
         *,
         timeout_seconds: float,
     ) -> GitCommitResult: ...
+
+    async def prepare_pull_request(
+        self,
+        workspace_root: Path,
+        context: GitWorkflowContext,
+        request: PreparePullRequestRequest,
+        *,
+        timeout_seconds: float,
+    ) -> PullRequestPreparation: ...
+
+    async def validate_repository_state(
+        self,
+        workspace_root: Path,
+        preparation: PullRequestPreparation,
+        *,
+        timeout_seconds: float,
+    ) -> tuple[MergeReasonCode, ...]: ...

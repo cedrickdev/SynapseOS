@@ -19,8 +19,12 @@ from core.git_workflow import (
     GitHistoryRequest,
     GitHistoryResult,
     GitRepositoryStatus,
+    GitWorkflowContext,
     GitWorkflowError,
     GitWorkflowErrorCode,
+    MergeReasonCode,
+    PreparePullRequestRequest,
+    PullRequestPreparation,
     TaskBranchResult,
 )
 from core.git_workflow.ports import GitCommitPolicy
@@ -176,3 +180,45 @@ class RecordingGitProvider:
             subject=request.subject,
             changed_path_count=len(request.paths),
         )
+
+    async def prepare_pull_request(
+        self,
+        workspace_root: Path,
+        context: GitWorkflowContext,
+        request: PreparePullRequestRequest,
+        *,
+        timeout_seconds: float,
+    ) -> PullRequestPreparation:
+        del workspace_root, timeout_seconds
+        await self._invoke()
+        preparation = PullRequestPreparation(
+            project_id=context.project_id,
+            task_id=context.task_id,
+            correlation_id=context.correlation_id,
+            base_branch=request.base_branch,
+            base_sha="a" * 40,
+            head_branch=request.expected_branch,
+            head_sha="c" * 40,
+            title=request.title,
+            summary=request.summary,
+            changed_paths=("file.py",),
+            insertions=1,
+            deletions=0,
+            commit_count=1,
+            author_logical_id=context.actor.profile.id,
+            checksum="0" * 64,
+        )
+        return preparation.model_copy(
+            update={"checksum": preparation.calculated_checksum()},
+        )
+
+    async def validate_repository_state(
+        self,
+        workspace_root: Path,
+        preparation: PullRequestPreparation,
+        *,
+        timeout_seconds: float,
+    ) -> tuple[MergeReasonCode, ...]:
+        del workspace_root, preparation, timeout_seconds
+        await self._invoke()
+        return ()

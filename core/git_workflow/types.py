@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from datetime import datetime
 from enum import StrEnum
@@ -542,6 +544,7 @@ class PullRequestPreparation(_ImmutableGitModel):
     task_id: UUID
     correlation_id: UUID
     base_branch: Annotated[str, Field(pattern=r"^(main|production)$")]
+    base_sha: Annotated[str, Field(pattern=r"^[0-9a-f]{40,64}$")]
     head_branch: Annotated[str, Field(min_length=1, max_length=255)]
     head_sha: Annotated[str, Field(pattern=r"^[0-9a-f]{40,64}$")]
     title: Annotated[str, Field(min_length=1, max_length=200)]
@@ -552,6 +555,17 @@ class PullRequestPreparation(_ImmutableGitModel):
     commit_count: Annotated[int, Field(ge=1, le=10_000)]
     author_logical_id: Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._:-]{0,127}$")]
     checksum: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+    def calculated_checksum(self) -> str:
+        """Return the stable checksum of all preparation fields except checksum."""
+        payload = self.model_dump(mode="json", exclude={"checksum"})
+        encoded = json.dumps(
+            payload,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
 
 
 class GitEvidenceReference(_ImmutableGitModel):

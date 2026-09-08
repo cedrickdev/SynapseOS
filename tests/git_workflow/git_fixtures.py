@@ -42,11 +42,15 @@ def initialized_repository(tmp_path: Path) -> Path:
     return repository.resolve()
 
 
-def local_provider(*, diff_bytes: int = 524_288) -> LocalGitProvider:
+def local_provider(
+    *,
+    diff_bytes: int = 524_288,
+    history_bytes: int = 262_144,
+) -> LocalGitProvider:
     """Build the real bounded local provider used by behavior tests."""
     return LocalGitProvider(
         Path("/usr/bin/git"),
-        GitProcessLimits(diff_bytes=diff_bytes),
+        GitProcessLimits(diff_bytes=diff_bytes, history_bytes=history_bytes),
     )
 
 

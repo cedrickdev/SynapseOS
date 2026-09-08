@@ -469,7 +469,7 @@ git commit -m "feat(git): orchestrate audited operations"
 - Produces read-only `MergeValidationResult(decision=PASS|BLOCK, reason_codes=...)`.
 - Does not create `PullRequest`, `Approval`, remote requests, or Git merges.
 
-- [ ] **Step 1: Write failing preparation tests**
+- [x] **Step 1: Write failing preparation tests**
 
 ```python
 def test_prepare_pull_request_returns_stable_local_metadata(tmp_path: Path) -> None:
@@ -488,13 +488,13 @@ def test_prepare_pull_request_returns_stable_local_metadata(tmp_path: Path) -> N
 Also reject dirty state, no commits, non-ancestor base, merge commits, protected head, stale task
 branch, and truncated diff/history.
 
-- [ ] **Step 2: Run preparation tests and verify RED, then implement GREEN**
+- [x] **Step 2: Run preparation tests and verify RED, then implement GREEN**
 
 Use fixed local commands (`merge-base --is-ancestor`, `rev-list --count`, `diff --numstat`,
 `diff --name-only`) with bounded parsers. Generate title and summary from safe typed fields and hash
 canonical JSON with SHA-256.
 
-- [ ] **Step 3: Write failing deterministic merge-gate tests**
+- [x] **Step 3: Write failing deterministic merge-gate tests**
 
 ```python
 def test_merge_requirements_pass_only_for_fresh_independent_verified_scope() -> None:
@@ -518,12 +518,12 @@ Add literal expected reason-code tests for author equals reviewer, missing/faile
 stale SHA/checksum, wrong correlation/project/task, dirty state, protected head, changed base,
 non-ancestor history, and merge commits. Prove all failures return `BLOCK` and never mutate refs.
 
-- [ ] **Step 4: Implement merge validation and verify GREEN**
+- [x] **Step 4: Implement merge validation and verify GREEN**
 
 Validate immutable evidence first, then repository state. Accumulate only stable reason codes in a
 deterministic order. Never return raw Git output or invoke commit, switch, merge, push, or fetch.
 
-- [ ] **Step 5: Run all Phase 19 tests and commit Task 7**
+- [x] **Step 5: Run all Phase 19 tests and commit Task 7**
 
 ```bash
 TEST_POSTGRES_PORT=55433 .venv/bin/pytest tests/git_workflow \

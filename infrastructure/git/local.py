@@ -25,8 +25,12 @@ from core.git_workflow import (
     GitHistoryResult,
     GitProcessLimits,
     GitRepositoryStatus,
+    GitWorkflowContext,
     GitWorkflowError,
     GitWorkflowErrorCode,
+    MergeReasonCode,
+    PreparePullRequestRequest,
+    PullRequestPreparation,
     TaskBranchResult,
     is_protected_branch,
 )
@@ -527,6 +531,342 @@ class LocalGitProvider:
             subject=subject,
             changed_path_count=len(paths),
         )
+
+    async def prepare_pull_request(
+        self,
+        workspace_root: Path,
+        context: GitWorkflowContext,
+        request: PreparePullRequestRequest,
+        *,
+        timeout_seconds: float,
+    ) -> PullRequestPreparation:
+        """Build bounded local metadata without creating a remote pull request."""
+        root = self._require_repository(workspace_root)
+        if (
+            type(context) is not GitWorkflowContext
+            or type(request) is not PreparePullRequestRequest
+        ):
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_REQUEST,
+                "Git pull-request preparation input invalid.",
+            )
+        if context.workspace_root != root or context.task_id != request.task_id:
+            raise GitWorkflowError(GitWorkflowErrorCode.INVALID_REQUEST, "Git scope invalid.")
+        if not is_protected_branch(request.base_branch):
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.PROTECTED_BRANCH,
+                "Git base branch is not protected.",
+            )
+
+        status = await self.status(root, timeout_seconds=timeout_seconds)
+        if (
+            status.detached
+            or not status.clean
+            or status.operation_in_progress
+            or status.branch != request.expected_branch
+            or status.head_sha is None
+        ):
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_STATE,
+                "Git repository state does not allow pull-request preparation.",
+            )
+
+        ancestor = await self._run(
+            ("merge-base", "--is-ancestor", request.base_branch, "HEAD"),
+            root,
+            timeout_seconds,
+            self._limits.stderr_bytes,
+            accepted_exit_codes=frozenset({0, 1}),
+        )
+        if ancestor.exit_code != 0:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.STALE_STATE,
+                "Git base is not an ancestor of the task branch.",
+            )
+        base_sha = await self._read_scalar(
+            root,
+            ("rev-parse", request.base_branch),
+            timeout_seconds,
+        )
+
+        commit_count_text = await self._read_scalar(
+            root,
+            ("rev-list", "--count", f"{request.base_branch}..HEAD"),
+            timeout_seconds,
+        )
+        try:
+            commit_count = int(commit_count_text)
+        except ValueError as error:
+            error.__traceback__ = None
+            del error
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.GIT_FAILED,
+                "Git commit count invalid.",
+            ) from None
+        if not 1 <= commit_count <= 100:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_STATE,
+                "Git task branch commit count is not allowed.",
+            )
+
+        merge_commits = await self._run(
+            ("rev-list", "--merges", f"{request.base_branch}..HEAD"),
+            root,
+            timeout_seconds,
+            self._limits.history_bytes,
+        )
+        if merge_commits.stdout.truncated:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git merge history exceeds its safe limit.",
+            )
+        if merge_commits.stdout.content:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_STATE,
+                "Git task branch contains a merge commit.",
+            )
+
+        format_value = (
+            f"%H{_FIELD_SEPARATOR}%P{_FIELD_SEPARATOR}%s{_FIELD_SEPARATOR}"
+            f"%an{_FIELD_SEPARATOR}%aI{_RECORD_SEPARATOR}"
+        )
+        history_result = await self._run(
+            (
+                "log",
+                "--first-parent",
+                f"--max-count={commit_count + 1}",
+                f"--format={format_value}",
+                f"{request.base_branch}..HEAD",
+            ),
+            root,
+            timeout_seconds,
+            self._limits.history_bytes,
+        )
+        history_commits = _parse_history(self._decode(history_result.stdout.content))
+        if history_result.stdout.truncated or len(history_commits) != commit_count:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git history is incomplete.",
+            )
+
+        complete_diff = await self.diff(
+            root,
+            GitDiffRequest(mode=GitDiffMode.BASE, base_branch=request.base_branch),
+            timeout_seconds=timeout_seconds,
+        )
+        if complete_diff.truncated:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git comparison exceeds its safe limit.",
+            )
+
+        paths_result = await self._run(
+            ("diff", "--name-only", "-z", "--no-renames", f"{request.base_branch}...HEAD"),
+            root,
+            timeout_seconds,
+            self._limits.diff_bytes,
+        )
+        numstat_result = await self._run(
+            ("diff", "--numstat", "-z", "--no-renames", f"{request.base_branch}...HEAD"),
+            root,
+            timeout_seconds,
+            self._limits.diff_bytes,
+        )
+        if paths_result.stdout.truncated or numstat_result.stdout.truncated:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git comparison exceeds its safe limit.",
+            )
+        changed_paths = tuple(
+            path for path in self._decode(paths_result.stdout.content).split("\x00") if path
+        )
+        if not changed_paths or len(changed_paths) > self._limits.maximum_paths:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git changed-path set is not allowed.",
+            )
+        resolved_paths = self._resolve_paths(root, changed_paths)
+        if resolved_paths != changed_paths:
+            raise GitWorkflowError(GitWorkflowErrorCode.UNSAFE_PATH, "Git path is not allowed.")
+
+        insertions, deletions = self._parse_numstat(numstat_result.stdout.content, changed_paths)
+        preparation = PullRequestPreparation(
+            project_id=context.project_id,
+            task_id=context.task_id,
+            correlation_id=context.correlation_id,
+            base_branch=request.base_branch,
+            base_sha=base_sha,
+            head_branch=request.expected_branch,
+            head_sha=status.head_sha,
+            title=request.title,
+            summary=request.summary,
+            changed_paths=changed_paths,
+            insertions=insertions,
+            deletions=deletions,
+            commit_count=commit_count,
+            author_logical_id=context.actor.profile.id,
+            checksum="0" * 64,
+        )
+        return preparation.model_copy(
+            update={"checksum": preparation.calculated_checksum()},
+        )
+
+    async def validate_repository_state(
+        self,
+        workspace_root: Path,
+        preparation: PullRequestPreparation,
+        *,
+        timeout_seconds: float,
+    ) -> tuple[MergeReasonCode, ...]:
+        """Return deterministic fail-closed reasons without mutating repository refs."""
+        root = self._require_repository(workspace_root)
+        if type(preparation) is not PullRequestPreparation:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.INVALID_REQUEST,
+                "Git merge preparation invalid.",
+            )
+        reasons: set[MergeReasonCode] = set()
+        if not is_protected_branch(preparation.base_branch):
+            reasons.add(MergeReasonCode.UNPROTECTED_BASE)
+        if is_protected_branch(preparation.head_branch):
+            reasons.add(MergeReasonCode.PROTECTED_HEAD)
+
+        status = await self.status(root, timeout_seconds=timeout_seconds)
+        if not status.clean:
+            reasons.add(MergeReasonCode.DIRTY_REPOSITORY)
+        if status.operation_in_progress:
+            reasons.add(MergeReasonCode.OPERATION_IN_PROGRESS)
+        if status.branch != preparation.head_branch or status.head_sha != preparation.head_sha:
+            reasons.add(MergeReasonCode.STALE_PREPARATION)
+        if reasons.intersection(
+            {
+                MergeReasonCode.PROTECTED_HEAD,
+                MergeReasonCode.UNPROTECTED_BASE,
+                MergeReasonCode.DIRTY_REPOSITORY,
+                MergeReasonCode.OPERATION_IN_PROGRESS,
+            }
+        ):
+            return tuple(reason for reason in MergeReasonCode if reason in reasons)
+
+        base_sha = await self._read_scalar(
+            root,
+            ("rev-parse", preparation.base_branch),
+            timeout_seconds,
+        )
+        if base_sha != preparation.base_sha:
+            reasons.add(MergeReasonCode.STALE_PREPARATION)
+        ancestor = await self._run(
+            ("merge-base", "--is-ancestor", preparation.base_branch, "HEAD"),
+            root,
+            timeout_seconds,
+            self._limits.stderr_bytes,
+            accepted_exit_codes=frozenset({0, 1}),
+        )
+        if ancestor.exit_code != 0:
+            reasons.add(MergeReasonCode.BASE_NOT_ANCESTOR)
+        merge_commits = await self._run(
+            ("rev-list", "--merges", f"{preparation.base_branch}..HEAD"),
+            root,
+            timeout_seconds,
+            self._limits.history_bytes,
+        )
+        if merge_commits.stdout.truncated:
+            reasons.add(MergeReasonCode.STALE_PREPARATION)
+        elif merge_commits.stdout.content:
+            reasons.add(MergeReasonCode.MERGE_COMMIT_PRESENT)
+        if reasons:
+            return tuple(reason for reason in MergeReasonCode if reason in reasons)
+
+        complete_diff = await self.diff(
+            root,
+            GitDiffRequest(mode=GitDiffMode.BASE, base_branch=preparation.base_branch),
+            timeout_seconds=timeout_seconds,
+        )
+        if complete_diff.truncated:
+            return (MergeReasonCode.STALE_PREPARATION,)
+
+        try:
+            commit_count = int(
+                await self._read_scalar(
+                    root,
+                    ("rev-list", "--count", f"{preparation.base_branch}..HEAD"),
+                    timeout_seconds,
+                )
+            )
+        except ValueError as error:
+            error.__traceback__ = None
+            del error
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.GIT_FAILED,
+                "Git commit count invalid.",
+            ) from None
+        paths_result = await self._run(
+            (
+                "diff",
+                "--name-only",
+                "-z",
+                "--no-renames",
+                f"{preparation.base_branch}...HEAD",
+            ),
+            root,
+            timeout_seconds,
+            self._limits.diff_bytes,
+        )
+        numstat_result = await self._run(
+            (
+                "diff",
+                "--numstat",
+                "-z",
+                "--no-renames",
+                f"{preparation.base_branch}...HEAD",
+            ),
+            root,
+            timeout_seconds,
+            self._limits.diff_bytes,
+        )
+        if paths_result.stdout.truncated or numstat_result.stdout.truncated:
+            reasons.add(MergeReasonCode.STALE_PREPARATION)
+            return tuple(reason for reason in MergeReasonCode if reason in reasons)
+        changed_paths = tuple(
+            path for path in self._decode(paths_result.stdout.content).split("\x00") if path
+        )
+        insertions, deletions = self._parse_numstat(numstat_result.stdout.content, changed_paths)
+        current = preparation.model_copy(
+            update={
+                "base_sha": base_sha,
+                "head_sha": status.head_sha,
+                "changed_paths": changed_paths,
+                "insertions": insertions,
+                "deletions": deletions,
+                "commit_count": commit_count,
+                "checksum": "0" * 64,
+            }
+        )
+        if current.calculated_checksum() != preparation.checksum:
+            reasons.add(MergeReasonCode.STALE_PREPARATION)
+        return tuple(reason for reason in MergeReasonCode if reason in reasons)
+
+    @classmethod
+    def _parse_numstat(cls, raw: bytes, expected_paths: tuple[str, ...]) -> tuple[int, int]:
+        text = cls._decode(raw)
+        insertions = 0
+        deletions = 0
+        paths: list[str] = []
+        for record in text.split("\x00"):
+            if not record:
+                continue
+            fields = record.split("\t", 2)
+            if len(fields) != 3 or not fields[0].isdigit() or not fields[1].isdigit():
+                raise GitWorkflowError(
+                    GitWorkflowErrorCode.GIT_FAILED,
+                    "Git comparison output invalid.",
+                )
+            insertions += int(fields[0])
+            deletions += int(fields[1])
+            paths.append(fields[2])
+        if tuple(paths) != expected_paths:
+            raise GitWorkflowError(GitWorkflowErrorCode.STALE_STATE, "Git comparison changed.")
+        return insertions, deletions
 
     def _resolve_paths(self, root: Path, requested_paths: tuple[str, ...]) -> tuple[str, ...]:
         paths: list[str] = []

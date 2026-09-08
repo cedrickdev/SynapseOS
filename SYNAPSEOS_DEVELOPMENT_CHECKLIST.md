@@ -1265,19 +1265,19 @@ Créer le premier contrôle indépendant avec droit de blocage.
 
 ## Responsabilités
 
-- [ ] review sécurité
-- [ ] secrets
-- [ ] auth/authz
-- [ ] injections
-- [ ] validation inputs
-- [ ] dépendances
-- [ ] configuration dangereuse
+- [x] review sécurité
+- [x] secrets
+- [x] auth/authz
+- [x] injections
+- [x] validation inputs
+- [x] dépendances
+- [x] configuration dangereuse
 
 ## Décisions
 
-- [ ] PASS
-- [ ] WARN
-- [ ] BLOCK
+- [x] PASS
+- [x] WARN
+- [x] BLOCK
 
 ## Prompt Claude Code — Phase 18
 

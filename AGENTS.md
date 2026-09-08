@@ -9,8 +9,8 @@ model**, **Phase 3 — task state machine**, **Phase 4 — LLM provider boundary
 core**, **Phase 6 — tool registry**, **Phase 7 — permission engine**, **Phase 8 — Skills
 Registry**, **Phase 9 — workspace isolation**, **Phase 10 — transactional write tools**, and
 **Phase 11 — secure command profiles**, **Phase 13 — Loop Engineering V1**, **Phase 14 —
-Developer Agent**, **Phase 15 — Reviewer Agent**, **Phase 16 — Developer–Reviewer workflow**, and
-**Phase 17 — QA Agent**.
+Developer Agent**, **Phase 15 — Reviewer Agent**, **Phase 16 — Developer–Reviewer workflow**,
+**Phase 17 — QA Agent**, and **Phase 18 — Security Agent V1**.
 Phase 12 remains deliberately unimplemented.
 It contains a minimal FastAPI application, typed
 SQLAlchemy models, Alembic migrations, append-only history protection, an audited task workflow,
@@ -37,9 +37,9 @@ container. Phase 11 command execution is an application-level fixed-profile boun
 hostile-code sandbox. Phase 17 adds a separate test-only permission policy for an active QA agent
 on a Developer-owned `WAITING_QA` task; it authorizes only the closed QA test adapter when both
 persisted grants are active. The repository does not include a free-form shell, MCP access,
-provider routing, Security execution, or frontend. Phase 12 remains deliberately unimplemented.
-Phase 17 provides only the QA behavior documented in `docs/qa-agent.md`; Phase 18 and later phases
-are not implemented. Do not
+provider routing, external scanner adapters, Phase 19 Git workflow behavior, or frontend. Phase 12
+remains deliberately unimplemented. Phase 18 provides only the bounded Security behavior
+documented in `docs/security-agent.md`; Phase 19 and later phases are not implemented. Do not
 implement work from a later phase unless the user explicitly starts that phase.
 
 Important files:
@@ -63,12 +63,14 @@ Current source layout:
 - `core/developer/` — Phase 14 role validation, skill context, evidence, reporting, and composition.
 - `core/reviewer/` — Phase 15 read-only validation, analysis, gate, scoring, and composition.
 - `core/qa/` — Phase 17 independent authority, test execution, analysis, gate, and composition.
+- `core/security/` — Phase 18 redaction, scanner boundary, analysis, deterministic veto, and composition.
 - `core/workflows/` — Phase 16 Developer–Reviewer orchestration and the separate Phase 17 QA stage.
 - `skills/` — five repository-owned versioned V1 skill packages.
 - `alembic/` — PostgreSQL migrations.
 - `tests/` — unit and real-PostgreSQL integration tests.
 - `docs/developer-reviewer-workflow.md` — Phase 16 flow, contracts, checkpoints, safety boundary, and phase handoff.
 - `docs/qa-agent.md` — Phase 17 contracts, delegated authority, deterministic gate, workflow, and safety boundary.
+- `docs/security-agent.md` — Phase 18 contracts, read authority, deterministic veto, workflow, and exclusions.
 
 ## Development commands
 
@@ -123,6 +125,13 @@ TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/qa \
   tests/workflows/test_qa_integration.py \
   tests/database/test_qa_permission_policy.py \
   tests/tools/test_qa_command_tool.py -q
+```
+
+For the focused Phase 18 Security Agent and PostgreSQL integration tests, run:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/security tests/workflows \
+  tests/database/test_security_permission_policy.py -q
 ```
 
 Run a single test with:

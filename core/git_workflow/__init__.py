@@ -35,6 +35,7 @@ from core.git_workflow.types import (
     is_protected_branch,
     is_valid_sha,
 )
+from core.git_workflow.workflow import GitWorkflow
 
 __all__ = [
     "GIT_AUDIT_DATA_KEYS",
@@ -60,6 +61,7 @@ __all__ = [
     "GitProcessLimits",
     "GitRepositoryStatus",
     "GitWorkflowContext",
+    "GitWorkflow",
     "GitWorkflowError",
     "GitWorkflowErrorCode",
     "MergeDecision",

@@ -46,9 +46,7 @@ def test_existing_task_branch_is_rejected_without_switching(tmp_path: Path) -> N
     git(repository, "branch", request.branch)
 
     with pytest.raises(GitWorkflowError) as captured:
-        asyncio.run(
-            local_provider().create_task_branch(repository, request, timeout_seconds=2.0)
-        )
+        asyncio.run(local_provider().create_task_branch(repository, request, timeout_seconds=2.0))
 
     assert captured.value.code is GitWorkflowErrorCode.BRANCH_EXISTS
     assert git(repository, "branch", "--show-current") == "main"
@@ -60,9 +58,7 @@ def test_dirty_base_is_rejected_without_creating_branch(tmp_path: Path) -> None:
     (repository / "untracked.txt").write_text("preserve\n", encoding="utf-8")
 
     with pytest.raises(GitWorkflowError) as captured:
-        asyncio.run(
-            local_provider().create_task_branch(repository, request, timeout_seconds=2.0)
-        )
+        asyncio.run(local_provider().create_task_branch(repository, request, timeout_seconds=2.0))
 
     assert captured.value.code is GitWorkflowErrorCode.INVALID_STATE
     assert git(repository, "branch", "--list", request.branch) == ""
@@ -75,9 +71,7 @@ def test_detached_head_is_rejected_without_creating_branch(tmp_path: Path) -> No
     git(repository, "switch", "--detach")
 
     with pytest.raises(GitWorkflowError) as captured:
-        asyncio.run(
-            local_provider().create_task_branch(repository, request, timeout_seconds=2.0)
-        )
+        asyncio.run(local_provider().create_task_branch(repository, request, timeout_seconds=2.0))
 
     assert captured.value.code is GitWorkflowErrorCode.INVALID_STATE
     assert git(repository, "branch", "--list", request.branch) == ""
@@ -89,9 +83,7 @@ def test_non_base_branch_is_rejected(tmp_path: Path) -> None:
     git(repository, "switch", "-c", "temporary")
 
     with pytest.raises(GitWorkflowError) as captured:
-        asyncio.run(
-            local_provider().create_task_branch(repository, request, timeout_seconds=2.0)
-        )
+        asyncio.run(local_provider().create_task_branch(repository, request, timeout_seconds=2.0))
 
     assert captured.value.code is GitWorkflowErrorCode.PROTECTED_BRANCH
 
@@ -105,9 +97,7 @@ def test_in_progress_operation_is_rejected(tmp_path: Path) -> None:
     )
 
     with pytest.raises(GitWorkflowError) as captured:
-        asyncio.run(
-            local_provider().create_task_branch(repository, request, timeout_seconds=2.0)
-        )
+        asyncio.run(local_provider().create_task_branch(repository, request, timeout_seconds=2.0))
 
     assert captured.value.code is GitWorkflowErrorCode.INVALID_STATE
     assert git(repository, "branch", "--list", request.branch) == ""

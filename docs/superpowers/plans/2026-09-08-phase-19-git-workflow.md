@@ -411,7 +411,7 @@ git commit -m "feat(git): audit workflow operations"
   `prepare_pull_request`, and `validate_merge_requirements`.
 - Serializes all operations per canonical workspace and never closes injected resources.
 
-- [ ] **Step 1: Write failing operation-order and audit tests**
+- [x] **Step 1: Write failing operation-order and audit tests**
 
 ```python
 def test_started_audit_precedes_one_provider_call_and_completed_audit() -> None:
@@ -429,18 +429,18 @@ Add tests that start-audit failure prevents Git, provider failure records one sa
 terminal-audit failure does not retry Git, cancellation leaves only start audit, timeout is passed
 once, injected resources are not closed, and concurrent operations for one workspace serialize.
 
-- [ ] **Step 2: Run workflow tests and verify RED**
+- [x] **Step 2: Run workflow tests and verify RED**
 
 Expected: `GitWorkflow` does not exist.
 
-- [ ] **Step 3: Implement the minimal orchestration template**
+- [x] **Step 3: Implement the minimal orchestration template**
 
 Implement one private `_execute` path that validates exact request/context types, acquires the
 workspace lock, records start, invokes one provider operation under the remaining deadline, records
 completed or failed metadata, and clears operation-local references in `finally`. Re-raise
 `CancelledError` immediately after provider cleanup without terminal audit.
 
-- [ ] **Step 4: Verify workflow tests and commit**
+- [x] **Step 4: Verify workflow tests and commit**
 
 ```bash
 .venv/bin/pytest tests/git_workflow/test_workflow.py \

@@ -69,4 +69,3 @@ def validate_write_authority(
             "Git write authority is required.",
         )
     return canonical
-

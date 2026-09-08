@@ -24,9 +24,7 @@ def _task_repository(tmp_path: Path) -> tuple[Path, CreateTaskBranchRequest]:
         kind=TaskBranchKind.FEATURE,
         slug="git-workflow",
     )
-    asyncio.run(
-        local_provider().create_task_branch(repository, branch, timeout_seconds=2.0)
-    )
+    asyncio.run(local_provider().create_task_branch(repository, branch, timeout_seconds=2.0))
     return repository, branch
 
 

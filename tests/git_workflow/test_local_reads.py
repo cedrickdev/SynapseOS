@@ -73,9 +73,7 @@ def test_diff_selects_worktree_staged_and_base_modes(tmp_path: Path) -> None:
     git(repository, "commit", "-m", "feat: stage change")
     (repository / "tracked.txt").write_text("worktree\n", encoding="utf-8")
 
-    worktree = asyncio.run(
-        local_provider().diff(repository, GitDiffRequest(), timeout_seconds=2.0)
-    )
+    worktree = asyncio.run(local_provider().diff(repository, GitDiffRequest(), timeout_seconds=2.0))
     base = asyncio.run(
         local_provider().diff(
             repository,

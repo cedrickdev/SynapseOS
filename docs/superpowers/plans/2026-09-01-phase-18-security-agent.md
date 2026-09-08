@@ -1010,7 +1010,7 @@ git add README.md AGENTS.md SYNAPSEOS_DEVELOPMENT_CHECKLIST.md docs/security-age
 git commit -m "docs(security): complete Phase 18 delivery"
 ```
 
-- [ ] **Step 6: Finish the branch**
+- [x] **Step 6: Finish the branch**
 
 Run independent scoped code and security reviews, convert every accepted finding into a failing
 regression test before fixing it, repeat the full acceptance gate, push

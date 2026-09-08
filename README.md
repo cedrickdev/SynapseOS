@@ -48,14 +48,14 @@ See [`docs/cahier de charges.md`](docs/cahier%20de%20charges.md) for the full pr
 
 ## Status
 
-**Phase 17 — QA Agent completed.** The repository now provides the persistence foundation, an
+**Phase 18 — Security Agent V1 completed.** The repository now provides the persistence foundation, an
 audited task workflow, provider-neutral LLM contracts with an Ollama adapter, a bounded runtime
 agent, five read-only repository tools, deny-by-default PostgreSQL permission enforcement, a
 bounded deterministic registry of versioned skills, isolated audited project workspaces, and four
 compensatable UTF-8 write tools and fixed, bounded test/lint/build/read-only-Git profiles. A
 free-form shell, MCP, general-purpose multi-agent orchestration beyond the explicit
-Developer–Reviewer and QA stages, a Security engine, and the frontend remain intentionally
-unimplemented.
+Developer–Reviewer, QA, and Security stages, external scanner adapters, and the frontend remain
+intentionally unimplemented.
 
 What exists today:
 
@@ -222,6 +222,14 @@ TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/qa \
   tests/tools/test_qa_command_tool.py -q
 ```
 
+The focused Phase 18 suite covers the bounded Security Agent, real PostgreSQL read authority,
+deterministic veto, and the persistent Security workflow:
+
+```bash
+TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/security tests/workflows \
+  tests/database/test_security_permission_policy.py -q
+```
+
 Run `make help` to list every available target.
 
 **Working agreement:** changes are test-driven (write the failing test first), and `make check`
@@ -249,7 +257,7 @@ validated pull request. The near-term sequence is:
 15. **Reviewer Agent** — completed
 16. **Developer ↔ Reviewer workflow** — completed
 17. **QA Agent** — completed
-18. Security Agent V1 — not started
+18. **Security Agent V1** — completed
 
 The complete phased plan (up to a full engineering organisation) lives in
 [`SYNAPSEOS_DEVELOPMENT_CHECKLIST.md`](SYNAPSEOS_DEVELOPMENT_CHECKLIST.md).
@@ -271,6 +279,7 @@ The complete phased plan (up to a full engineering organisation) lives in
 - **Reviewer Agent:** [`docs/reviewer-agent.md`](docs/reviewer-agent.md)
 - **Developer ↔ Reviewer workflow:** [`docs/developer-reviewer-workflow.md`](docs/developer-reviewer-workflow.md)
 - **QA Agent and workflow:** [`docs/qa-agent.md`](docs/qa-agent.md)
+- **Security Agent and workflow:** [`docs/security-agent.md`](docs/security-agent.md)
 - **Architecture decisions (ADRs):** [`docs/adr/`](docs/adr/)
 - **Repository working agreement:** [`AGENTS.md`](AGENTS.md)
 

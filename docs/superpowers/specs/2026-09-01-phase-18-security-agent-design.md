@@ -140,8 +140,7 @@ class SecurityScannerPort(Protocol):
     async def scan(
         self,
         request: ValidatedSecurityScanRequest,
-    ) -> SecurityScanReport:
-        ...
+    ) -> SecurityScanReport: ...
 ```
 
 The validated scan request exposes only bounded invocation-local source and immutable scope. The

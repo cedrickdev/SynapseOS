@@ -67,7 +67,7 @@ strict mypy.
   `SanitizedSecuritySource`, `SecurityAnalysis`, `SecurityRequest`,
   `SecurityScannerSummary`, `SecurityResult`, `SecurityErrorCode`, and `SecurityError`.
 
-- [ ] **Step 1: Write failing immutable-contract tests**
+- [x] **Step 1: Write failing immutable-contract tests**
 
 Create tests for strict nested revalidation, tuple copying, unknown-field rejection, hidden input
 errors, normalized relative paths, finite confidence and duration values, bounded line ranges,
@@ -94,7 +94,7 @@ def test_block_result_requires_confirmed_high_impact_finding() -> None:
         )
 ```
 
-- [ ] **Step 2: Run focused tests and observe RED**
+- [x] **Step 2: Run focused tests and observe RED**
 
 ```bash
 .venv/bin/pytest tests/security/test_types.py tests/security/test_errors.py -q
@@ -102,7 +102,7 @@ def test_block_result_requires_confirmed_high_impact_finding() -> None:
 
 Expected: test collection fails because `core.security` does not exist.
 
-- [ ] **Step 3: Implement exact enums and immutable models**
+- [x] **Step 3: Implement exact enums and immutable models**
 
 Use `ConfigDict(frozen=True, extra="forbid", strict=True, hide_input_in_errors=True,
 revalidate_instances="always")`. Keep Security-specific enums in `core/security/types.py`.
@@ -244,11 +244,11 @@ of 65,536 UTF-8 bytes, and truthful decision shapes:
 `INVALID_ANALYSIS`, `TIMEOUT`, and `INTERNAL_FAILURE`. `SecurityError` retains only the code and a
 constant safe message.
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run the Task 1 command. Expected: all tests pass without warnings.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add core/security tests/security
@@ -271,7 +271,7 @@ git commit -m "feat(security): define bounded security contracts"
 - Produces: `ValidatedSecurityRequest`, `validate_security_request(request: SecurityRequest)`, and
   `validate_security_profile_authority(profile: AgentProfile)`.
 
-- [ ] **Step 1: Write failing preflight tests**
+- [x] **Step 1: Write failing preflight tests**
 
 Cover valid read-only authority and rejection for wrong role, inactive profile, autonomy outside
 zero or one, identity reuse, profile/context mismatch, task/project/correlation mismatch, missing
@@ -299,7 +299,7 @@ def test_validation_requires_four_independent_role_identities() -> None:
     assert raised.value.code is SecurityErrorCode.INVALID_SCOPE
 ```
 
-- [ ] **Step 2: Run validation tests and observe RED**
+- [x] **Step 2: Run validation tests and observe RED**
 
 ```bash
 .venv/bin/pytest tests/security/test_validation.py -q
@@ -307,14 +307,12 @@ def test_validation_requires_four_independent_role_identities() -> None:
 
 Expected: import failure for `core.security.validation`.
 
-- [ ] **Step 3: Implement canonical least-privilege validation**
+- [x] **Step 3: Implement canonical least-privilege validation**
 
 Define exact authority sets:
 
 ```python
-SECURITY_TOOL_IDS = frozenset(
-    {"read_file", "list_files", "search_text", "git_status", "git_diff"}
-)
+SECURITY_TOOL_IDS = frozenset({"read_file", "list_files", "search_text", "git_status", "git_diff"})
 _READ_TOOLS = frozenset({"read_file", "list_files", "search_text"})
 _GIT_TOOLS = frozenset({"git_status", "git_diff"})
 _REQUIRED_PERMISSIONS = frozenset({Permission.FILESYSTEM_READ})
@@ -329,14 +327,14 @@ status, autonomy `0` or `1`, at least one filesystem read tool, optional Git too
 correlation across request and execution context, successful canonical QA evidence, and exact test
 equality. Clear raw exception frames and expose only stable `SecurityError` values.
 
-- [ ] **Step 4: Verify GREEN with contract regressions**
+- [x] **Step 4: Verify GREEN with contract regressions**
 
 ```bash
 .venv/bin/pytest tests/security/test_types.py tests/security/test_errors.py \
   tests/security/test_validation.py -q
 ```
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add core/security tests/security
@@ -367,7 +365,7 @@ class SecurityScannerPort(Protocol):
     async def scan(self, request: ValidatedSecurityRequest) -> SecurityScannerReport: ...
 ```
 
-- [ ] **Step 1: Write failing redaction tests**
+- [x] **Step 1: Write failing redaction tests**
 
 Test redaction of PEM private-key blocks and explicit quoted assignments for `api_key`, `apikey`,
 `client_secret`, `password`, `secret`, and `token`. Assert detected values are absent from sanitized
@@ -379,9 +377,7 @@ without values, and no I/O or persistent history.
 ```python
 def test_private_key_is_redacted_without_retaining_its_value() -> None:
     secret = "-----BEGIN PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY-----"
-    request = security_request(
-        affected_files=(security_source_file("config/key.pem", secret),)
-    )
+    request = security_request(affected_files=(security_source_file("config/key.pem", secret),))
     sanitized = sanitize_security_source(request)
     assert secret not in sanitized.files[0].content
     assert "private-material" not in repr(sanitized)
@@ -389,18 +385,18 @@ def test_private_key_is_redacted_without_retaining_its_value() -> None:
     assert sanitized.findings[0].confirmation is SecurityConfirmation.CONFIRMED
 ```
 
-- [ ] **Step 2: Write failing scanner-protocol contract tests**
+- [x] **Step 2: Write failing scanner-protocol contract tests**
 
 Create a recording fake implementing `SecurityScannerPort`. Assert the protocol accepts one
 validated request, returns one canonical metadata-only report, and exposes no close/retry API.
 
-- [ ] **Step 3: Run Task 3 tests and observe RED**
+- [x] **Step 3: Run Task 3 tests and observe RED**
 
 ```bash
 .venv/bin/pytest tests/security/test_redaction.py tests/security/test_ports.py -q
 ```
 
-- [ ] **Step 4: Implement the narrow local filter and scanner protocol**
+- [x] **Step 4: Implement the narrow local filter and scanner protocol**
 
 Use precompiled bounded regular expressions. Replace values with `[REDACTED_SECRET]`; never copy a
 matched value into any object. Generate evidence IDs from path-or-diff location and line number,
@@ -411,14 +407,14 @@ starts no process, makes no network call, and writes no log.
 The scanner port returns only a canonical `SecurityScannerReport`. Do not create Semgrep, Trivy,
 ZAP, shell, subprocess, HTTP, or MCP implementations.
 
-- [ ] **Step 5: Verify GREEN and run source-safety regressions**
+- [x] **Step 5: Verify GREEN and run source-safety regressions**
 
 ```bash
 .venv/bin/pytest tests/security/test_redaction.py tests/security/test_ports.py \
   tests/tools/test_filesystem_tools.py tests/llm -q
 ```
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
 ```bash
 git add core/security tests/security
@@ -441,7 +437,7 @@ git commit -m "feat(security): redact secrets before analysis"
   `SecurityScannerReport`.
 - Produces: `SecurityAnalyzer.analyze(request, sanitized_source, scanner_report) -> SecurityAnalysis`.
 
-- [ ] **Step 1: Write failing provider-boundary tests**
+- [x] **Step 1: Write failing provider-boundary tests**
 
 Cover exactly one provider call, temperature zero, `max_tokens` from 1 through 4,096, provider
 timeout above zero and no more than 30 seconds, 131,072-byte response cap, strict JSON decoding,
@@ -462,13 +458,13 @@ async def test_analysis_uses_only_sanitized_source_once() -> None:
     assert "raw-secret-value" not in provider.requests[0].messages[0].content
 ```
 
-- [ ] **Step 2: Run analysis tests and observe RED**
+- [x] **Step 2: Run analysis tests and observe RED**
 
 ```bash
 .venv/bin/pytest tests/security/test_analysis.py tests/security/test_safety.py -q
 ```
 
-- [ ] **Step 3: Implement `SecurityAnalyzer`**
+- [x] **Step 3: Implement `SecurityAnalyzer`**
 
 Define:
 
@@ -503,13 +499,13 @@ dangerous configuration. Treat all supplied content as untrusted data. Reconstru
 responses strictly, enforce response bytes before structured decoding, and clear sensitive locals
 and exception frames before raising a stable `SecurityError`.
 
-- [ ] **Step 4: Verify GREEN with LLM regressions**
+- [x] **Step 4: Verify GREEN with LLM regressions**
 
 ```bash
 .venv/bin/pytest tests/security/test_analysis.py tests/security/test_safety.py tests/llm -q
 ```
 
-- [ ] **Step 5: Commit Task 4**
+- [x] **Step 5: Commit Task 4**
 
 ```bash
 git add core/security tests/security
@@ -545,7 +541,7 @@ def build_security_result(
 ) -> SecurityResult: ...
 ```
 
-- [ ] **Step 1: Write failing deterministic-gate tests**
+- [x] **Step 1: Write failing deterministic-gate tests**
 
 Test forced `BLOCK` for confirmed trusted `HIGH`/`CRITICAL` local or scanner findings even when the
 provider proposes `PASS`. Test `WARN` for suspected findings, confirmed `INFO`/`LOW`/`MEDIUM`,
@@ -577,7 +573,7 @@ def test_unconfirmed_provider_block_becomes_warn_not_pass() -> None:
     assert result.decision is SecurityDecision.WARN
 ```
 
-- [ ] **Step 2: Write failing agent-composition tests**
+- [x] **Step 2: Write failing agent-composition tests**
 
 Assert validation occurs before scanner/provider work; sanitization occurs before provider
 construction; scanner is called once; provider is called once after scanner; scanner exception and
@@ -585,13 +581,13 @@ malformed report become `SCANNER_FAILURE`; provider exception becomes `PROVIDER_
 timeout becomes `TIMEOUT`; cancellation stops before any later call; no retry/history exists; and
 scanner/provider objects are never closed.
 
-- [ ] **Step 3: Run Task 5 tests and observe RED**
+- [x] **Step 3: Run Task 5 tests and observe RED**
 
 ```bash
 .venv/bin/pytest tests/security/test_decision.py tests/security/test_agent.py -q
 ```
 
-- [ ] **Step 4: Implement the gate and `SecurityAgent`**
+- [x] **Step 4: Implement the gate and `SecurityAgent`**
 
 Implement:
 
@@ -620,13 +616,13 @@ caller cannot remove trust from the built-in local redactor, and provider eviden
 suspected. Redact exact source echoes and obvious secret markers from public rationale/findings.
 Re-raise cancellation immediately and sanitize every other failure.
 
-- [ ] **Step 5: Verify GREEN and all Security unit tests**
+- [x] **Step 5: Verify GREEN and all Security unit tests**
 
 ```bash
 .venv/bin/pytest tests/security -q
 ```
 
-- [ ] **Step 6: Commit Task 5**
+- [x] **Step 6: Commit Task 5**
 
 ```bash
 git add core/security tests/security
@@ -682,7 +678,7 @@ class SecurityRunner(Protocol):
     async def run(self, request: SecurityRequest) -> SecurityResult: ...
 ```
 
-- [ ] **Step 1: Write failing workflow contract tests**
+- [x] **Step 1: Write failing workflow contract tests**
 
 Cover immutable nested reconstruction, four distinct persistent agent UUIDs, exact nested task and
 correlation scope, and truthful terminal pairs:
@@ -703,7 +699,7 @@ VALID_SECURITY_TERMINALS = {
 }
 ```
 
-- [ ] **Step 2: Write failing real-PostgreSQL preflight tests**
+- [x] **Step 2: Write failing real-PostgreSQL preflight tests**
 
 Use Alembic-backed fixtures. Cover missing task/agents, non-`WAITING_SECURITY` state, wrong roles,
 inactive agents, reused UUIDs/slugs, Developer assignment mismatch, nested slug/profile mismatch,
@@ -722,14 +718,14 @@ def test_security_preflight_requires_waiting_security(db_session: Session) -> No
     assert raised.value.code is SecurityWorkflowErrorCode.INVALID_STATE
 ```
 
-- [ ] **Step 3: Run Task 6 tests and observe RED**
+- [x] **Step 3: Run Task 6 tests and observe RED**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_security_types.py \
   tests/workflows/test_security_validation.py -q
 ```
 
-- [ ] **Step 4: Implement workflow types, errors, port, and persistent preflight**
+- [x] **Step 4: Implement workflow types, errors, port, and persistent preflight**
 
 Strictly canonicalize nested values. Load and row-lock the task, then load Developer, Reviewer, QA,
 and Security agents. Require exact active roles, four distinct identities, preserved Developer
@@ -739,14 +735,14 @@ and managed-workspace scope; it does not claim PostgreSQL can authenticate calle
 bytes. Return a frozen slotted `ValidatedSecurityWorkflowScope`. Never commit, invoke Security, or
 close the caller-owned session during validation.
 
-- [ ] **Step 5: Verify GREEN with QA workflow regressions**
+- [x] **Step 5: Verify GREEN with QA workflow regressions**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_security_types.py \
   tests/workflows/test_security_validation.py tests/workflows/test_qa_validation.py -q
 ```
 
-- [ ] **Step 6: Commit Task 6**
+- [x] **Step 6: Commit Task 6**
 
 ```bash
 git add core/workflows tests/workflows
@@ -772,7 +768,7 @@ git commit -m "feat(workflow): validate persistent security scope"
 - Produces: `SecurityWorkflowOrchestrator.run(request) -> SecurityWorkflowResult` and committed
   Security checkpoint helpers.
 
-- [ ] **Step 1: Write failing checkpoint and audit tests**
+- [x] **Step 1: Write failing checkpoint and audit tests**
 
 Cover row-locked `SECURITY_STARTED`, duplicate/stale start rejection, atomic completion plus state
 transition, one correlation ID, rollback, append-only behavior, and an exact audit allowlist. Assert
@@ -780,7 +776,7 @@ audit data contains counts and stable identifiers only and excludes source, diff
 explanations, remediations, evidence text, secret values, QA details, prompts, responses, scanner
 output, provider metadata, and raw exceptions.
 
-- [ ] **Step 2: Write failing orchestration tests**
+- [x] **Step 2: Write failing orchestration tests**
 
 Cover one Security call and exact transitions:
 
@@ -797,7 +793,7 @@ scanner/provider/runtime failure to `WAITING_HUMAN` through `SECURITY_ESCALATED`
 no later checkpoint, concurrent human transition winning, database failure with no retry, no
 automatic Developer/Git/deployment call, and caller-owned session/runner.
 
-- [ ] **Step 3: Run Task 7 tests and observe RED**
+- [x] **Step 3: Run Task 7 tests and observe RED**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_security_audit.py \
@@ -805,7 +801,7 @@ TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows/test_security_audit.py
   tests/workflows/test_security_safety.py -q
 ```
 
-- [ ] **Step 4: Implement durable Security checkpoints**
+- [x] **Step 4: Implement durable Security checkpoints**
 
 Define:
 
@@ -823,7 +819,7 @@ the task row lock, verifies expected state and Developer assignment, calls
 decision, confidence, finding counts by severity, confirmed blocker count, scanner suite ID,
 scanner completion/truncation flags, and correlation scope.
 
-- [ ] **Step 5: Implement `SecurityWorkflowOrchestrator`**
+- [x] **Step 5: Implement `SecurityWorkflowOrchestrator`**
 
 ```python
 class SecurityWorkflowOrchestrator:
@@ -840,13 +836,13 @@ permitted transition. Operational failures use a bounded recovery deadline to at
 `WAITING_HUMAN` only while the task remains `WAITING_SECURITY`. Cancellation re-raises immediately
 without an escalation checkpoint.
 
-- [ ] **Step 6: Verify GREEN with Phase 16 and 17 workflow regressions**
+- [x] **Step 6: Verify GREEN with Phase 16 and 17 workflow regressions**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/workflows -q
 ```
 
-- [ ] **Step 7: Commit Task 7**
+- [x] **Step 7: Commit Task 7**
 
 ```bash
 git add core/workflows tests/workflows
@@ -871,7 +867,7 @@ git commit -m "feat(workflow): orchestrate audited security gate"
 - Produces: `SQLAlchemySecurityPermissionPolicy` and real-PostgreSQL acceptance evidence for the
   complete Phase 18 data path.
 
-- [ ] **Step 1: Write failing deny-by-default policy tests**
+- [x] **Step 1: Write failing deny-by-default policy tests**
 
 Define the only accepted tool capabilities:
 
@@ -892,14 +888,14 @@ autonomy above one, wrong task/project/run, non-running run, wrong task state, s
 write/shell/deployment requests, and production access. Test database failures are sanitized and
 the session remains caller-owned.
 
-- [ ] **Step 2: Run policy tests and observe RED**
+- [x] **Step 2: Run policy tests and observe RED**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest \
   tests/database/test_security_permission_policy.py -q
 ```
 
-- [ ] **Step 3: Implement `SQLAlchemySecurityPermissionPolicy`**
+- [x] **Step 3: Implement `SQLAlchemySecurityPermissionPolicy`**
 
 Canonicalize `PolicyRequest`, require timezone-aware evaluation time, match one exact capability
 entry, load the active Security run/task/Developer scope, query only required live grants, and
@@ -907,7 +903,7 @@ return existing `PermissionDecision` values. Deny every capability not listed. C
 failures to the existing sanitized `PermissionPolicyError`. Do not commit, roll back, close the
 session, or mutate grants.
 
-- [ ] **Step 4: Write failing concrete Security and workflow integration tests**
+- [x] **Step 4: Write failing concrete Security and workflow integration tests**
 
 Against the Alembic-built PostgreSQL schema, persist Developer, Reviewer, QA, and Security agents,
 a `WAITING_SECURITY` task assigned to Developer, active grants, and a Security run. Compose a real
@@ -920,7 +916,7 @@ a `WAITING_SECURITY` task assigned to Developer, active grants, and a Security r
 - scanner/provider failure produces `SECURITY_ESCALATED` and no duplicated work;
 - all persisted data is metadata-only and append-only.
 
-- [ ] **Step 5: Run integration tests and verify GREEN**
+- [x] **Step 5: Run integration tests and verify GREEN**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/security/test_integration.py \
@@ -928,14 +924,14 @@ TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/security/test_integration.py \
   tests/database/test_security_permission_policy.py -q
 ```
 
-- [ ] **Step 6: Run Phase 18 and regression suites**
+- [x] **Step 6: Run Phase 18 and regression suites**
 
 ```bash
 TEST_POSTGRES_PORT=55432 .venv/bin/pytest tests/security tests/workflows \
   tests/database/test_security_permission_policy.py -q
 ```
 
-- [ ] **Step 7: Commit Task 8**
+- [x] **Step 7: Commit Task 8**
 
 ```bash
 git add infrastructure/permissions tests/database tests/security tests/workflows
@@ -957,14 +953,14 @@ git commit -m "test(security): verify concrete security workflow"
 - Consumes: verified Phase 18 behavior and command evidence.
 - Produces: truthful operating documentation and only genuinely completed Phase 18 checkboxes.
 
-- [ ] **Step 1: Document exact Phase 18 behavior**
+- [x] **Step 1: Document exact Phase 18 behavior**
 
 Document request/result contracts, source bounds, local redaction limits, scanner port, provider
 bounds, trusted confirmation, deterministic gate, read-only authority, state transitions, audit
 allowlist, error behavior, lifecycle ownership, example composition, and explicit exclusions.
 Update repository status and focused test commands without claiming external scanners or Phase 19.
 
-- [ ] **Step 2: Run complete verification before checking boxes**
+- [x] **Step 2: Run complete verification before checking boxes**
 
 ```bash
 TEST_POSTGRES_PORT=55432 make test
@@ -979,7 +975,7 @@ provider payload persistence, arbitrary provider metadata, retries, duplicate ca
 closure, accidental Phase 19 work, and AI co-author trailers. Run Docker/API health only when
 Docker is available and report unavailable evidence honestly.
 
-- [ ] **Step 3: Update only verified Phase 18 checkboxes**
+- [x] **Step 3: Update only verified Phase 18 checkboxes**
 
 Mark the seven responsibility boxes and three decision boxes only after tests prove them:
 
@@ -996,7 +992,7 @@ Mark the seven responsibility boxes and three decision boxes only after tests pr
 
 Do not modify Phase 19 or later checkboxes.
 
-- [ ] **Step 4: Re-run final verification after documentation changes**
+- [x] **Step 4: Re-run final verification after documentation changes**
 
 ```bash
 TEST_POSTGRES_PORT=55432 make test
@@ -1006,7 +1002,7 @@ make typecheck
 git diff --check origin/main...HEAD
 ```
 
-- [ ] **Step 5: Commit verified documentation**
+- [x] **Step 5: Commit verified documentation**
 
 ```bash
 git add README.md AGENTS.md SYNAPSEOS_DEVELOPMENT_CHECKLIST.md docs/security-agent.md \

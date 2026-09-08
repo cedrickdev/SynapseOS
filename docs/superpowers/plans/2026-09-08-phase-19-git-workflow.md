@@ -140,7 +140,7 @@ git commit -m "feat(git): define bounded workflow contracts"
 - Produces `LocalGitProvider(git_executable: Path, limits: GitProcessLimits)`.
 - Internal `_run_git(arguments, workspace, timeout, stdout_limit)` accepts adapter-owned tuples only.
 
-- [ ] **Step 1: Write failing real-repository read tests**
+- [x] **Step 1: Write failing real-repository read tests**
 
 ```python
 def test_status_diff_and_history_are_structured_and_bounded(tmp_path: Path) -> None:
@@ -164,11 +164,11 @@ def test_status_diff_and_history_are_structured_and_bounded(tmp_path: Path) -> N
 Add tests for staged and base-branch diffs, safe path filters, detached HEAD, operation-state flags,
 history offset/limit, non-UTF-8 output, and explicit truncation.
 
-- [ ] **Step 2: Run read tests and verify RED**
+- [x] **Step 2: Run read tests and verify RED**
 
 Expected: import or missing-method failures for `LocalGitProvider`.
 
-- [ ] **Step 3: Implement minimal read commands and parsers**
+- [x] **Step 3: Implement minimal read commands and parsers**
 
 Use exact fixed argument vectors:
 
@@ -181,20 +181,20 @@ Use exact fixed argument vectors:
 Resolve path filters with `resolve_workspace_path` and `relative_workspace_path`. Parse into Task 1
 models and fail closed on malformed/truncated structured output.
 
-- [ ] **Step 4: Write and verify RED process-safety tests**
+- [x] **Step 4: Write and verify RED process-safety tests**
 
 Tests must prove a recording executable receives only allowlisted flags; host `PATH`,
 `GIT_EXTERNAL_DIFF`, `GIT_CONFIG_COUNT`, credentials, askpass, and proxy variables are absent;
 timeouts kill the process group; cancellation kills it and raises `CancelledError`; and one request
 causes one subprocess invocation.
 
-- [ ] **Step 5: Implement process bounds and verify GREEN**
+- [x] **Step 5: Implement process bounds and verify GREEN**
 
 Use `asyncio.create_subprocess_exec`, `stdin=DEVNULL`, bounded concurrent stdout/stderr drains,
 `start_new_session=True`, `asyncio.timeout`, terminate-then-kill cleanup, and a literal minimal
 environment. Convert all non-cancellation failures to sanitized `GitWorkflowError` values.
 
-- [ ] **Step 6: Run focused quality checks and commit Task 2**
+- [x] **Step 6: Run focused quality checks and commit Task 2**
 
 ```bash
 .venv/bin/pytest tests/git_workflow/test_local_reads.py \

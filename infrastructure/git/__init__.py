@@ -1,1 +1,5 @@
-"""Git provider abstraction (placeholder — implemented in Phase 19)."""
+"""Local Git provider integrations."""
+
+from infrastructure.git.local import LocalGitProvider
+
+__all__ = ["LocalGitProvider"]

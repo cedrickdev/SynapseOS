@@ -58,6 +58,9 @@ _DIFF_ARGUMENTS = (
     "--no-renames",
     "--src-prefix=a/",
     "--dst-prefix=b/",
+    "--patch",
+    "--numstat",
+    "-z",
 )
 _FIELD_SEPARATOR = "\x1f"
 _RECORD_SEPARATOR = "\x1e"
@@ -243,13 +246,16 @@ class LocalGitProvider:
             timeout_seconds,
             self._limits.diff_bytes,
         )
-        patch = self._decode(result.stdout.content)
-        insertions, deletions = _count_patch_lines(patch)
+        patch, changed_paths, insertions, deletions = _parse_diff_output(result.stdout.content)
+        if changed_paths:
+            resolved_paths = self._resolve_paths(root, changed_paths)
+            if resolved_paths != changed_paths:
+                raise GitWorkflowError(GitWorkflowErrorCode.UNSAFE_PATH, "Git path is not allowed.")
         return GitDiffResult(
             mode=request.mode,
             base_branch=request.base_branch,
             patch=patch,
-            changed_paths=(),
+            changed_paths=changed_paths,
             insertions=insertions,
             deletions=deletions,
             truncated=result.stdout.truncated,
@@ -471,9 +477,12 @@ class LocalGitProvider:
                     "-c",
                     "commit.gpgSign=false",
                     "commit",
+                    "--only",
                     "--no-gpg-sign",
                     "-m",
                     request.subject,
+                    "--",
+                    *paths,
                 ),
                 root,
                 timeout_seconds,
@@ -642,8 +651,13 @@ class LocalGitProvider:
             timeout_seconds,
             self._limits.history_bytes,
         )
+        if history_result.stdout.truncated:
+            raise GitWorkflowError(
+                GitWorkflowErrorCode.RESOURCE_LIMIT,
+                "Git history is incomplete.",
+            )
         history_commits = _parse_history(self._decode(history_result.stdout.content))
-        if history_result.stdout.truncated or len(history_commits) != commit_count:
+        if len(history_commits) != commit_count:
             raise GitWorkflowError(
                 GitWorkflowErrorCode.RESOURCE_LIMIT,
                 "Git history is incomplete.",
@@ -784,6 +798,28 @@ class LocalGitProvider:
         )
         if complete_diff.truncated:
             return (MergeReasonCode.STALE_PREPARATION,)
+
+        format_value = (
+            f"%H{_FIELD_SEPARATOR}%P{_FIELD_SEPARATOR}%s{_FIELD_SEPARATOR}"
+            f"%an{_FIELD_SEPARATOR}%aI{_RECORD_SEPARATOR}"
+        )
+        history_result = await self._run(
+            (
+                "log",
+                "--first-parent",
+                f"--max-count={preparation.commit_count + 1}",
+                f"--format={format_value}",
+                f"{preparation.base_branch}..HEAD",
+            ),
+            root,
+            timeout_seconds,
+            self._limits.history_bytes,
+        )
+        if history_result.stdout.truncated:
+            return (MergeReasonCode.STALE_PREPARATION,)
+        history_commits = _parse_history(self._decode(history_result.stdout.content))
+        if len(history_commits) != preparation.commit_count:
+            reasons.add(MergeReasonCode.STALE_PREPARATION)
 
         try:
             commit_count = int(
@@ -1104,15 +1140,42 @@ class LocalGitProvider:
         )
 
 
-def _count_patch_lines(patch: str) -> tuple[int, int]:
+def _parse_diff_output(value: bytes) -> tuple[str, tuple[str, ...], int, int]:
+    if not value:
+        return "", (), 0, 0
+    metadata, separator, patch_bytes = value.partition(b"\x00\x00")
+    if not separator:
+        raise GitWorkflowError(GitWorkflowErrorCode.GIT_FAILED, "Git diff output invalid.")
+    try:
+        metadata_text = metadata.decode("utf-8", errors="strict")
+        patch = patch_bytes.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        error.__traceback__ = None
+        del error
+        raise GitWorkflowError(
+            GitWorkflowErrorCode.GIT_FAILED,
+            "Git returned invalid text.",
+        ) from None
+    paths: list[str] = []
     insertions = 0
     deletions = 0
-    for line in patch.splitlines():
-        if line.startswith("+") and not line.startswith("+++"):
-            insertions += 1
-        elif line.startswith("-") and not line.startswith("---"):
-            deletions += 1
-    return insertions, deletions
+    for record in metadata_text.split("\x00"):
+        if not record:
+            continue
+        fields = record.split("\t", 2)
+        if len(fields) != 3 or not fields[2]:
+            raise GitWorkflowError(GitWorkflowErrorCode.GIT_FAILED, "Git diff output invalid.")
+        if fields[0] == fields[1] == "-":
+            added = removed = 0
+        elif fields[0].isdigit() and fields[1].isdigit():
+            added = int(fields[0])
+            removed = int(fields[1])
+        else:
+            raise GitWorkflowError(GitWorkflowErrorCode.GIT_FAILED, "Git diff output invalid.")
+        paths.append(fields[2])
+        insertions += added
+        deletions += removed
+    return patch, tuple(paths), insertions, deletions
 
 
 def _parse_history(value: str) -> list[GitCommitSummary]:

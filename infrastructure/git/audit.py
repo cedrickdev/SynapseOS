@@ -6,7 +6,7 @@ from typing import Never
 
 from pydantic import ValidationError
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from core.enums import AuditActorType
 from core.git_workflow import (
@@ -126,3 +126,25 @@ class SQLAlchemyGitAuditRecorder:
             GitWorkflowErrorCode.AUDIT_FAILED,
             "Git workflow audit is unavailable.",
         )
+
+
+class TransactionalSQLAlchemyGitAuditRecorder:
+    """Persist each lifecycle event in one independent durable transaction."""
+
+    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+        if not isinstance(session_factory, sessionmaker):
+            raise ValueError("Git audit session factory is invalid")
+        self._session_factory = session_factory
+
+    def record(self, record: GitAuditRecord) -> None:
+        """Commit one record before returning without retaining network resources."""
+        try:
+            with self._session_factory() as session:
+                SQLAlchemyGitAuditRecorder(session).record(record)
+                session.commit()
+        except GitWorkflowError:
+            raise
+        except Exception as error:
+            error.__traceback__ = None
+            del error
+            SQLAlchemyGitAuditRecorder._unavailable()

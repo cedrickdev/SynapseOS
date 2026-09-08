@@ -10,12 +10,19 @@ import pytest
 
 from core.git_workflow import (
     CreateTaskBranchRequest,
+    GitProcessLimits,
     GitWorkflowError,
     GitWorkflowErrorCode,
     TaskBranchKind,
 )
+from infrastructure.git import LocalGitProvider
 from infrastructure.git.policy import ObviousSecretCommitPolicy
-from tests.git_workflow.git_fixtures import git, initialized_repository, local_provider
+from tests.git_workflow.git_fixtures import (
+    executable_script,
+    git,
+    initialized_repository,
+    local_provider,
+)
 from tests.git_workflow.test_commits import _commit_request, _task_repository
 
 
@@ -118,3 +125,36 @@ def test_symlink_path_is_rejected_without_staging(tmp_path: Path) -> None:
 
     assert captured.value.code is GitWorkflowErrorCode.UNSAFE_PATH
     assert git(repository, "diff", "--cached", "--name-only") == ""
+
+
+def test_commit_excludes_file_staged_after_policy_inspection(tmp_path: Path) -> None:
+    repository, branch = _task_repository(tmp_path)
+    (repository / "selected.txt").write_text("selected\n", encoding="utf-8")
+    (repository / "intruder.txt").write_text(
+        "API_KEY=sk-live-not-inspected\n",
+        encoding="utf-8",
+    )
+    wrapper = executable_script(
+        tmp_path / "git-wrapper",
+        """for argument in "$@"; do
+  if [ "$argument" = "commit" ]; then
+    /usr/bin/git add -- intruder.txt
+    break
+  fi
+done
+exec /usr/bin/git "$@"
+""",
+    )
+    provider = LocalGitProvider(wrapper, GitProcessLimits())
+
+    asyncio.run(
+        provider.commit_changes(
+            repository,
+            _commit_request(branch, "selected.txt"),
+            ObviousSecretCommitPolicy(),
+            timeout_seconds=2.0,
+        )
+    )
+
+    assert git(repository, "show", "--format=", "--name-only", "HEAD") == "selected.txt"
+    assert git(repository, "diff", "--cached", "--name-only") == "intruder.txt"

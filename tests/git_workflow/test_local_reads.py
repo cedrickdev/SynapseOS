@@ -104,6 +104,7 @@ def test_diff_filters_one_safe_relative_path(tmp_path: Path) -> None:
 
     assert "tracked.txt" in result.patch
     assert "other.txt" not in result.patch
+    assert result.changed_paths == ("tracked.txt",)
 
 
 def test_diff_rejects_symlink_path_filter(tmp_path: Path) -> None:

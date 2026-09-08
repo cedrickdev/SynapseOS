@@ -218,3 +218,28 @@ def test_prepare_pull_request_rejects_truncated_diff(tmp_path: Path) -> None:
         )
 
     assert captured.value.code is GitWorkflowErrorCode.RESOURCE_LIMIT
+
+
+def add_long_history(repository: Path, count: int = 8) -> None:
+    """Add bounded commits whose summaries exceed the smallest history budget."""
+    for index in range(count):
+        (repository / "history.txt").write_text(f"revision {index}\n", encoding="utf-8")
+        git(repository, "add", "--", "history.txt")
+        git(repository, "commit", "-m", f"feat: {'history-' * 20}{index}")
+
+
+def test_prepare_pull_request_rejects_truncated_history(tmp_path: Path) -> None:
+    repository, request = committed_task_repository(tmp_path)
+    add_long_history(repository)
+
+    with pytest.raises(GitWorkflowError) as captured:
+        asyncio.run(
+            local_provider(history_bytes=1_024).prepare_pull_request(
+                repository,
+                git_context(repository),
+                request,
+                timeout_seconds=2.0,
+            )
+        )
+
+    assert captured.value.code is GitWorkflowErrorCode.RESOURCE_LIMIT

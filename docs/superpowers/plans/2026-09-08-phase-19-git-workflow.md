@@ -66,9 +66,7 @@ def test_task_branch_is_derived_from_canonical_task_scope() -> None:
 
     branch = derive_task_branch(task_id, TaskBranchKind.FEATURE, "bounded-git-workflow")
 
-    assert str(branch) == (
-        "feature/11111111-1111-1111-1111-111111111111-bounded-git-workflow"
-    )
+    assert str(branch) == ("feature/11111111-1111-1111-1111-111111111111-bounded-git-workflow")
 
 
 @pytest.mark.parametrize("slug", ("../escape", "UPPER", "two--hyphens", "main", "x.lock"))
@@ -149,9 +147,7 @@ def test_status_diff_and_history_are_structured_and_bounded(tmp_path: Path) -> N
 
     provider = local_provider()
     status = asyncio.run(provider.status(repository, timeout_seconds=2.0))
-    diff = asyncio.run(
-        provider.diff(repository, GitDiffRequest(mode=GitDiffMode.WORKTREE), 2.0)
-    )
+    diff = asyncio.run(provider.diff(repository, GitDiffRequest(mode=GitDiffMode.WORKTREE), 2.0))
     history = asyncio.run(provider.history(repository, GitHistoryRequest(limit=10), 2.0))
 
     assert status.branch == "main"
@@ -553,29 +549,29 @@ git commit -m "feat(git): prepare and validate merge handoffs"
 - Documents exact safety guarantees and Phase 20 exclusions.
 - Marks only verified Phase 19 checklist boxes.
 
-- [ ] **Step 1: Write failing end-to-end integration test**
+- [x] **Step 1: Write failing end-to-end integration test**
 
 The test provisions persistent Project, Task, Agent, and AgentRun records; creates a real temporary
 Git repository; creates the task branch through `GitWorkflow`; commits one explicit path; reads
 status/diff/history; prepares the local PR record; validates independent Reviewer/QA/Security
 evidence; commits the SQLAlchemy session; and asserts ordered metadata-only append-only audit events.
 
-- [ ] **Step 2: Run the integration test and verify RED**
+- [x] **Step 2: Run the integration test and verify RED**
 
 Expected: fail on the first missing composition or persistence behavior not yet connected.
 
-- [ ] **Step 3: Complete composition and make integration GREEN**
+- [x] **Step 3: Complete composition and make integration GREEN**
 
 Add only exports or small composition helpers necessary for the tested Phase 19 path. Do not add an
 API route, remote provider, database migration, or Phase 20 model.
 
-- [ ] **Step 4: Write documentation and update only Phase 19 checklist boxes**
+- [x] **Step 4: Write documentation and update only Phase 19 checklist boxes**
 
 Document architecture, operation matrix, branch/commit conventions, audit allowlist, process
 security, known process-local locking limitation, and explicit future remote-provider boundary.
 Update repository status to Phase 19 completed and Phase 20 unimplemented.
 
-- [ ] **Step 5: Run complete verification**
+- [x] **Step 5: Run complete verification**
 
 ```bash
 TEST_POSTGRES_PORT=55433 make test
@@ -588,14 +584,14 @@ git diff --check origin/main
 Expected: zero test failures, zero Ruff findings, zero mypy errors, all files formatted, and no
 whitespace errors.
 
-- [ ] **Step 6: Perform focused security and scope review**
+- [x] **Step 6: Perform focused security and scope review**
 
 Verify no command path includes `push`, `fetch`, `merge`, `reset --hard`, `clean`, `stash`, arbitrary
 `-c` configuration, shell execution, or remote URLs; no audit data includes raw paths/diffs/errors;
 and no Phase 20 checkbox or behavior changed. Correct every Critical or Important finding and rerun
 the complete gate.
 
-- [ ] **Step 7: Mark this plan complete and commit**
+- [x] **Step 7: Mark this plan complete and commit**
 
 ```bash
 git add docs README.md AGENTS.md SYNAPSEOS_DEVELOPMENT_CHECKLIST.md tests/git_workflow

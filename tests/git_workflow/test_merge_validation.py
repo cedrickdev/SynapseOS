@@ -18,6 +18,7 @@ from tests.git_workflow.factories import git_context
 from tests.git_workflow.fakes import AllowCommitPolicy, RecordingGitAuditRecorder
 from tests.git_workflow.git_fixtures import git, local_provider
 from tests.git_workflow.test_pull_request_preparation import (
+    add_long_history,
     committed_task_repository,
 )
 
@@ -252,3 +253,26 @@ def test_merge_requirements_block_unprotected_base_and_protected_head(tmp_path: 
         MergeReasonCode.PROTECTED_HEAD,
         MergeReasonCode.UNPROTECTED_BASE,
     )
+
+
+def test_merge_requirements_block_when_history_cannot_be_revalidated(tmp_path: Path) -> None:
+    repository, preparation_request = committed_task_repository(tmp_path)
+    add_long_history(repository)
+    context = git_context(repository)
+    preparation = asyncio.run(
+        local_provider().prepare_pull_request(
+            repository,
+            context,
+            preparation_request,
+            timeout_seconds=2.0,
+        )
+    )
+    workflow = GitWorkflow(
+        local_provider(history_bytes=1_024),
+        RecordingGitAuditRecorder([]),
+        AllowCommitPolicy(),
+    )
+
+    result = asyncio.run(workflow.validate_merge_requirements(context, merge_request(preparation)))
+
+    assert result.reason_codes == (MergeReasonCode.STALE_PREPARATION,)

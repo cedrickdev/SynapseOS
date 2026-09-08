@@ -1,5 +1,6 @@
 """Provider-neutral bounded Git workflow contracts."""
 
+from core.git_workflow.audit import GIT_AUDIT_DATA_KEYS, GitAuditRecord, GitAuditStage
 from core.git_workflow.errors import GitWorkflowError, GitWorkflowErrorCode
 from core.git_workflow.types import (
     CommitKind,
@@ -36,12 +37,15 @@ from core.git_workflow.types import (
 )
 
 __all__ = [
+    "GIT_AUDIT_DATA_KEYS",
     "CommitKind",
     "CommitPolicyDecision",
     "CommitPolicyResult",
     "CommitRequest",
     "CreateTaskBranchRequest",
     "GitAuthority",
+    "GitAuditRecord",
+    "GitAuditStage",
     "GitCheckStatus",
     "GitCommitResult",
     "GitCommitSummary",

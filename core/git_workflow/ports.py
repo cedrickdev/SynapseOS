@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
+from core.git_workflow.audit import GitAuditRecord
 from core.git_workflow.types import (
     CommitPolicyResult,
     CommitRequest,
@@ -23,6 +24,12 @@ class GitCommitPolicy(Protocol):
     """Inspect one bounded staged patch without side effects."""
 
     def inspect(self, staged_patch: str) -> CommitPolicyResult: ...
+
+
+class GitAuditRecorder(Protocol):
+    """Append one validated Git audit record without owning the transaction."""
+
+    def record(self, record: GitAuditRecord) -> None: ...
 
 
 class GitProvider(Protocol):

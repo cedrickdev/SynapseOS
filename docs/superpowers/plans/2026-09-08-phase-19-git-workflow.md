@@ -350,22 +350,22 @@ git commit -m "feat(git): commit explicit paths safely"
 - Produces `SQLAlchemyGitAuditRecorder(session: Session)` backed by `AuditEvent`.
 - Uses `GIT_OPERATION_STARTED`, `GIT_OPERATION_COMPLETED`, and `GIT_OPERATION_FAILED` event types.
 
-- [ ] **Step 1: Write failing strict audit-contract tests**
+- [x] **Step 1: Write failing strict audit-contract tests**
 
 Prove raw path/diff/subject/error keys are rejected, nested values are rejected, non-finite numeric
 values are rejected, and copied data becomes immutable.
 
-- [ ] **Step 2: Run audit-contract tests and verify RED**
+- [x] **Step 2: Run audit-contract tests and verify RED**
 
 Expected: `GitAuditRecord` and recorder do not exist.
 
-- [ ] **Step 3: Implement immutable audit contract and SQLAlchemy recorder**
+- [x] **Step 3: Implement immutable audit contract and SQLAlchemy recorder**
 
 Map the trusted context to `AuditEvent(actor_type=AGENT, resource_type="GIT_REPOSITORY")`, validate
 the persistent project/task/agent/run scope, append and flush exactly one event, sanitize all
 persistence failures to `AUDIT_FAILED`, and never commit or close the caller-owned session.
 
-- [ ] **Step 4: Write and run real-PostgreSQL audit tests**
+- [x] **Step 4: Write and run real-PostgreSQL audit tests**
 
 ```python
 def test_git_audit_is_append_only_and_metadata_only(db_session: Session) -> None:
@@ -384,7 +384,7 @@ def test_git_audit_is_append_only_and_metadata_only(db_session: Session) -> None
 
 Run with `TEST_POSTGRES_PORT=55433` and verify Alembic creates the schema.
 
-- [ ] **Step 5: Commit Task 5**
+- [x] **Step 5: Commit Task 5**
 
 ```bash
 git add core/git_workflow infrastructure/git tests/git_workflow \

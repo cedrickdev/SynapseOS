@@ -1564,11 +1564,25 @@ Permettre à l'entreprise de se souvenir.
 
 ## Types
 
-- [ ] agent memory
-- [ ] project memory
-- [ ] company memory
-- [ ] decision memory
-- [ ] failure memory
+- [x] agent memory
+- [x] project memory
+- [x] company memory
+- [x] decision memory
+- [x] failure memory
+
+## Implementation V1 verified
+
+- [x] `MemoryEntry`, `MemoryScope`, `MemoryRepository`, and `MemoryService`
+- [x] explicit `AGENT`, `PROJECT`, and `COMPANY` scope binding
+- [x] bounded title, content, source, tags, confidence, pagination, and result count
+- [x] decision and failure memories represented by typed entries
+- [x] case-insensitive SQL search over title and content
+- [x] filtering by scope, project, agent, and tags
+- [x] supersession preserves the old entry and hides it from active search
+- [x] PostgreSQL constraints, indexes, foreign keys, and Alembic migration
+- [x] no automatic prompt, response, or conversation persistence
+- [x] no embeddings, pgvector, vector search, or complex RAG
+- [x] real-PostgreSQL tests cover creation, search, scope validation, and supersession
 
 ## Prompt Claude Code — Phase 23
 

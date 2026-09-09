@@ -2,6 +2,7 @@
 
 from infrastructure.database.repositories.agent_scores import AgentScoreRepository
 from infrastructure.database.repositories.audit_events import AuditEventRepository
+from infrastructure.database.repositories.memory import MemoryRepository
 from infrastructure.database.repositories.pull_requests import (
     ApprovalRepository,
     PullRequestRepository,
@@ -12,6 +13,7 @@ __all__ = [
     "AgentScoreRepository",
     "ApprovalRepository",
     "AuditEventRepository",
+    "MemoryRepository",
     "PullRequestRepository",
     "PullRequestReviewRepository",
 ]

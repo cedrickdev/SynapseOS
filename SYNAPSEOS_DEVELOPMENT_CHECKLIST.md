@@ -1432,13 +1432,41 @@ Le score LLM déclaré seul n'est jamais suffisant.
 
 ## Facteurs possibles
 
-- [ ] self-confidence du modèle
-- [ ] expertise agent
-- [ ] qualité des preuves
-- [ ] tests
-- [ ] historique
-- [ ] contradictions
-- [ ] ambiguïtés
+- [x] self-confidence du modèle
+- [x] expertise agent
+- [x] qualité des preuves
+- [x] tests
+- [ ] historique — deferred to Phase 22 reputation/reliability inputs
+- [x] contradictions — represented by the caller-supplied uncertainty penalty
+- [x] ambiguïtés — represented by the caller-supplied uncertainty penalty
+
+## Implementation V1 verified
+
+- [x] immutable `ConfidenceAssessment` with bounded decimal inputs
+- [x] derived `final_confidence` cannot be supplied or mutated by a caller
+- [x] deterministic formula with four-decimal `ROUND_HALF_UP` quantization
+- [x] model self-confidence alone contributes at most `0.10`
+- [x] evidence and deterministic verification outweigh self-confidence
+- [x] uncertainty penalty is subtracted and the result is clamped to `[0.0, 1.0]`
+- [x] invalid, non-finite, and out-of-range values are rejected
+- [x] unit tests cover formula, bounds, immutability, and input validation
+- [x] Phase 22 reputation aggregation is not implemented
+
+Formula:
+
+```text
+final_confidence = clamp(
+    0.10 * self_reported_confidence
+    + 0.30 * evidence_score
+    + 0.40 * verification_score
+    + 0.20 * expertise_score
+    - uncertainty_penalty,
+    0.0,
+    1.0,
+)
+```
+
+This is a deterministic decision signal, not a perfectly calibrated mathematical probability.
 
 ## Prompt Claude Code — Phase 21
 

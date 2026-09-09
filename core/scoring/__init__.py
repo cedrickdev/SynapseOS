@@ -1,1 +1,5 @@
-"""Scoring — confidence & reputation (placeholder — implemented in Phases 21-22)."""
+"""Provider-neutral confidence scoring contracts."""
+
+from core.scoring.confidence import ConfidenceAssessment, ConfidenceFactor
+
+__all__ = ["ConfidenceAssessment", "ConfidenceFactor"]

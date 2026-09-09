@@ -1497,15 +1497,40 @@ Créer tests unitaires et documentation expliquant la formule.
 
 ## Métriques
 
-- [ ] tasks completed
-- [ ] first pass approvals
-- [ ] corrections
-- [ ] regressions
-- [ ] security findings
-- [ ] customer complaints
-- [ ] rollbacks
-- [ ] escalations
-- [ ] collaboration
+- [x] tasks completed — measurable reliability events
+- [x] first pass approvals — measurable review/code-quality events
+- [x] corrections — subsequent events lower or improve the derived projection
+- [x] regressions — measurable reliability/code-quality events
+- [x] security findings — security score events
+- [x] customer complaints — customer-satisfaction score events
+- [x] rollbacks — measurable reliability events
+- [x] escalations — measurable reliability/collaboration events
+- [x] collaboration — collaboration score events
+
+## Implementation V1 verified
+
+- [x] confidence remains a per-decision signal and is excluded from reputation
+- [x] reputation is a deterministic weighted projection of measurable result events
+- [x] reliability is the historical mean of reliability events
+- [x] expertise is calculated independently per validated domain
+- [x] `AgentScore` remains the append-only source of truth
+- [x] current agent reputation and reliability are materialized projections
+- [x] every update stages a sanitized append-only audit event in the same transaction
+- [x] history processing is explicitly bounded to 1,000 events and fails closed at the limit
+- [x] no automatic promotion, demotion, seniority, autonomy, or permission change
+- [x] unit and real-PostgreSQL tests cover calculation, history, updates, and auditing
+
+V1 reputation weights are normalized across the measurable categories present:
+
+```text
+reliability             0.35
+code_quality            0.20
+security                0.20
+collaboration           0.15
+customer_satisfaction   0.10
+```
+
+Confidence and domain expertise never enter the global reputation projection.
 
 ## Prompt Claude Code — Phase 22
 

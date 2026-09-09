@@ -13,6 +13,7 @@ from core.enums import AgentStatus, TaskStatus
 from core.qa import QAError, validate_qa_request
 from core.workflows.deadline import _configure_transaction_timeouts
 from core.workflows.errors import WorkflowError, WorkflowErrorCode
+from core.workflows.pull_request_evidence import matches_persisted_pull_request
 from core.workflows.qa_errors import (
     QAWorkflowError,
     QAWorkflowErrorCode,
@@ -60,6 +61,13 @@ def _validate_qa_workflow_request_result(
         if type(request) is not QAWorkflowRequest:
             return None, QAWorkflowErrorCode.INVALID_INPUT
         canonical_request = _canonicalize_qa_workflow_request(request)
+        if not matches_persisted_pull_request(
+            session,
+            task_id=canonical_request.task_id,
+            correlation_id=canonical_request.correlation_id,
+            evidence=canonical_request.pull_request_evidence,
+        ):
+            raise QAWorkflowError(QAWorkflowErrorCode.INVALID_INPUT)
         if deadline is not None:
             _configure_transaction_timeouts(session, deadline)
         task, developer, reviewer, qa = _load_qa_scope(session, canonical_request)

@@ -20,6 +20,14 @@ from core.pull_requests import (
     PullRequestReviewDecision,
     PullRequestStatus,
 )
+from core.workflows import (
+    QAWorkflowError,
+    SecurityWorkflowError,
+    WorkflowError,
+    validate_qa_workflow_request,
+    validate_security_workflow_request,
+    validate_workflow_request,
+)
 from infrastructure.database.append_only import AppendOnlyViolationError
 from infrastructure.database.models import (
     Agent,
@@ -946,45 +954,82 @@ def test_reviewer_workflow_request_accepts_strict_pull_request_evidence_binding(
     db_session: Session,
     tmp_path: Path,
 ) -> None:
-    request = persisted_workflow_request(db_session, tmp_path)[-1]
+    task, developer, _, request = persisted_workflow_request(db_session, tmp_path)
+    pull_request = _pull_request(
+        task.project, task, developer, correlation_id=request.correlation_id
+    )
+    db_session.add(pull_request)
+    db_session.flush()
     payload = request.model_dump(mode="python")
     payload["pull_request_evidence"] = {
-        "head_sha": "a" * 40,
-        "preparation_checksum": "b" * 64,
+        "head_sha": pull_request.head_sha,
+        "preparation_checksum": pull_request.preparation_checksum,
     }
     validated = type(request).model_validate(payload)
 
     assert validated.pull_request_evidence is not None
     assert validated.pull_request_evidence.head_sha == "a" * 40
+    assert validate_workflow_request(db_session, validated).request == validated
+
+    payload["pull_request_evidence"] = {
+        "head_sha": "c" * 40,
+        "preparation_checksum": pull_request.preparation_checksum,
+    }
+    with pytest.raises(WorkflowError):
+        validate_workflow_request(db_session, type(request).model_validate(payload))
 
 
 def test_qa_workflow_request_accepts_strict_pull_request_evidence_binding(
     db_session: Session,
     tmp_path: Path,
 ) -> None:
-    request = persisted_qa_workflow_request(db_session, tmp_path)[-1]
+    task, developer, _, _, request = persisted_qa_workflow_request(db_session, tmp_path)
+    pull_request = PullRequestRepository(db_session).add(
+        _pull_request(task.project, task, developer, correlation_id=request.correlation_id)
+    )
+    db_session.flush()
     payload = request.model_dump(mode="python")
     payload["pull_request_evidence"] = {
-        "head_sha": "a" * 40,
-        "preparation_checksum": "b" * 64,
+        "head_sha": pull_request.head_sha,
+        "preparation_checksum": pull_request.preparation_checksum,
     }
     validated = type(request).model_validate(payload)
 
     assert validated.pull_request_evidence is not None
     assert validated.pull_request_evidence.head_sha == "a" * 40
+    assert validate_qa_workflow_request(db_session, validated).request == validated
+
+    payload["pull_request_evidence"] = {
+        "head_sha": "c" * 40,
+        "preparation_checksum": pull_request.preparation_checksum,
+    }
+    with pytest.raises(QAWorkflowError):
+        validate_qa_workflow_request(db_session, type(request).model_validate(payload))
 
 
 def test_security_workflow_request_accepts_strict_pull_request_evidence_binding(
     db_session: Session,
     tmp_path: Path,
 ) -> None:
-    request = persisted_security_workflow_request(db_session, tmp_path)[-1]
+    task, developer, _, _, _, request = persisted_security_workflow_request(db_session, tmp_path)
+    pull_request = PullRequestRepository(db_session).add(
+        _pull_request(task.project, task, developer, correlation_id=request.correlation_id)
+    )
+    db_session.flush()
     payload = request.model_dump(mode="python")
     payload["pull_request_evidence"] = {
-        "head_sha": "a" * 40,
-        "preparation_checksum": "b" * 64,
+        "head_sha": pull_request.head_sha,
+        "preparation_checksum": pull_request.preparation_checksum,
     }
     validated = type(request).model_validate(payload)
 
     assert validated.pull_request_evidence is not None
     assert validated.pull_request_evidence.head_sha == "a" * 40
+    assert validate_security_workflow_request(db_session, validated).request == validated
+
+    payload["pull_request_evidence"] = {
+        "head_sha": "c" * 40,
+        "preparation_checksum": pull_request.preparation_checksum,
+    }
+    with pytest.raises(SecurityWorkflowError):
+        validate_security_workflow_request(db_session, type(request).model_validate(payload))

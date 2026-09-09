@@ -170,6 +170,16 @@ def _stage_security_completed(
             "scanner_suite_id": result.scanner.suite_id,
             "scanner_complete": result.scanner.complete,
             "scanner_truncated": result.scanner.truncated,
+            **(
+                {
+                    "head_sha": scope.request.pull_request_evidence.head_sha,
+                    "preparation_checksum": (
+                        scope.request.pull_request_evidence.preparation_checksum
+                    ),
+                }
+                if scope.request.pull_request_evidence is not None
+                else {}
+            ),
         },
     )
 

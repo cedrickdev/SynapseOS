@@ -24,6 +24,7 @@ from core.security import (
 )
 from core.workflows.deadline import _configure_transaction_timeouts
 from core.workflows.errors import WorkflowError, WorkflowErrorCode
+from core.workflows.pull_request_evidence import matches_persisted_pull_request
 from core.workflows.security_errors import (
     SecurityWorkflowError,
     SecurityWorkflowErrorCode,
@@ -74,6 +75,13 @@ def _validate_security_workflow_request_result(
     try:
         _validate_raw_workflow_request(request)
         canonical_request = _canonicalize_security_workflow_request(request)
+        if not matches_persisted_pull_request(
+            session,
+            task_id=canonical_request.task_id,
+            correlation_id=canonical_request.correlation_id,
+            evidence=canonical_request.pull_request_evidence,
+        ):
+            raise SecurityWorkflowError(SecurityWorkflowErrorCode.INVALID_INPUT)
         if deadline is not None:
             _configure_transaction_timeouts(session, deadline)
         task, developer, reviewer, qa, security = _load_security_scope(session, canonical_request)

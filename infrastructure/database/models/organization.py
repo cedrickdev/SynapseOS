@@ -22,6 +22,11 @@ from infrastructure.database.base import (
 if TYPE_CHECKING:
     from infrastructure.database.models.execution import AgentRun, Decision
     from infrastructure.database.models.history import AgentScore, AuditEvent
+    from infrastructure.database.models.pull_requests import (
+        Approval,
+        PullRequest,
+        PullRequestReview,
+    )
     from infrastructure.database.models.work import Task
 
 
@@ -58,6 +63,15 @@ class Agent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     decisions: Mapped[list[Decision]] = relationship(back_populates="agent")
     scores: Mapped[list[AgentScore]] = relationship(back_populates="agent")
     permissions: Mapped[list[AgentPermission]] = relationship(back_populates="agent")
+    authored_pull_requests: Mapped[list[PullRequest]] = relationship(
+        back_populates="author", foreign_keys="PullRequest.author_agent_id"
+    )
+    pull_request_reviews: Mapped[list[PullRequestReview]] = relationship(
+        back_populates="reviewer", foreign_keys="PullRequestReview.reviewer_agent_id"
+    )
+    pull_request_approvals: Mapped[list[Approval]] = relationship(
+        back_populates="approver", foreign_keys="Approval.approver_agent_id"
+    )
 
 
 class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -77,6 +91,7 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     scores: Mapped[list[AgentScore]] = relationship(back_populates="project")
     audit_events: Mapped[list[AuditEvent]] = relationship(back_populates="project")
     agent_permissions: Mapped[list[AgentPermission]] = relationship(back_populates="project")
+    pull_requests: Mapped[list[PullRequest]] = relationship(back_populates="project")
 
 
 class AgentPermission(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

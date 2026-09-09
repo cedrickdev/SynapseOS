@@ -14,9 +14,12 @@ EXPECTED_TABLES = {
     "agent_runs",
     "agent_scores",
     "agents",
+    "approvals",
     "audit_events",
     "decisions",
     "projects",
+    "pull_request_reviews",
+    "pull_requests",
     "task_dependencies",
     "tasks",
     "tool_calls",
@@ -37,7 +40,13 @@ def test_migration_supports_upgrade_downgrade_and_second_upgrade(
     command.upgrade(config, "20260825_0001")
     engine = create_engine(migration_database_url)
     try:
-        assert set(inspect(engine).get_table_names()) >= EXPECTED_TABLES - {"agent_permissions"}
+        phase_2_tables = EXPECTED_TABLES - {
+            "agent_permissions",
+            "approvals",
+            "pull_request_reviews",
+            "pull_requests",
+        }
+        assert set(inspect(engine).get_table_names()) >= phase_2_tables
         project_id = uuid.uuid4()
         task_ids = [uuid.uuid4() for _ in range(4)]
         with engine.begin() as connection:

@@ -18,6 +18,7 @@ from core.workflows.errors import (
     _discard_exception,
     _raise_workflow_error,
 )
+from core.workflows.pull_request_evidence import matches_persisted_pull_request
 from core.workflows.types import DeveloperReviewerWorkflowRequest, WorkflowHandoffContext
 from infrastructure.database.models import Agent, Task
 
@@ -60,6 +61,13 @@ def _validate_workflow_request_result(
         if type(request) is not DeveloperReviewerWorkflowRequest:
             return None, WorkflowErrorCode.INVALID_INPUT
         canonical_request = _canonicalize_request(request)
+        if not matches_persisted_pull_request(
+            session,
+            task_id=canonical_request.task_id,
+            correlation_id=canonical_request.correlation_id,
+            evidence=canonical_request.pull_request_evidence,
+        ):
+            raise WorkflowError(WorkflowErrorCode.INVALID_INPUT)
         if deadline is not None:
             _configure_transaction_timeouts(session, deadline)
         task, developer, reviewer = _load_scope(session, canonical_request)

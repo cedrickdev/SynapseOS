@@ -230,7 +230,12 @@ class GitWorkflow:
             GitOperation.VALIDATE_MERGE_REQUIREMENTS,
             evaluate,
             started_data={"preparation_checksum": request.preparation.checksum},
-            completed_data=_merge_validation_audit_data,
+            completed_data=lambda result: {
+                **_merge_validation_audit_data(result),
+                "preparation_checksum": request.preparation.checksum,
+                "commit_sha": request.preparation.head_sha,
+                "base_sha": request.preparation.base_sha,
+            },
         )
 
     async def _execute(

@@ -12,6 +12,10 @@ class IntakeErrorCode(StrEnum):
     PROVIDER_FAILURE = "PROVIDER_FAILURE"
     INVALID_ANALYSIS = "INVALID_ANALYSIS"
     TIMEOUT = "TIMEOUT"
+    CONVERTER_UNAVAILABLE = "CONVERTER_UNAVAILABLE"
+    CONVERSION_FAILURE = "CONVERSION_FAILURE"
+    CONVERSION_TIMEOUT = "CONVERSION_TIMEOUT"
+    UNSAFE_DOCUMENT = "UNSAFE_DOCUMENT"
 
 
 _SAFE_MESSAGES = {
@@ -19,6 +23,10 @@ _SAFE_MESSAGES = {
     IntakeErrorCode.PROVIDER_FAILURE: "Intake provider failed.",
     IntakeErrorCode.INVALID_ANALYSIS: "Intake analysis is invalid.",
     IntakeErrorCode.TIMEOUT: "Intake analysis timed out.",
+    IntakeErrorCode.CONVERTER_UNAVAILABLE: "Document converter is unavailable.",
+    IntakeErrorCode.CONVERSION_FAILURE: "Document conversion failed.",
+    IntakeErrorCode.CONVERSION_TIMEOUT: "Document conversion timed out.",
+    IntakeErrorCode.UNSAFE_DOCUMENT: "Document content requires human review.",
 }
 
 

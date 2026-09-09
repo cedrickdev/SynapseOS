@@ -2,6 +2,17 @@
 
 from core.intake.agent import IntakeAgent, ProjectManagerAgent
 from core.intake.analysis import IntakeAnalyzer
+from core.intake.documents import (
+    ClientDocument,
+    ConvertedDocument,
+    DocumentConversionRequest,
+    DocumentConverter,
+    DocumentFormat,
+    DocumentIntakeResult,
+    DocumentProvenance,
+    DocumentRetentionPolicy,
+    DocumentSensitivity,
+)
 from core.intake.errors import IntakeError, IntakeErrorCode
 from core.intake.types import (
     IntakeAnalysis,
@@ -25,5 +36,14 @@ __all__ = [
     "IntakeRequest",
     "IntakeResult",
     "ProjectManagerAgent",
+    "ClientDocument",
+    "ConvertedDocument",
+    "DocumentConversionRequest",
+    "DocumentConverter",
+    "DocumentFormat",
+    "DocumentIntakeResult",
+    "DocumentProvenance",
+    "DocumentRetentionPolicy",
+    "DocumentSensitivity",
     "build_intake_result",
 ]

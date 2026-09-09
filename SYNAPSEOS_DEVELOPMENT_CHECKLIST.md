@@ -2354,9 +2354,17 @@ Donner une interface humaine pour piloter SynapseOS.
 Implémente UNIQUEMENT le frontend V1 de SynapseOS.
 
 Stack :
-Nuxt 3 + TypeScript.
+Nuxt 4 + TypeScript.
 
-Avant de choisir une UI library, inspecte le repository et la décision d'architecture existante.
+Before implementing any frontend feature or selecting a UI library, read and follow
+`docs/frontend-architecture-roadmap.md`. This document is the authoritative implementation
+specification for the frontend. Any intentional divergence requires an explicit ADR and a
+corresponding checklist update.
+
+The frontend is a client of the SynapseOS backend runtime. It must not duplicate, weaken, or bypass
+backend permissions, state machines, audit rules, security vetoes, workspace isolation, or tool
+authority. The browser must never receive direct shell, filesystem, database, or provider-secret
+access.
 
 Créer d'abord :
 - app shell
@@ -2639,6 +2647,77 @@ Agent / Runtime
     -> LLM Router
     -> provider
 ```
+
+---
+
+# V2 BACKEND ARCHITECTURE BACKLOG — Agent Governance Extensions
+
+## Status and source of truth
+
+This backlog is approved as the future backend governance direction for SynapseOS, but remains
+deferred until the current V1 roadmap has been completed and reconciled. It is not a frontend or UI
+specification. Do not mark any V2 extension complete and do not implement it implicitly inside a V1
+phase.
+
+Before planning or implementing any V2 governance extension, read and follow
+`docs/synapseos v2-agent-governance-extensions.md`. That document is the authoritative architecture
+and implementation specification for the entities, evidence, rules, decisions, persistence,
+runtime controls, auditing, and sequencing described below. Any intentional divergence requires an
+explicit ADR and a corresponding checklist update.
+
+## Strategic components
+
+- [ ] Agent Genome — maintain a versioned, evidence-based profile of demonstrated capabilities,
+      strengths, weaknesses, efficiency, historical outcomes, and normal behavior
+- [ ] Agent Trust Score — derive auditable historical and runtime trust signals from outcomes,
+      failures, incidents, reviews, QA, security, and observed behavior
+- [ ] Autonomy Governor — lease bounded, scoped, observable, and revocable autonomy for a specific
+      task and action
+- [ ] AI Manager — assign and reassign work, coordinate agents, and react to cost, risk, blockers,
+      trust, and runtime conditions without expanding authority
+
+## Mandatory authority hierarchy
+
+```text
+Security veto
+    ↓
+Permission Engine
+    ↓
+Autonomy Governor
+    ↓
+AI Manager
+    ↓
+Agent Runtime
+```
+
+Agent Genome and Agent Trust Score provide decision signals only. Trust must never grant a
+permission. The Autonomy Governor must never bypass the Permission Engine or a security veto. The
+AI Manager must never directly grant, broaden, or override authority. Existing backend security,
+permission, human-approval, audit, runtime-bound, and least-privilege invariants remain superior
+constraints.
+
+## Required implementation order
+
+```text
+1. Agent Genome
+2. Agent Trust Score
+3. Autonomy Governor
+4. AI Manager
+```
+
+The future extension phase families are reserved as follows:
+
+```text
+EXT-GEN-01 → EXT-GEN-08
+EXT-TRUST-01 → EXT-TRUST-08
+EXT-GOV-01 → EXT-GOV-08
+EXT-MGR-01 → EXT-MGR-10
+```
+
+These identifiers must not be merged into or substituted for existing V1 phase numbers. Before V2
+implementation begins, reconcile their exact placement and dependencies against the completed V1
+roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =
+one validation.
 
 ---
 

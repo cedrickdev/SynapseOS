@@ -1685,10 +1685,10 @@ Recevoir un cahier des charges et produire un cadrage structuré.
 ## Capacités
 
 - [x] lire cahier des charges
-- [ ] accept bounded client documents through a provider-neutral document-ingestion boundary
-- [ ] convert approved PDF and Office formats to structured Markdown in an isolated worker
-- [ ] validate file type, size, conversion limits, sensitivity, and prompt-injection risk
-- [ ] preserve source provenance and require an explicit retention policy
+- [x] accept bounded client documents through a provider-neutral document-ingestion boundary
+- [x] convert approved PDF and Office formats to structured Markdown in an isolated worker
+- [x] validate file type, size, conversion limits, sensitivity, and prompt-injection risk
+- [x] preserve source provenance and require an explicit retention policy
 - [x] identifier objectifs
 - [x] identifier ambiguïtés
 - [x] générer questions
@@ -1712,7 +1712,13 @@ Recevoir un cahier des charges et produire un cadrage structuré.
 - [x] deterministic local readiness gate that blocks implementation on any `BLOCKING` question
 - [x] sanitized public failures without client specification content
 - [x] deterministic tests using `FakeLLMProvider`
-- [ ] secure PDF and Office ingestion adapter and isolated conversion worker
+- [x] secure PDF and Office ingestion adapter and isolated conversion worker
+- [x] local-only MarkItDown `convert_local()` adapter for PDF, DOCX, PPTX, and XLSX
+- [x] ephemeral temporary-file lifecycle with SHA-256 provenance and no content persistence
+- [x] separate worker process with CPU, file-size, descriptor, timeout, and output limits
+- [x] explicit provider-processing consent and rejection of `RESTRICTED` documents
+- [x] known prompt-injection marker defense before provider calls, while all document content remains
+      untrusted and unable to grant authority
 
 ## Prompt Claude Code — Phase 25
 

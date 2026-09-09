@@ -1684,23 +1684,35 @@ Recevoir un cahier des charges et produire un cadrage structuré.
 
 ## Capacités
 
-- [ ] lire cahier des charges
+- [x] lire cahier des charges
 - [ ] accept bounded client documents through a provider-neutral document-ingestion boundary
 - [ ] convert approved PDF and Office formats to structured Markdown in an isolated worker
 - [ ] validate file type, size, conversion limits, sensitivity, and prompt-injection risk
 - [ ] preserve source provenance and require an explicit retention policy
-- [ ] identifier objectifs
-- [ ] identifier ambiguïtés
-- [ ] générer questions
-- [ ] classifier questions
-- [ ] produire requirements
-- [ ] produire epics/tasks
+- [x] identifier objectifs
+- [x] identifier ambiguïtés
+- [x] générer questions
+- [x] classifier questions
+- [x] produire requirements
+- [x] produire epics/tasks
 
 ## Questions
 
-- [ ] BLOCKING
-- [ ] IMPORTANT
-- [ ] OPTIONAL
+- [x] BLOCKING
+- [x] IMPORTANT
+- [x] OPTIONAL
+
+## Text intake V1 verified
+
+- [x] immutable bounded request, analysis, question, and result contracts
+- [x] exactly one provider-neutral LLM request with no retry or fallback
+- [x] bounded input bytes, response bytes, generation tokens, and timeout
+- [x] immediate cancellation propagation and caller-owned provider lifecycle
+- [x] strict structured output with closed question classifications
+- [x] deterministic local readiness gate that blocks implementation on any `BLOCKING` question
+- [x] sanitized public failures without client specification content
+- [x] deterministic tests using `FakeLLMProvider`
+- [ ] secure PDF and Office ingestion adapter and isolated conversion worker
 
 ## Prompt Claude Code — Phase 25
 

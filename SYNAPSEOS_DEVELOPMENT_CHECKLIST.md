@@ -1627,15 +1627,28 @@ Pouvoir reconstruire toute l'histoire d'une décision.
 
 ## Événements
 
-- [ ] task transitions
-- [ ] LLM calls
-- [ ] tool calls
-- [ ] permissions
-- [ ] decisions
-- [ ] Git actions
-- [ ] reviews
-- [ ] security
-- [ ] score changes
+- [x] task transitions
+- [x] LLM calls — supported through the standard bounded audit interface
+- [x] tool calls
+- [x] permissions
+- [x] decisions
+- [x] Git actions
+- [x] reviews
+- [x] security
+- [x] score changes
+
+## Implementation verified
+
+- [x] central validated `AuditLogService` exposes append/get/search/reconstruct only
+- [x] timestamp, actor, project/task/run, action, resource, result, correlation, metadata
+- [x] actor/resource/result/correlation filters with bounded pagination
+- [x] deterministic chronological reconstruction by correlation ID
+- [x] shallow bounded metadata rejects sensitive keys and oversized values
+- [x] repositories and service expose no update or delete operations
+- [x] global SQLAlchemy append-only guard still blocks direct Session updates/deletes
+- [x] corrections remain new events linked through `corrects_event_id`
+- [x] real-PostgreSQL tests cover append, filtering, reconstruction, and rejection
+- [x] no Phase 25 intake functionality
 
 ## Prompt Claude Code — Phase 24
 

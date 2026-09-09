@@ -168,6 +168,13 @@ def test_git_workflow_is_end_to_end_audited(
     assert history.truncated is False
     assert preparation.head_sha == commit_result.commit_sha
     assert gate.decision is MergeDecision.PASS
+    merge_validation_event = next(
+        event
+        for event in events
+        if event.action == GitOperation.VALIDATE_MERGE_REQUIREMENTS.value
+        and event.event_type == "GIT_OPERATION_COMPLETED"
+    )
+    assert merge_validation_event.data["base_sha"] == preparation.base_sha
     assert len(events) == len(operations) * 2
     for operation in operations:
         operation_events = [event for event in events if event.action == operation.value]

@@ -1382,17 +1382,17 @@ Matérialiser le workflow de validation.
 
 ## PR contient
 
-- [ ] task
-- [ ] auteur
-- [ ] résumé
-- [ ] changements
-- [ ] tests
-- [ ] risques
-- [ ] confidence
-- [ ] reviewer
-- [ ] QA
-- [ ] security
-- [ ] approvals
+- [x] task
+- [x] auteur
+- [x] résumé
+- [x] changements
+- [x] tests
+- [x] risques
+- [x] confidence
+- [x] reviewer
+- [x] QA
+- [x] security
+- [x] approvals
 
 ## Prompt Claude Code — Phase 20
 

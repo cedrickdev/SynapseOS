@@ -157,6 +157,16 @@ def _stage_qa_completed(
                 {"profile_id": item.profile_id.value, "status": item.status.value}
                 for item in result.tests
             ],
+            **(
+                {
+                    "head_sha": scope.request.pull_request_evidence.head_sha,
+                    "preparation_checksum": (
+                        scope.request.pull_request_evidence.preparation_checksum
+                    ),
+                }
+                if scope.request.pull_request_evidence is not None
+                else {}
+            ),
         },
     )
 

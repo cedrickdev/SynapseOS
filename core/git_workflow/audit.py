@@ -19,6 +19,7 @@ GIT_AUDIT_DATA_KEYS = frozenset(
         "branch_kind",
         "branch_name",
         "base_branch",
+        "base_sha",
         "commit_sha",
         "selected_path_count",
         "changed_path_count",

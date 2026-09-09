@@ -625,6 +625,16 @@ def _event_data(
             "decision": _require_review_decision(decision).value,
             "review_score": _require_review_score(review_score),
             "finding_count": _require_finding_count(finding_count),
+            **(
+                {
+                    "head_sha": scope.request.pull_request_evidence.head_sha,
+                    "preparation_checksum": (
+                        scope.request.pull_request_evidence.preparation_checksum
+                    ),
+                }
+                if scope.request.pull_request_evidence is not None
+                else {}
+            ),
         }
     if event_type is WorkflowEventType.REVIEW_CYCLE_EXHAUSTED:
         _require_absent(decision, review_score, finding_count)

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from core.agents import AgentProfile
 from core.enums import TaskStatus
+from core.pull_requests import PullRequestEvidenceBinding
 from core.qa import QACriterionAssessment, QAFinding, QAResult, QATestEvidence, QATestRecommendation
 from core.security import (
     SecurityDecision,
@@ -108,6 +109,7 @@ class SecurityWorkflowRequest(_ImmutableSecurityWorkflowModel):
     security_agent_id: UUID
     security_request: SecurityRequest
     correlation_id: UUID
+    pull_request_evidence: PullRequestEvidenceBinding | None = None
 
     @field_validator("security_request", mode="before")
     @classmethod

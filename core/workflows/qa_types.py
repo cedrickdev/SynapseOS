@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from core.enums import TaskStatus
+from core.pull_requests import PullRequestEvidenceBinding
 from core.qa import QADecision, QARequest, QAResult
 
 
@@ -47,6 +48,7 @@ class QAWorkflowRequest(_ImmutableQAWorkflowModel):
     qa_agent_id: UUID
     qa_request: QARequest
     correlation_id: UUID
+    pull_request_evidence: PullRequestEvidenceBinding | None = None
 
     @field_validator("qa_request", mode="before")
     @classmethod

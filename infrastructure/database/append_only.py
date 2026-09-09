@@ -25,7 +25,11 @@ def _reject_append_only_changes(session: Session, _flush_context: Any, _instance
             )
 
     for entity in session.dirty:
-        if isinstance(entity, AppendOnlyMixin) and entity not in session.new:
+        if (
+            isinstance(entity, AppendOnlyMixin)
+            and entity not in session.new
+            and session.is_modified(entity, include_collections=False)
+        ):
             entity_id = getattr(entity, "id", "<pending>")
             raise AppendOnlyViolationError(
                 f"Cannot update append-only {type(entity).__name__} entity {entity_id}."

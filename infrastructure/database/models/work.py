@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from infrastructure.database.models.execution import AgentRun, Decision
     from infrastructure.database.models.history import AgentScore, AuditEvent
     from infrastructure.database.models.organization import Agent, Project
+    from infrastructure.database.models.pull_requests import PullRequest
 
 
 class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -29,6 +30,7 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "tasks"
     __table_args__ = (
+        UniqueConstraint("project_id", "id", name="project_id_id"),
         CheckConstraint(
             "max_iterations >= 1 AND iteration_count >= 0 AND iteration_count <= max_iterations",
             name="iteration_bounds",
@@ -85,6 +87,9 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     decisions: Mapped[list[Decision]] = relationship(back_populates="task")
     scores: Mapped[list[AgentScore]] = relationship(back_populates="task")
     audit_events: Mapped[list[AuditEvent]] = relationship(back_populates="task")
+    pull_requests: Mapped[list[PullRequest]] = relationship(
+        back_populates="task", foreign_keys="PullRequest.task_id"
+    )
 
 
 class TaskDependency(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

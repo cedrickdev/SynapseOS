@@ -12,6 +12,7 @@ from core.agents import AgentProfile, AgentReport
 from core.commands import CommandProfileId
 from core.developer import DeveloperRequest
 from core.enums import TaskStatus
+from core.pull_requests import PullRequestEvidenceBinding
 from core.reviewer import ReviewDecision, ReviewerResult
 
 Identifier = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9._:-]{0,127}$")]
@@ -84,6 +85,7 @@ class DeveloperReviewerWorkflowRequest(_ImmutableWorkflowModel):
     max_review_cycles: Annotated[int, Field(ge=1, le=10)]
     timeout_seconds: Annotated[float, Field(gt=0.0, le=3600.0, allow_inf_nan=False)]
     correlation_id: UUID
+    pull_request_evidence: PullRequestEvidenceBinding | None = None
 
     @field_validator("developer_request", mode="before")
     @classmethod

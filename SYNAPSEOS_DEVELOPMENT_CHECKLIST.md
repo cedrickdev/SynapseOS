@@ -2415,6 +2415,17 @@ POSTMORTEM
 CLOSED
 ```
 
+## Phase 39 implementation checklist
+
+- [x] Add bounded incident contracts and severity classification.
+- [x] Enforce the DETECTED → ACKNOWLEDGED → INVESTIGATING → MITIGATING → RESOLVED → POSTMORTEM → CLOSED lifecycle.
+- [x] Record immutable incident timeline events with append-only application protection.
+- [x] Require owner, affected service, mitigation, resolution, root cause, and follow-up actions.
+- [x] Persist incidents, timeline events, and postmortems through PostgreSQL and Alembic.
+- [x] Add read/append repositories without update or delete operations for incident events.
+- [x] Verify unit tests, real-PostgreSQL integration tests, Ruff, formatting, mypy, and diff hygiene.
+- [x] Keep production deployment automation and frontend work out of Phase 39.
+
 ## Prompt Claude Code — Phase 39
 
 ```text

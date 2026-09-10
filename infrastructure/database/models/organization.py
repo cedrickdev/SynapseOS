@@ -32,6 +32,7 @@ from infrastructure.database.base import (
 if TYPE_CHECKING:
     from infrastructure.database.models.execution import AgentRun, Decision
     from infrastructure.database.models.history import AgentScore, AuditEvent
+    from infrastructure.database.models.incidents import Incident
     from infrastructure.database.models.pull_requests import (
         Approval,
         PullRequest,
@@ -129,6 +130,7 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     audit_events: Mapped[list[AuditEvent]] = relationship(back_populates="project")
     agent_permissions: Mapped[list[AgentPermission]] = relationship(back_populates="project")
     pull_requests: Mapped[list[PullRequest]] = relationship(back_populates="project")
+    incidents: Mapped[list[Incident]] = relationship(back_populates="project")
 
 
 class AgentPermission(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

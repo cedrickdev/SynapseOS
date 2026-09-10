@@ -3,6 +3,7 @@
 from infrastructure.database.models.budget import UsageRecord
 from infrastructure.database.models.execution import AgentRun, Decision, ToolCall
 from infrastructure.database.models.history import AgentScore, AuditEvent
+from infrastructure.database.models.incidents import Incident, IncidentEvent, Postmortem
 from infrastructure.database.models.memory import MemoryEntry
 from infrastructure.database.models.organization import (
     Agent,
@@ -21,9 +22,12 @@ __all__ = [
     "AgentScore",
     "Approval",
     "AuditEvent",
+    "Incident",
+    "IncidentEvent",
     "MemoryEntry",
     "Decision",
     "Project",
+    "Postmortem",
     "PullRequest",
     "PullRequestReview",
     "Task",

@@ -8,13 +8,16 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from apps.api.routes import health
+from apps.api.routes import health, metrics
+from core.observability.sink import InMemoryMetricsSink, MetricsSink
 
 
-def create_app() -> FastAPI:
+def create_app(metrics_sink: MetricsSink | None = None) -> FastAPI:
     """Build and configure the FastAPI application."""
     app = FastAPI(title="SynapseOS Platform API", version="0.1.0")
     app.include_router(health.router)
+    app.include_router(metrics.router)
+    app.state.metrics_sink = metrics_sink or InMemoryMetricsSink()
     return app
 
 

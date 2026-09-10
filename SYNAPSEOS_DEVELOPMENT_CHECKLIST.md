@@ -2360,17 +2360,17 @@ Voir ce que fait réellement l'entreprise.
 
 ## Métriques
 
-- [ ] task throughput
-- [ ] success rate
-- [ ] average iterations
-- [ ] agent reliability
-- [ ] review rejection
-- [ ] QA failures
-- [ ] security blocks
-- [ ] cost
-- [ ] latency
-- [ ] escalations
-- [ ] project progress
+- [x] task throughput
+- [x] success rate
+- [x] average iterations
+- [x] agent reliability
+- [x] review rejection
+- [x] QA failures
+- [x] security blocks
+- [x] cost
+- [x] latency
+- [x] escalations
+- [x] project progress
 
 ## Prompt Claude Code — Phase 38
 

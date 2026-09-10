@@ -2161,21 +2161,31 @@ Adapter les responsabilités selon les performances.
 
 ## Niveaux
 
-- [ ] Trainee
-- [ ] Junior
-- [ ] Engineer
-- [ ] Senior
-- [ ] Staff
-- [ ] Principal
+- [x] Trainee
+- [x] Junior
+- [x] Engineer
+- [x] Senior
+- [x] Staff
+- [x] Principal
 
 ## Actions possibles
 
-- [ ] promotion
-- [ ] rétrogradation
-- [ ] autonomie réduite
-- [ ] review obligatoire
-- [ ] perte d'une capability
-- [ ] mentoring
+- [x] promotion
+- [x] rétrogradation
+- [x] autonomie réduite
+- [x] review obligatoire
+- [x] perte d'une capability
+- [x] mentoring
+
+## Implementation plan
+
+- [x] Define bounded observed career metrics
+- [x] Produce deterministic promotion and demotion recommendations
+- [x] Produce autonomy increase and reduction recommendations
+- [x] Produce mandatory review, capability restriction, and mentoring recommendations
+- [x] Require human approval for every recommendation
+- [x] Keep the engine non-mutating and auditable through evidence fields
+- [x] Verify full tests, Ruff, formatting, and strict mypy
 
 ## Prompt Claude Code — Phase 34
 

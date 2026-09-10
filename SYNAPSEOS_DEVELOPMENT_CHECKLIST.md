@@ -2266,16 +2266,16 @@ Clôturer un projet comme dans une vraie entreprise.
 
 ## Conditions
 
-- [ ] client approval
-- [ ] QA final
-- [ ] security final
-- [ ] livraison
-- [ ] documentation
-- [ ] retrospective
-- [ ] performance review
-- [ ] lessons learned
-- [ ] celebration
-- [ ] agents AVAILABLE
+- [x] client approval
+- [x] QA final
+- [x] security final
+- [x] livraison
+- [x] documentation
+- [x] retrospective
+- [x] performance review
+- [x] lessons learned
+- [x] celebration
+- [x] agents AVAILABLE
 
 ## Prompt Claude Code — Phase 36
 

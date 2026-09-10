@@ -1,5 +1,6 @@
 """Phase 2 SQLAlchemy persistence models."""
 
+from infrastructure.database.models.budget import UsageRecord
 from infrastructure.database.models.execution import AgentRun, Decision, ToolCall
 from infrastructure.database.models.history import AgentScore, AuditEvent
 from infrastructure.database.models.memory import MemoryEntry
@@ -28,4 +29,5 @@ __all__ = [
     "Task",
     "TaskDependency",
     "ToolCall",
+    "UsageRecord",
 ]

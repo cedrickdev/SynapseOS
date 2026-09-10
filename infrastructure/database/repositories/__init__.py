@@ -8,6 +8,7 @@ from infrastructure.database.repositories.pull_requests import (
     PullRequestRepository,
     PullRequestReviewRepository,
 )
+from infrastructure.database.repositories.usage_records import UsageRecordRepository
 
 __all__ = [
     "AgentScoreRepository",
@@ -16,4 +17,5 @@ __all__ = [
     "MemoryRepository",
     "PullRequestRepository",
     "PullRequestReviewRepository",
+    "UsageRecordRepository",
 ]

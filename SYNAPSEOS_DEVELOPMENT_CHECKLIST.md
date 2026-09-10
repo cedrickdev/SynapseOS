@@ -2312,14 +2312,14 @@ Ne modifie pas les scores uniquement pour produire des félicitations.
 
 ## Mesures
 
-- [ ] tokens
-- [ ] appels LLM
-- [ ] temps
-- [ ] tool calls
-- [ ] CPU/GPU
-- [ ] provider cost
-- [ ] budget projet
-- [ ] budget agent
+- [x] tokens
+- [x] appels LLM
+- [x] temps
+- [x] tool calls
+- [x] CPU/GPU
+- [x] provider cost
+- [x] budget projet
+- [x] budget agent
 
 ## Prompt Claude Code — Phase 37
 

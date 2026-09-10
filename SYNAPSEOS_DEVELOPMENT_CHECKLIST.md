@@ -1759,13 +1759,13 @@ Transformer les requirements en proposition technique.
 
 ## Sorties
 
-- [ ] architecture
-- [ ] stack candidates
-- [ ] choix argumenté
-- [ ] domaines
-- [ ] services/modules
-- [ ] risques
-- [ ] ADR
+- [x] architecture
+- [x] stack candidates
+- [x] choix argumenté
+- [x] domaines
+- [x] services/modules
+- [x] risques
+- [x] ADR
 
 ## Prompt Claude Code — Phase 26
 

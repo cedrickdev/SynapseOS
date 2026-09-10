@@ -11,6 +11,8 @@ from core.llm import LLMProviderError, LLMRequest, LLMResponse, LLMResponseError
 class FakeLLMProvider:
     """Return queued outcomes without performing network I/O."""
 
+    propagates_cancellation = True
+
     def __init__(
         self,
         *,

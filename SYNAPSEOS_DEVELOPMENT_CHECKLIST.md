@@ -1901,12 +1901,21 @@ Permettre à un agent de reconnaître ses limites.
 
 ## Conditions
 
-- [ ] faible confiance
-- [ ] manque de compétence
-- [ ] permissions insuffisantes
-- [ ] conflit
-- [ ] boucle stagnante
-- [ ] décision critique
+- [x] faible confiance
+- [x] manque de compétence
+- [x] permissions insuffisantes (critical denial)
+- [x] conflit (unresolved contradiction)
+- [x] boucle stagnante (maximum iterations)
+- [x] décision critique (irreversible or high-risk)
+
+## Implementation plan
+
+- [x] Define bounded immutable escalation contracts and approved targets
+- [x] Select one deterministic escalation trigger with explicit precedence
+- [x] Create one clear escalation action for the receiving authority
+- [x] Emit one sanitized audit event for every escalation
+- [x] Keep audit and task sinks injected with no implicit persistence or retry
+- [x] Verify unit tests, full tests, Ruff, formatting, and strict mypy
 
 ## Prompt Claude Code — Phase 29
 

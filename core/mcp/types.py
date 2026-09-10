@@ -173,6 +173,17 @@ class MCPRegistry:
             raise MCPRouterError("MCP capability is unavailable.")
         return candidates[0]
 
+    def required_permissions(
+        self, capabilities: Sequence[str], permissions: frozenset[Permission]
+    ) -> frozenset[Permission]:
+        """Return the permissions required by resolved capabilities."""
+        required: set[Permission] = set()
+        for capability in capabilities:
+            server, definition = self.resolve(capability, permissions)
+            required.update(server.required_permissions)
+            required.update(definition.required_permissions)
+        return frozenset(required)
+
 
 class MCPRouter:
     """Route capability requests through allowlisted, healthy MCP definitions."""

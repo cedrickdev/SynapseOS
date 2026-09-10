@@ -2082,6 +2082,16 @@ scoring déterministe.
 Ne laisse pas un agent contourner les permissions en choisissant une capacité.
 ```
 
+## Implementation plan
+
+- [x] Define bounded task, agent, and project routing context
+- [x] Select skills through the existing deterministic skill selector
+- [x] Select only explicitly registered and permission-compatible tools
+- [x] Select only healthy, allowlisted, permission-compatible MCP capabilities
+- [x] Return a bounded CapabilityPlan with required permissions and rationale
+- [x] Reject unknown requested tools and prevent permission bypasses
+- [x] Verify full tests, Ruff, formatting, and strict mypy
+
 ---
 
 # PHASE 33 — Feedback client

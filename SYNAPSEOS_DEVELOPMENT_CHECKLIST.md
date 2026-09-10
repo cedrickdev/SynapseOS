@@ -1952,11 +1952,20 @@ Connecter des outils déterministes de cybersécurité.
 
 ## Candidats
 
-- [ ] Semgrep
-- [ ] Trivy
-- [ ] secret scanner
-- [ ] dependency audit
+- [x] Semgrep
+- [x] Trivy
+- [x] secret scanner
+- [x] dependency audit
 - [ ] OWASP ZAP plus tard
+
+## Implementation plan
+
+- [x] Define one provider-neutral SecurityScanner contract
+- [x] Add bounded, non-destructive command runner input contracts
+- [x] Implement Semgrep, Trivy, secret-scanning, and dependency-audit adapters
+- [x] Normalize scanner output into the existing immutable Finding format
+- [x] Reject malformed, unsafe, or unbounded scanner output without retry
+- [x] Verify focused and full tests, Ruff, formatting, and strict mypy
 
 ## Prompt Claude Code — Phase 30
 

@@ -11,6 +11,15 @@ from core.security.redaction import (
     SECRET_PATTERN_SOURCE_ID,
     sanitize_security_source,
 )
+from core.security.scanners import (
+    DependencyAuditScanner,
+    ScannerCommandResult,
+    ScannerOutputError,
+    SecretScanner,
+    SecurityScanner,
+    SemgrepScanner,
+    TrivyScanner,
+)
 from core.security.types import (
     SanitizedSecuritySource,
     SecurityAnalysis,
@@ -51,6 +60,13 @@ __all__ = [
     "SecurityResult",
     "SecurityScannerFinding",
     "SecurityScannerPort",
+    "SecurityScanner",
+    "ScannerCommandResult",
+    "ScannerOutputError",
+    "SemgrepScanner",
+    "TrivyScanner",
+    "SecretScanner",
+    "DependencyAuditScanner",
     "SecurityScannerReport",
     "SecurityScannerSummary",
     "SecuritySeverity",

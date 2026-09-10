@@ -2142,6 +2142,15 @@ ne jamais pénaliser automatiquement un agent uniquement à partir du texte du c
 Une plainte doit être confirmée/analysée avant impact réputationnel.
 ```
 
+## Implementation plan
+
+- [x] Define bounded ClientFeedback and FeedbackCategory contracts
+- [x] Classify feedback deterministically without model or reputation side effects
+- [x] Keep root-cause analysis and responsibility assessment separate from client text
+- [x] Create corrective actions only after independent confirmation
+- [x] Prevent automatic reputation impact for unconfirmed complaints
+- [x] Verify full tests, Ruff, formatting, and strict mypy
+
 ---
 
 # PHASE 34 — Promotions, rétrogradations et autonomie

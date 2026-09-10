@@ -1802,6 +1802,13 @@ Il doit pouvoir dire qu'une information manque et demander une escalade.
 
 Créer des équipes temporaires selon les domaines du projet.
 
+## Verified outputs
+
+- [x] Identify functional domains from requirements and architecture
+- [x] Validate dependencies between identified domains
+- [x] Propose the capabilities required by each domain
+- [x] Produce bounded, business-level `DomainWorkstream` proposals
+
 Exemples :
 
 ```text

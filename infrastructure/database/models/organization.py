@@ -7,7 +7,17 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -62,6 +72,7 @@ class Agent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     runs: Mapped[list[AgentRun]] = relationship(back_populates="agent")
     decisions: Mapped[list[Decision]] = relationship(back_populates="agent")
     scores: Mapped[list[AgentScore]] = relationship(back_populates="agent")
+    capabilities: Mapped[list[AgentCapability]] = relationship(back_populates="agent")
     permissions: Mapped[list[AgentPermission]] = relationship(back_populates="agent")
     authored_pull_requests: Mapped[list[PullRequest]] = relationship(
         back_populates="author", foreign_keys="PullRequest.author_agent_id"
@@ -72,6 +83,32 @@ class Agent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     pull_request_approvals: Mapped[list[Approval]] = relationship(
         back_populates="approver", foreign_keys="Approval.approver_agent_id"
     )
+
+
+class AgentCapability(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A current company-level capability declaration for one reusable agent."""
+
+    __tablename__ = "agent_capabilities"
+    __table_args__ = (
+        CheckConstraint("expertise_score BETWEEN 0 AND 1", name="expertise_score_range"),
+        CheckConstraint(
+            "capability ~ '^[a-z0-9][a-z0-9._:-]{0,127}$'",
+            name="capability_identifier",
+        ),
+        Index("uq_agent_capabilities_agent_capability", "agent_id", "capability", unique=True),
+        Index("ix_agent_capabilities_active_lookup", "agent_id", "active", "capability"),
+    )
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("agents.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    capability: Mapped[str] = mapped_column(String(128), nullable=False)
+    expertise_score: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    agent: Mapped[Agent] = relationship(back_populates="capabilities")
 
 
 class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):

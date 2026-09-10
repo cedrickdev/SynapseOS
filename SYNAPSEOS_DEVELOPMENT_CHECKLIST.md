@@ -1846,15 +1846,25 @@ Ajouter tests avec plusieurs exemples de cahiers des charges.
 
 Affecter les meilleurs agents aux tâches.
 
+## Implementation plan
+
+- [x] Define immutable registry and matching contracts with strict bounds
+- [x] Persist explicit agent capabilities independently of projects
+- [x] Read bounded candidate snapshots from PostgreSQL without assignment side effects
+- [x] Reject unavailable, incapable, under-permissioned, or under-autonomy candidates
+- [x] Rank eligible candidates deterministically by expertise, reputation, reliability, seniority, and task cost
+- [x] Return bounded scores and explanations without changing agents or permissions
+- [x] Verify unit, PostgreSQL, migration, Ruff, format, and mypy checks
+
 ## Critères
 
-- [ ] expertise
-- [ ] reputation
-- [ ] disponibilité
-- [ ] séniorité
-- [ ] permissions
-- [ ] risque
-- [ ] coût
+- [x] expertise
+- [x] reputation
+- [x] disponibilité
+- [x] séniorité
+- [x] permissions
+- [x] risque
+- [x] coût
 
 ## Prompt Claude Code — Phase 28
 

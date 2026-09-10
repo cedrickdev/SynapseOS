@@ -2247,6 +2247,15 @@ Sorties :
 Aucune connaissance ne devient globale sans validation explicite dans V1.
 ```
 
+## Implementation plan
+
+- [x] Define bounded project evidence and lesson contracts
+- [x] Generate lessons from validated incidents, feedback, reviews, and decisions
+- [x] Produce deterministic process-change recommendations
+- [x] Produce company-memory and skill candidates without global persistence
+- [x] Keep every candidate explicitly unvalidated until a later approval flow
+- [x] Verify full tests, Ruff, formatting, and strict mypy
+
 ---
 
 # PHASE 36 — Project Closure

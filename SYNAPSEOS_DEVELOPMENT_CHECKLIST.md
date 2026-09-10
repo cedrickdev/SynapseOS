@@ -1998,13 +1998,24 @@ Permettre la découverte et l'utilisation contrôlée de serveurs MCP.
 
 ## Checklist
 
-- [ ] MCPServer registry
-- [ ] capabilities
-- [ ] permissions
-- [ ] health
-- [ ] routing
-- [ ] audit
-- [ ] allowlist
+- [x] MCPServer registry
+- [x] capabilities
+- [x] permissions
+- [x] health
+- [x] routing
+- [x] audit
+- [x] allowlist
+
+## Implementation plan
+
+- [x] Define immutable MCP server and capability contracts
+- [x] Register only explicit, bounded, allowlisted server definitions
+- [x] Discover capabilities through permission and health filters
+- [x] Route capability requests without exposing server identity to callers
+- [x] Enforce per-server timeout limits and propagate cancellation safely
+- [x] Emit metadata-only audit events for success and failure outcomes
+- [x] Provide deterministic mock client and audit sink tests
+- [x] Verify full tests, Ruff, formatting, and strict mypy
 
 ## Prompt Claude Code — Phase 31
 

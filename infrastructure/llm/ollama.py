@@ -59,6 +59,8 @@ def _discard_task_result(task: asyncio.Task[None]) -> None:
 class OllamaLLMProvider:
     """Translate provider-neutral requests to Ollama without hidden retries."""
 
+    propagates_cancellation = True
+
     def __init__(
         self,
         *,

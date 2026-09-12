@@ -1,0 +1,11 @@
+{
+  "name": "synapseos-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "web:dev": "pnpm --filter @synapseos/web dev",
+    "web:build": "pnpm --filter @synapseos/web build",
+    "web:test": "pnpm --filter @synapseos/web test",
+    "web:check": "pnpm --filter @synapseos/web check"
+  }
+}

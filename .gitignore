@@ -13,6 +13,12 @@ venv/
 env/
 
 # Tooling caches
+node_modules/
+.nuxt/
+.output/
+test-results/
+playwright-report/
+.impeccable/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

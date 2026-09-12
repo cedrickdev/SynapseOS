@@ -1,0 +1,11 @@
+{
+  "app": {
+    "name": "SynapseOS",
+    "controlCenter": "Centre de contrôle"
+  },
+  "common": {
+    "loading": "Chargement des preuves",
+    "unavailable": "Contrat indisponible",
+    "retry": "Réessayer"
+  }
+}

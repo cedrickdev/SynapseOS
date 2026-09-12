@@ -1,0 +1,11 @@
+{
+  "app": {
+    "name": "SynapseOS",
+    "controlCenter": "Control Center"
+  },
+  "common": {
+    "loading": "Loading evidence",
+    "unavailable": "Contract unavailable",
+    "retry": "Try again"
+  }
+}

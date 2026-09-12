@@ -2461,18 +2461,18 @@ Donner une interface humaine pour piloter SynapseOS.
 
 ## Écrans V1
 
-- [ ] Dashboard
-- [ ] Projects
-- [ ] Project detail
-- [ ] Tasks
-- [ ] Agents
-- [ ] Agent details
-- [ ] Runs
-- [ ] Audit
-- [ ] Feedback
-- [ ] Security findings
-- [ ] Costs
-- [ ] Settings
+- [x] Dashboard
+- [x] Projects
+- [x] Project detail
+- [x] Tasks
+- [x] Agents
+- [x] Agent details
+- [x] Runs
+- [x] Audit
+- [x] Feedback
+- [x] Security findings
+- [x] Costs
+- [x] Settings
 
 ## Prompt Claude Code — Phase 40
 

@@ -9,6 +9,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from core.git_providers.errors import contains_credential
+
 _MAX_BRANCH_LENGTH = 255
 MAX_FILE_CONTENT_BYTES = 1_048_576
 _PROTECTED_BRANCHES = frozenset({"main", "production"})
@@ -58,6 +60,15 @@ class _ImmutableRemoteGitModel(BaseModel):
         hide_input_in_errors=True,
         revalidate_instances="always",
     )
+
+
+class RemoteOperationOptions(_ImmutableRemoteGitModel):
+    """Validated caller deadline shared by all remote provider operations."""
+
+    timeout_seconds: Annotated[
+        float,
+        Field(gt=0.0, le=300.0, allow_inf_nan=False),
+    ]
 
 
 class RemoteMergeMethod(StrEnum):
@@ -234,6 +245,20 @@ class RemoteMergeRequest(_ImmutableRemoteGitModel):
     method: RemoteMergeMethod
 
 
+class RemotePullRequestRequest(_ImmutableRemoteGitModel):
+    """Validated coordinates for one remote pull-request read."""
+
+    repository: RepositoryCoordinates
+    number: Annotated[int, Field(ge=1, le=2_147_483_647)]
+
+
+class RemoteChecksRequest(_ImmutableRemoteGitModel):
+    """Validated coordinates for checks bound to one exact remote head."""
+
+    repository: RepositoryCoordinates
+    head_sha: Annotated[str, Field(pattern=r"^[0-9a-f]{40,64}$")]
+
+
 class CreateRemotePullRequestRequest(_ImmutableRemoteGitModel):
     """Create one bounded pull request between canonical branch names."""
 
@@ -362,6 +387,8 @@ class RemoteGitAuditEvent(_ImmutableRemoteGitModel):
     @field_validator("detail")
     @classmethod
     def require_safe_detail(cls, value: str | None) -> str | None:
+        if value is not None and contains_credential(value):
+            return "Sensitive detail redacted."
         if value is not None and (
             value != value.strip() or any(ord(character) < 32 for character in value)
         ):

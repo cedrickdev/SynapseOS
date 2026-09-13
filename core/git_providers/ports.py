@@ -10,12 +10,15 @@ from core.git_providers.types import (
     CreateRemotePullRequestRequest,
     RemoteBranch,
     RemoteCheck,
+    RemoteChecksRequest,
     RemoteCommitRequest,
     RemoteCommitResult,
     RemoteGitAuditEvent,
     RemoteMergeRequest,
     RemoteMergeResult,
+    RemoteOperationOptions,
     RemotePullRequest,
+    RemotePullRequestRequest,
     RemoteRepositoryMetadata,
     RemoteReview,
     RepositoryCoordinates,
@@ -27,7 +30,7 @@ from core.pull_requests.types import MergeGateResult
 class GitHubTokenProvider(Protocol):
     """Supply one in-memory GitHub token within a caller deadline."""
 
-    async def get_token(self, *, timeout_seconds: float) -> str: ...
+    async def get_token(self, *, options: RemoteOperationOptions) -> str: ...
 
 
 @runtime_checkable
@@ -58,57 +61,54 @@ class RemoteGitProvider(Protocol):
         self,
         repository: RepositoryCoordinates,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> RemoteRepositoryMetadata: ...
 
     async def create_branch(
         self,
         request: CreateRemoteBranchRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> RemoteBranch: ...
 
     async def commit_and_push(
         self,
         request: RemoteCommitRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> RemoteCommitResult: ...
 
     async def create_pull_request(
         self,
         request: CreateRemotePullRequestRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> RemotePullRequest: ...
 
     async def get_pull_request(
         self,
-        repository: RepositoryCoordinates,
-        number: int,
+        request: RemotePullRequestRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> RemotePullRequest: ...
 
     async def list_reviews(
         self,
-        repository: RepositoryCoordinates,
-        number: int,
+        request: RemotePullRequestRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> tuple[RemoteReview, ...]: ...
 
     async def list_checks(
         self,
-        repository: RepositoryCoordinates,
-        head_sha: str,
+        request: RemoteChecksRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> tuple[RemoteCheck, ...]: ...
 
     async def merge_pull_request(
         self,
         request: RemoteMergeRequest,
         *,
-        timeout_seconds: float,
+        options: RemoteOperationOptions,
     ) -> RemoteMergeResult: ...

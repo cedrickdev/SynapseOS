@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
+
+_CREDENTIAL_PATTERNS = (
+    re.compile(r"(?i)\b(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]+"),
+    re.compile(r"(?i)\b(?:authorization|proxy-authorization)\s*:"),
+    re.compile(r"(?i)\bbearer\s+\S+"),
+    re.compile(r"(?i)\b(?:api[_-]?key|password|passwd|secret|token)\s*[:=]\s*\S+"),
+)
+
+
+def contains_credential(value: str) -> bool:
+    """Return whether text contains an obvious credential-bearing shape."""
+
+    return any(pattern.search(value) is not None for pattern in _CREDENTIAL_PATTERNS)
 
 
 class RemoteGitErrorCode(StrEnum):
@@ -41,6 +55,7 @@ class RemoteGitError(RuntimeError):
             or len(safe_message) > 255
             or safe_message != safe_message.strip()
             or any(ord(character) < 32 for character in safe_message)
+            or contains_credential(safe_message)
         ):
             raise ValueError("remote Git error message is invalid")
         if status_code is not None and not 100 <= status_code <= 599:

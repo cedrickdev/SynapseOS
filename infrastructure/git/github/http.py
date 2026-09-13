@@ -152,6 +152,7 @@ class GitHubJsonClient:
                 timeout=remaining,
             )
         response = await self._client.send(request, stream=True, follow_redirects=False)
+        processing_error: BaseException | None = None
         try:
             if not response.is_success:
                 raise RemoteGitError(
@@ -160,11 +161,20 @@ class GitHubJsonClient:
                 )
             body = bytearray()
             async for chunk in response.aiter_bytes():
-                body.extend(chunk)
-                if len(body) > self._max_response_bytes:
+                if len(chunk) > self._max_response_bytes - len(body):
                     raise RemoteGitError(RemoteGitErrorCode.RESOURCE_LIMIT)
+                body.extend(chunk)
+        except BaseException as error:
+            processing_error = error
+            raise
         finally:
-            await self._close_response(response, deadline=deadline)
+            try:
+                await self._close_response(response, deadline=deadline)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                if processing_error is None:
+                    raise RemoteGitError(RemoteGitErrorCode.PROVIDER_FAILED) from None
 
         try:
             value: Any = json.loads(body)

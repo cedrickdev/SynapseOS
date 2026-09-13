@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterable
+from typing import SupportsIndex
 
 import httpx
 import pytest
@@ -15,6 +16,7 @@ from core.git_providers import (
     RemoteGitErrorCode,
     RemoteOperationOptions,
 )
+from infrastructure.git.github import http as github_http
 from infrastructure.git.github.http import GitHubJsonClient
 
 
@@ -56,6 +58,19 @@ class _NeverEndingStream(httpx.AsyncByteStream):
 class _NeverClosingResponse(httpx.Response):
     async def aclose(self) -> None:
         await asyncio.Event().wait()
+
+
+class _RaisingCloseResponse(httpx.Response):
+    async def aclose(self) -> None:
+        raise RuntimeError("provider-close-secret")
+
+
+class _TrackingBody(bytearray):
+    extend_sizes: list[int] = []
+
+    def extend(self, data: Iterable[SupportsIndex]) -> None:
+        super().extend(data)
+        type(self).extend_sizes.append(len(self))
 
 
 def _client(
@@ -192,6 +207,67 @@ def test_request_json_streams_caps_and_closes_response() -> None:
     asyncio.run(raw_client.aclose())
 
 
+def test_request_json_rejects_oversized_chunk_before_accumulating_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _TrackingBody.extend_sizes = []
+    monkeypatch.setattr(github_http, "bytearray", _TrackingBody, raising=False)
+    client, raw_client, _ = _client(
+        lambda request: httpx.Response(200, content=b"x" * 65),
+        max_response_bytes=64,
+    )
+
+    with pytest.raises(RemoteGitError) as raised:
+        asyncio.run(
+            client.request_json(
+                "GET", "/repos/acme/widget", options=RemoteOperationOptions(timeout_seconds=1)
+            )
+        )
+
+    assert raised.value.code is RemoteGitErrorCode.RESOURCE_LIMIT
+    assert _TrackingBody.extend_sizes == []
+    asyncio.run(raw_client.aclose())
+
+
+def test_cleanup_failure_preserves_existing_canonical_error_without_provider_text() -> None:
+    client, raw_client, _ = _client(
+        lambda request: _RaisingCloseResponse(404, text="provider-body-secret")
+    )
+
+    with pytest.raises(RemoteGitError) as raised:
+        asyncio.run(
+            client.request_json(
+                "GET", "/repos/acme/widget", options=RemoteOperationOptions(timeout_seconds=1)
+            )
+        )
+
+    rendered = repr(raised.value) + str(raised.value)
+    assert raised.value.code is RemoteGitErrorCode.NOT_FOUND
+    assert raised.value.status_code == 404
+    assert "provider-close-secret" not in rendered
+    assert "provider-body-secret" not in rendered
+    assert raised.value.__cause__ is None
+    asyncio.run(raw_client.aclose())
+
+
+def test_cleanup_failure_after_success_returns_only_static_provider_error() -> None:
+    client, raw_client, _ = _client(lambda request: _RaisingCloseResponse(200, content=b"{}"))
+
+    with pytest.raises(RemoteGitError) as raised:
+        asyncio.run(
+            client.request_json(
+                "GET", "/repos/acme/widget", options=RemoteOperationOptions(timeout_seconds=1)
+            )
+        )
+
+    rendered = repr(raised.value) + str(raised.value)
+    assert raised.value.code is RemoteGitErrorCode.PROVIDER_FAILED
+    assert raised.value.status_code is None
+    assert "provider-close-secret" not in rendered
+    assert raised.value.__cause__ is None
+    asyncio.run(raw_client.aclose())
+
+
 def test_request_json_rejects_malformed_json_and_closes_response() -> None:
     stream = _TrackingStream((b"not-json",))
     client, raw_client, _ = _client(lambda request: httpx.Response(200, stream=stream))
@@ -297,9 +373,7 @@ def test_close_cancels_never_finishing_response_cleanup_without_hanging(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     raw_client = httpx.AsyncClient(
-        transport=httpx.MockTransport(
-            lambda request: _NeverClosingResponse(200, content=b"{}")
-        )
+        transport=httpx.MockTransport(lambda request: _NeverClosingResponse(200, content=b"{}"))
     )
     if owns_client:
         monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: raw_client)

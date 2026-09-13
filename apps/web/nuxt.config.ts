@@ -30,6 +30,7 @@ export default defineNuxtConfig({
     backendBaseUrl: 'http://localhost:8000',
     backendTimeoutMs: 8_000,
     backendMaxResponseBytes: 1_048_576,
+    backendServiceToken: '',
     public: {
       appName: 'SynapseOS'
     }

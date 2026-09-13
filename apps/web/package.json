@@ -6,6 +6,8 @@
     "dev": "nuxt dev --port 3000",
     "build": "nuxt build",
     "preview": "nuxt preview",
+    "openapi:export": "../../.venv/bin/python ../../scripts/export_dashboard_openapi.py openapi/dashboard.json",
+    "api:generate": "pnpm openapi:export && orval --config orval.config.ts",
     "typecheck": "nuxt typecheck",
     "lint": "nuxt prepare && eslint .",
     "test": "vitest run",
@@ -34,6 +36,7 @@
     "@vue/test-utils": "^2.5.0",
     "eslint": "^10.10.0",
     "happy-dom": "^20.14.3",
+    "orval": "^8.32.0",
     "typescript": "^5.9.3",
     "vitest": "^5.0.0",
     "vue-tsc": "^3.3.11"

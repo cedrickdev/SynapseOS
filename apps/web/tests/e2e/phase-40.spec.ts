@@ -26,6 +26,13 @@ test('every Phase 40 screen is reachable from the application shell', async ({ p
   }
 })
 
+test('the projects screen renders authoritative backend data', async ({ page }) => {
+  test.skip(process.env.SYNAPSEOS_E2E_DASHBOARD !== '1', 'Requires the real dashboard API stack')
+
+  await gotoApp(page, '/projects')
+  await expect(page.getByText('Live dashboard project')).toBeVisible()
+})
+
 test('the dashboard and navigation have no automatically detectable accessibility violations', async ({ page }) => {
   await gotoApp(page, '/')
   await expect(page.getByRole('heading', { name: 'Company pulse', level: 1 })).toBeVisible()

@@ -29,6 +29,7 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://synapseos:synapseos@db:5432/synapseos}
+      DASHBOARD_SERVICE_TOKEN: ${DASHBOARD_SERVICE_TOKEN:-}
     ports:
       - "8000:8000"
     healthcheck:

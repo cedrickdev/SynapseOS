@@ -1,1 +1,3 @@
-<template><ResourceCollectionView title="Projects" description="Portfolio, milestones and delivery state from the authoritative backend." icon="i-lucide-panels-top-left" resource="projects" /></template>
+<template>
+  <ProjectCollectionView />
+</template>

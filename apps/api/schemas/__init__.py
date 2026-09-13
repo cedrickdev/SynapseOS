@@ -1,0 +1,1 @@
+"""Typed HTTP response schemas."""

@@ -31,6 +31,7 @@ from infrastructure.database.base import (
 
 if TYPE_CHECKING:
     from infrastructure.database.models.execution import AgentRun, Decision
+    from infrastructure.database.models.genome import AgentGenome
     from infrastructure.database.models.history import AgentScore, AuditEvent
     from infrastructure.database.models.incidents import Incident
     from infrastructure.database.models.pull_requests import (
@@ -75,6 +76,7 @@ class Agent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     scores: Mapped[list[AgentScore]] = relationship(back_populates="agent")
     capabilities: Mapped[list[AgentCapability]] = relationship(back_populates="agent")
     permissions: Mapped[list[AgentPermission]] = relationship(back_populates="agent")
+    genome: Mapped[AgentGenome | None] = relationship(back_populates="agent", uselist=False)
     authored_pull_requests: Mapped[list[PullRequest]] = relationship(
         back_populates="author", foreign_keys="PullRequest.author_agent_id"
     )

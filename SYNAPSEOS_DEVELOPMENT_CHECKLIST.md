@@ -2881,6 +2881,35 @@ EXT-GOV-01 → EXT-GOV-08
 EXT-MGR-01 → EXT-MGR-10
 ```
 
+## EXT-GEN-01 — Agent Genome contracts and entities
+
+### Objective
+
+Introduce the persistent, versioned Agent Genome data foundation without changing agent
+selection, permissions, trust, autonomy, or runtime behavior.
+
+### Checklist
+
+- [x] Define typed Genome statuses, metric windows, failure severities, and creation sources
+- [x] Add `AgentGenome` and immutable `AgentGenomeVersion` PostgreSQL models
+- [x] Add immutable `AgentCapabilityMetric` and `AgentPerformanceMetric` models
+- [x] Add append-only `AgentFailurePattern` observations
+- [x] Enforce agent ownership, version uniqueness, score bounds, non-negative counters, and UTC dates
+- [x] Add indexes for bounded agent, version, capability, metric, and failure-pattern reads
+- [x] Add repositories exposing only approved create/get/list operations
+- [x] Add an Alembic migration and downgrade path
+- [x] Add real-PostgreSQL migration, constraint, isolation, immutability, and repository tests
+- [x] Run the complete test suite, Ruff, formatting, and mypy
+
+### Explicit exclusions
+
+- evidence ingestion
+- capability or performance scoring formulas
+- behavioral baseline or deviation detection
+- capability matching or agent ranking
+- Trust Score, Autonomy Governor, and AI Manager integration
+- any permission, routing, frontend, or runtime behavior change
+
 These identifiers must not be merged into or substituted for existing V1 phase numbers. Before V2
 implementation begins, reconcile their exact placement and dependencies against the completed V1
 roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =

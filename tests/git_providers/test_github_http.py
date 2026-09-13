@@ -53,6 +53,11 @@ class _NeverEndingStream(httpx.AsyncByteStream):
         self.closed = True
 
 
+class _NeverClosingResponse(httpx.Response):
+    async def aclose(self) -> None:
+        await asyncio.Event().wait()
+
+
 def _client(
     handler: Callable[[httpx.Request], httpx.Response],
     *,
@@ -269,6 +274,61 @@ def test_async_context_closes_owned_client(monkeypatch: pytest.MonkeyPatch) -> N
     asyncio.run(use_client())
 
     assert owned_client.is_closed
+
+
+def test_client_response_bound_accepts_16_mib_and_rejects_larger_values() -> None:
+    exact_client = GitHubJsonClient(
+        token_provider=_TokenProvider(),
+        max_response_bytes=16_777_216,
+    )
+
+    asyncio.run(exact_client.aclose())
+
+    with pytest.raises(ValueError, match="size limit"):
+        GitHubJsonClient(
+            token_provider=_TokenProvider(),
+            max_response_bytes=16_777_217,
+        )
+
+
+@pytest.mark.parametrize("owns_client", [False, True])
+def test_close_cancels_never_finishing_response_cleanup_without_hanging(
+    owns_client: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: _NeverClosingResponse(200, content=b"{}")
+        )
+    )
+    if owns_client:
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: raw_client)
+        client = GitHubJsonClient(
+            token_provider=_TokenProvider(),
+            max_response_bytes=1_024,
+        )
+    else:
+        client = GitHubJsonClient(
+            token_provider=_TokenProvider(),
+            max_response_bytes=1_024,
+            client=raw_client,
+        )
+
+    async def exercise_cleanup() -> None:
+        with pytest.raises(RemoteGitError) as raised:
+            await client.request_json(
+                "GET",
+                "/repos/acme/widget",
+                options=RemoteOperationOptions(timeout_seconds=0.01),
+            )
+        assert raised.value.code is RemoteGitErrorCode.TIMED_OUT
+        await asyncio.wait_for(client.aclose(), timeout=0.05)
+
+    asyncio.run(exercise_cleanup())
+
+    assert raw_client.is_closed is owns_client
+    if not owns_client:
+        asyncio.run(raw_client.aclose())
 
 
 @pytest.mark.parametrize(

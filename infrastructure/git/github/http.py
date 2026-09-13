@@ -20,6 +20,7 @@ from core.git_providers import (
 )
 
 _DEFAULT_BASE_URL = "https://api.github.com"
+MAX_GITHUB_RESPONSE_BYTES = 16 * 1024 * 1024
 _ALLOWED_METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"})
 _STATUS_ERRORS = {
     401: RemoteGitErrorCode.AUTHENTICATION_FAILED,
@@ -58,8 +59,11 @@ class GitHubJsonClient:
             or parsed_url.fragment
         ):
             raise ValueError("GitHub base URL is invalid")
-        if type(max_response_bytes) is not int or max_response_bytes <= 0:
-            raise ValueError("GitHub response size limit must be positive")
+        if (
+            type(max_response_bytes) is not int
+            or not 1 <= max_response_bytes <= MAX_GITHUB_RESPONSE_BYTES
+        ):
+            raise ValueError("GitHub response size limit is invalid")
 
         self._token_provider = token_provider
         self._max_response_bytes = max_response_bytes
@@ -217,7 +221,10 @@ class GitHubJsonClient:
         """Close pending responses and only a client owned by this boundary."""
         self._closed = True
         if self._cleanup_tasks:
-            await asyncio.gather(*tuple(self._cleanup_tasks), return_exceptions=True)
+            cleanup_tasks = tuple(self._cleanup_tasks)
+            for task in cleanup_tasks:
+                task.cancel()
+            await asyncio.gather(*cleanup_tasks, return_exceptions=True)
         if self._owns_client:
             await self._client.aclose()
 

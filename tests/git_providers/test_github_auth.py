@@ -227,6 +227,26 @@ def test_app_supplier_close_does_not_close_injected_client(
     asyncio.run(raw_client.aclose())
 
 
+def test_app_supplier_response_bound_accepts_16_mib_and_rejects_larger_values() -> None:
+    module = importlib.import_module("infrastructure.git.github.auth")
+    exact_provider = module.GitHubAppInstallationTokenProvider(
+        app_id=12_345,
+        installation_id=67_890,
+        private_key="not-used-until-token-request",
+        max_response_bytes=16_777_216,
+    )
+
+    asyncio.run(exact_provider.aclose())
+
+    with pytest.raises(ValueError, match="size limit"):
+        module.GitHubAppInstallationTokenProvider(
+            app_id=12_345,
+            installation_id=67_890,
+            private_key="not-used-until-token-request",
+            max_response_bytes=16_777_217,
+        )
+
+
 def test_public_package_exports_github_authentication_and_http_boundaries() -> None:
     package = importlib.import_module("infrastructure.git.github")
 

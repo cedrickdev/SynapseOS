@@ -2507,6 +2507,39 @@ Pas de données mockées permanentes si les endpoints existent.
 
 ---
 
+# PHASE 40.1 — Frontend Backend API Contracts
+
+## Objective
+
+Connect the Phase 40 dashboard to authoritative backend data through bounded, read-only contracts.
+
+## Checklist
+
+- [x] Add authenticated read-only FastAPI contracts for projects, tasks, agents, runs, audit,
+  feedback, security findings, and costs.
+- [x] Enforce private service-token authentication without exposing the token in OpenAPI or browser
+  runtime configuration.
+- [x] Bound pagination and user-authored free text at the HTTP boundary.
+- [x] Exclude prompts, raw errors, arbitrary metadata, audit payloads, and task acceptance criteria
+  from dashboard responses.
+- [x] Read exclusively from authoritative PostgreSQL models without mock business data.
+- [x] Export a deterministic FastAPI OpenAPI document and generate the TypeScript client with Orval.
+- [x] Route browser requests through the Nuxt server proxy; never call FastAPI directly from the
+  browser.
+- [x] Configure TanStack Query with no implicit retries and bounded cache lifetime.
+- [x] Use the generated typed query client on the Projects screen.
+- [x] Cover API contracts with real PostgreSQL initialized through Alembic.
+- [x] Verify the PostgreSQL → FastAPI → Nuxt → browser path with Playwright.
+- [x] Pass backend pytest, Ruff, mypy, frontend unit tests, lint, typecheck, and production build.
+
+## Explicit exclusions
+
+- No frontend mutation authority.
+- No direct browser access to database, filesystem, shell, tools, agents, or provider credentials.
+- No GitHub or GitLab provider implementation from Phase 41.
+
+---
+
 # PHASE 41 — GitHub / GitLab Provider réel
 
 ## Objectif

@@ -13,5 +13,7 @@ export default defineEventHandler(async (event) => {
     baseUrl: config.backendBaseUrl,
     timeoutMs: config.backendTimeoutMs,
     maxResponseBytes: config.backendMaxResponseBytes,
+    serviceToken: config.backendServiceToken,
+    query: getQuery(event),
   })
 })

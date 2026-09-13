@@ -9,8 +9,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from core.git_providers.errors import contains_credential
-
 _MAX_BRANCH_LENGTH = 255
 MAX_FILE_CONTENT_BYTES = 1_048_576
 _PROTECTED_BRANCHES = frozenset({"main", "production"})
@@ -382,15 +380,3 @@ class RemoteGitAuditEvent(_ImmutableRemoteGitModel):
     repository: RepositoryCoordinates
     operation: RemoteGitOperation
     outcome: RemoteGitAuditOutcome
-    detail: Annotated[str, Field(min_length=1, max_length=255)] | None = None
-
-    @field_validator("detail")
-    @classmethod
-    def require_safe_detail(cls, value: str | None) -> str | None:
-        if value is not None and contains_credential(value):
-            return "Sensitive detail redacted."
-        if value is not None and (
-            value != value.strip() or any(ord(character) < 32 for character in value)
-        ):
-            raise ValueError("audit detail is invalid")
-        return value

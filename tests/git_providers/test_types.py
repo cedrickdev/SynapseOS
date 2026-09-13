@@ -228,36 +228,35 @@ def test_remote_git_errors_expose_only_bounded_sanitized_context() -> None:
 
     error = errors.RemoteGitError(
         errors.RemoteGitErrorCode.STALE_STATE,
-        "Remote repository state changed.",
         status_code=409,
     )
 
-    assert str(error) == "Remote repository state changed."
+    assert str(error) == "Remote Git state is stale."
     assert error.code is errors.RemoteGitErrorCode.STALE_STATE
     assert error.status_code == 409
     assert not hasattr(error, "body")
     assert not hasattr(error, "token")
     with pytest.raises(ValueError):
-        errors.RemoteGitError(errors.RemoteGitErrorCode.PROVIDER_FAILED, "x" * 256)
-    with pytest.raises(ValueError):
-        errors.RemoteGitError(errors.RemoteGitErrorCode.PROVIDER_FAILED, "unsafe\nmessage")
+        errors.RemoteGitError(errors.RemoteGitErrorCode.PROVIDER_FAILED, status_code=99)
 
 
-def test_remote_git_error_rejects_credential_bearing_messages_without_echoing_them() -> None:
+def test_remote_git_error_message_is_closed_and_cannot_accept_arbitrary_text() -> None:
     errors = importlib.import_module("core.git_providers.errors")
 
-    unsafe_messages = (
-        "GitHub rejected ghp_0123456789abcdefghijklmnopqrstuvwxyz.",
-        "Authorization: Bearer highly-sensitive-value",
-        "password=highly-sensitive-value",
-        "secret: highly-sensitive-value",
-        "token = highly-sensitive-value",
-        "token=" + "x" * 300,
+    error = errors.RemoteGitError(errors.RemoteGitErrorCode.STALE_STATE, status_code=409)
+
+    assert error.safe_message == "Remote Git state is stale."
+    assert str(error) == "Remote Git state is stale."
+    arbitrary_credentials = (
+        "opaque credential zxqv-987654321",
+        "https://user:password@example.com/repository",
+        "Basic dXNlcjpwYXNzd29yZA==",
+        "client_secret=highly-sensitive-value",
+        "access_token=highly-sensitive-value",
     )
-    for unsafe_message in unsafe_messages:
-        with pytest.raises(ValueError) as captured:
-            errors.RemoteGitError(errors.RemoteGitErrorCode.PROVIDER_FAILED, unsafe_message)
-        assert unsafe_message not in str(captured.value)
+    for value in arbitrary_credentials:
+        with pytest.raises(TypeError):
+            errors.RemoteGitError(errors.RemoteGitErrorCode.PROVIDER_FAILED, value)
 
 
 def test_remote_results_are_immutable_and_allowlisted() -> None:
@@ -352,17 +351,16 @@ def test_remote_audit_event_is_bounded_immutable_and_secret_free_by_shape() -> N
         repository=repository,
         operation=module.RemoteGitOperation.CREATE_BRANCH,
         outcome=module.RemoteGitAuditOutcome.STARTED,
-        detail="Creating a SHA-bound branch.",
     )
 
     assert "token" not in event.model_dump()
-    with pytest.raises(ValidationError):
-        event.detail = "changed"
-    with pytest.raises(ValueError):
-        module.RemoteGitAuditEvent(**{**event.model_dump(), "detail": "x" * 256, "token": "secret"})
+    assert "detail" not in event.model_dump()
+    with pytest.raises(ValidationError) as captured:
+        module.RemoteGitAuditEvent(**{**event.model_dump(), "detail": "secret", "token": "secret"})
+    assert "secret" not in str(captured.value)
 
 
-def test_remote_audit_event_redacts_credential_bearing_detail() -> None:
+def test_remote_audit_event_has_no_free_form_detail_channel() -> None:
     module = importlib.import_module("core.git_providers.types")
     base = {
         "actor_id": "agent:developer",
@@ -374,20 +372,21 @@ def test_remote_audit_event_redacts_credential_bearing_detail() -> None:
         "operation": module.RemoteGitOperation.CREATE_BRANCH,
         "outcome": module.RemoteGitAuditOutcome.FAILED,
     }
-    unsafe_details = (
-        "GitHub rejected github_pat_highly_sensitive_value",
-        "Authorization: Bearer highly-sensitive-value",
-        "Bearer highly-sensitive-value",
-        "password=highly-sensitive-value",
-        "secret: highly-sensitive-value",
-        "token = highly-sensitive-value",
-    )
 
-    for unsafe_detail in unsafe_details:
-        event = module.RemoteGitAuditEvent(**base, detail=unsafe_detail)
-        serialized = str(event.model_dump())
-        assert event.detail == "Sensitive detail redacted."
-        assert unsafe_detail not in serialized
+    event = module.RemoteGitAuditEvent(**base)
+
+    assert "detail" not in event.model_dump()
+    arbitrary_credentials = (
+        "opaque credential zxqv-987654321",
+        "https://user:password@example.com/repository",
+        "Basic dXNlcjpwYXNzd29yZA==",
+        "client_secret=highly-sensitive-value",
+        "access_token=highly-sensitive-value",
+    )
+    for value in arbitrary_credentials:
+        with pytest.raises(ValidationError) as captured:
+            module.RemoteGitAuditEvent(**base, detail=value)
+        assert value not in str(captured.value)
 
 
 def test_remote_ports_accept_structurally_compatible_adapters() -> None:

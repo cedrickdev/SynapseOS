@@ -25,6 +25,7 @@ playwright-report/
 .coverage
 htmlcov/
 .superpowers/sdd/
+.worktrees/
 .synapseos/
 
 # Environment / secrets (never commit real secrets)

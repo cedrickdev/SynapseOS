@@ -21,6 +21,7 @@ dependencies = [
     "alembic>=1.13",
     "psycopg[binary]>=3.1",
     "httpx>=0.27",
+    "PyJWT[crypto]>=2.9,<3",
     "pyyaml>=6.0",
     "markitdown[pdf,docx,pptx,xlsx]>=0.1.6,<0.2",
 ]

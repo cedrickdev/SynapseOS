@@ -2548,14 +2548,14 @@ Connecter le workflow interne aux vraies PR/MR.
 
 ## Checklist
 
-- [ ] Git provider abstraction
-- [ ] GitHub App recommandé
+- [x] Git provider abstraction
+- [x] GitHub App recommandé
 - [ ] GitLab provider plus tard
-- [ ] create branch
-- [ ] create PR
-- [ ] review
-- [ ] status checks
-- [ ] merge gates
+- [x] create branch
+- [x] create PR
+- [x] review
+- [x] status checks
+- [x] merge gates
 - [ ] webhooks plus tard
 
 ## Prompt Claude Code — Phase 41
@@ -2588,14 +2588,14 @@ Permettre à plusieurs agents de travailler en parallèle.
 
 ## Checklist
 
-- [ ] queue
-- [ ] workers
-- [ ] locking
-- [ ] task ownership
-- [ ] cancellation
-- [ ] retries
-- [ ] idempotency
-- [ ] heartbeats
+- [x] queue
+- [x] workers
+- [x] locking
+- [x] task ownership
+- [x] cancellation
+- [x] retries
+- [x] idempotency
+- [x] heartbeats
 
 ## Prompt Claude Code — Phase 42
 
@@ -2636,6 +2636,14 @@ BLOCKED
 OFFLINE
 ```
 
+## Checklist
+
+- [x] availability-aware selection
+- [x] deterministic multi-project priority
+- [x] incompatible double-assignment prevention
+- [x] project release
+- [x] assignment history
+
 ## Prompt Claude Code — Phase 43
 
 ```text
@@ -2664,14 +2672,14 @@ Préparer l'apprentissage sans entraîner automatiquement le modèle.
 
 ## Données possibles
 
-- [ ] prompt/context
-- [ ] décision
-- [ ] alternatives
-- [ ] résultat
-- [ ] review
-- [ ] user feedback
-- [ ] corrected answer
-- [ ] reward candidate
+- [x] prompt/context
+- [x] décision
+- [x] alternatives
+- [x] résultat
+- [x] review
+- [x] user feedback
+- [x] corrected answer
+- [x] reward candidate
 
 ## Prompt Claude Code — Phase 44
 
@@ -2721,23 +2729,23 @@ flowchart TD
 
 ## Validation finale V1
 
-- [ ] cahier des charges analysé
-- [ ] questions bloquantes identifiées
-- [ ] architecture proposée
-- [ ] tâches générées
-- [ ] agent affecté
-- [ ] repository inspecté
-- [ ] code modifié
-- [ ] tests exécutés
-- [ ] review indépendante
-- [ ] QA
-- [ ] sécurité
-- [ ] merge gate
-- [ ] audit complet
-- [ ] scoring
-- [ ] mémoire
-- [ ] feedback
-- [ ] clôture
+- [x] cahier des charges analysé
+- [x] questions bloquantes identifiées
+- [x] architecture proposée
+- [x] tâches générées
+- [x] agent affecté
+- [x] repository inspecté
+- [x] code modifié
+- [x] tests exécutés
+- [x] review indépendante
+- [x] QA
+- [x] sécurité
+- [x] merge gate
+- [x] audit complet
+- [x] scoring
+- [x] mémoire
+- [x] feedback
+- [x] clôture
 
 ---
 

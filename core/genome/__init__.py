@@ -1,5 +1,13 @@
 """Provider-neutral Agent Genome persistence contracts."""
 
+from core.genome.evidence import (
+    EvidenceOutcome,
+    EvidenceSignal,
+    EvidenceSourceType,
+    EvidenceUnit,
+    GenomeEvidenceDraft,
+    filter_evidence_metadata,
+)
 from core.genome.types import (
     GenomeCreationSource,
     GenomeFailureSeverity,
@@ -8,8 +16,14 @@ from core.genome.types import (
 )
 
 __all__ = [
+    "EvidenceOutcome",
+    "EvidenceSignal",
+    "EvidenceSourceType",
+    "EvidenceUnit",
+    "GenomeEvidenceDraft",
     "GenomeCreationSource",
     "GenomeFailureSeverity",
     "GenomeMetricWindow",
     "GenomeVersionStatus",
+    "filter_evidence_metadata",
 ]

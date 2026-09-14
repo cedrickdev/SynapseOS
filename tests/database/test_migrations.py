@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
+from typing import cast
 
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import Numeric, create_engine, inspect, text
 
 from alembic import command
 
 EXPECTED_TABLES = {
+    "agent_genome_evidence",
     "agent_permissions",
     "agent_runs",
     "agent_scores",
@@ -41,6 +44,7 @@ def test_migration_supports_upgrade_downgrade_and_second_upgrade(
     engine = create_engine(migration_database_url)
     try:
         phase_2_tables = EXPECTED_TABLES - {
+            "agent_genome_evidence",
             "agent_permissions",
             "approvals",
             "pull_request_reviews",
@@ -190,6 +194,44 @@ def test_migration_supports_upgrade_downgrade_and_second_upgrade(
     engine = create_engine(migration_database_url)
     try:
         assert EXPECTED_TABLES.isdisjoint(inspect(engine).get_table_names())
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+
+
+def test_genome_evidence_migration_has_reversible_table_and_enums(
+    migration_database_url: str,
+) -> None:
+    config = _config(migration_database_url)
+    command.upgrade(config, "head")
+    engine = create_engine(migration_database_url)
+    try:
+        assert "agent_genome_evidence" in inspect(engine).get_table_names()
+        numeric_value = next(
+            column
+            for column in inspect(engine).get_columns("agent_genome_evidence")
+            if column["name"] == "numeric_value"
+        )
+        numeric_type = cast(Numeric[Decimal], numeric_value["type"])
+        assert numeric_type.precision == 20
+        assert numeric_type.scale == 8
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "20260913_0009")
+    engine = create_engine(migration_database_url)
+    try:
+        assert "agent_genome_evidence" not in inspect(engine).get_table_names()
+        with engine.connect() as connection:
+            enum_count = connection.execute(
+                text(
+                    "SELECT count(*) FROM pg_type WHERE typname IN "
+                    "('genome_evidence_source_type', 'genome_evidence_signal', "
+                    "'genome_evidence_outcome', 'genome_evidence_unit')"
+                )
+            ).scalar_one()
+            assert enum_count == 0
     finally:
         engine.dispose()
 

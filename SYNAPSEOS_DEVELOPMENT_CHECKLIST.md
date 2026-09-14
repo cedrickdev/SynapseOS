@@ -2910,6 +2910,34 @@ selection, permissions, trust, autonomy, or runtime behavior.
 - Trust Score, Autonomy Governor, and AI Manager integration
 - any permission, routing, frontend, or runtime behavior change
 
+## EXT-GEN-02 — Agent Genome evidence ingestion
+
+### Objective
+
+Collect immutable, provenance-bound evidence from existing trusted execution records without
+computing capability scores or changing runtime decisions.
+
+### Checklist
+
+- [x] Define typed evidence source, signal, outcome, value, and provenance contracts
+- [x] Add append-only `AgentGenomeEvidence` PostgreSQL persistence
+- [x] Deduplicate ingestion by source type, source identifier, and signal
+- [x] Add bounded adapters for AgentRun, independent Review, QA, Security, and Usage records
+- [x] Reject agent self-scores, unverified free-form claims, raw prompts, and raw provider output
+- [x] Filter evidence metadata through a strict allowlist before persistence
+- [x] Add bounded create/get/list repository operations without update or delete
+- [x] Add reversible Alembic migration
+- [x] Add unit and real-PostgreSQL tests for provenance, isolation, bounds, and append-only behavior
+- [x] Run the complete test suite, Ruff, formatting, and mypy
+
+### Explicit exclusions
+
+- capability or performance score calculation
+- evidence weighting, recency, decay, or task-similarity formulas
+- Genome version activation or snapshot generation
+- behavioral baselines and deviation detection
+- matching, Trust Score, Governor, Manager, permissions, or routing changes
+
 These identifiers must not be merged into or substituted for existing V1 phase numbers. Before V2
 implementation begins, reconcile their exact placement and dependencies against the completed V1
 roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =

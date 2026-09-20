@@ -25,6 +25,10 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.genome import (
+    EvidenceOutcome,
+    EvidenceSignal,
+    EvidenceSourceType,
+    EvidenceUnit,
     GenomeCreationSource,
     GenomeFailureSeverity,
     GenomeMetricWindow,
@@ -202,3 +206,97 @@ class AgentFailurePattern(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
     )
 
     agent: Mapped[Agent] = relationship()
+
+
+class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """One immutable, provenance-bound observation used by future Genome calculations."""
+
+    __tablename__ = "agent_genome_evidence"
+    __table_args__ = (
+        CheckConstraint("task_id IS NULL OR project_id IS NOT NULL", name="task_requires_project"),
+        CheckConstraint("(numeric_value IS NULL) = (unit IS NULL)", name="numeric_value_unit_pair"),
+        CheckConstraint(
+            "numeric_value IS NULL OR numeric_value >= 0", name="numeric_value_nonnegative"
+        ),
+        CheckConstraint(
+            "source_type <> 'AGENT_RUN' OR (run_id IS NOT NULL AND run_id = source_id)",
+            name="agent_run_source_binding",
+        ),
+        CheckConstraint(
+            "(source_type = 'AGENT_RUN' AND signal = 'RUN_OUTCOME') OR "
+            "(source_type = 'PULL_REQUEST_REVIEW' AND signal = 'REVIEW_OUTCOME') OR "
+            "(source_type = 'QA_APPROVAL' AND signal = 'QA_OUTCOME') OR "
+            "(source_type = 'SECURITY_APPROVAL' AND signal = 'SECURITY_OUTCOME') OR "
+            "(source_type = 'USAGE_RECORD' AND signal IN "
+            "('TOTAL_TOKENS', 'WALL_CLOCK_DURATION', 'TOOL_CALL_COUNT', "
+            "'CPU_DURATION', 'GPU_DURATION', 'PROVIDER_COST'))",
+            name="source_signal_match",
+        ),
+        CheckConstraint(
+            "(source_type = 'AGENT_RUN' AND outcome IN "
+            "('SUCCEEDED', 'FAILED', 'CANCELLED', 'TIMED_OUT') AND numeric_value IS NULL) OR "
+            "(source_type = 'PULL_REQUEST_REVIEW' AND outcome IN "
+            "('APPROVED', 'CHANGES_REQUESTED') AND numeric_value IS NULL) OR "
+            "(source_type IN ('QA_APPROVAL', 'SECURITY_APPROVAL') AND outcome IN "
+            "('PASSED', 'REJECTED', 'BLOCKED') AND numeric_value IS NULL) OR "
+            "(source_type = 'USAGE_RECORD' AND outcome = 'OBSERVED' "
+            "AND numeric_value IS NOT NULL)",
+            name="source_outcome_value_match",
+        ),
+        CheckConstraint(
+            "source_type <> 'USAGE_RECORD' OR "
+            "(signal = 'TOTAL_TOKENS' AND unit = 'TOKENS' "
+            "AND numeric_value = trunc(numeric_value)) OR "
+            "(signal = 'TOOL_CALL_COUNT' AND unit = 'COUNT' "
+            "AND numeric_value = trunc(numeric_value)) OR "
+            "(signal IN ('WALL_CLOCK_DURATION', 'CPU_DURATION', 'GPU_DURATION') "
+            "AND unit = 'MILLISECONDS') OR "
+            "(signal = 'PROVIDER_COST' AND unit = 'PROVIDER_CURRENCY')",
+            name="numeric_signal_unit_match",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "task_id"],
+            ["tasks.project_id", "tasks.id"],
+            name="fk_agent_genome_evidence_task_project_scope",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "source_type",
+            "source_id",
+            "signal",
+            name="uq_agent_genome_evidence_source_signal",
+        ),
+        Index("ix_agent_genome_evidence_agent_observed", "agent_id", "observed_at"),
+        Index("ix_agent_genome_evidence_project_observed", "project_id", "observed_at"),
+        Index("ix_agent_genome_evidence_task_observed", "task_id", "observed_at"),
+        Index("ix_agent_genome_evidence_signal_observed", "signal", "observed_at"),
+    )
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agents.id", ondelete="RESTRICT"), nullable=False
+    )
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
+    )
+    task_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agent_runs.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_type: Mapped[EvidenceSourceType] = mapped_column(
+        Enum(EvidenceSourceType, name="genome_evidence_source_type"), nullable=False
+    )
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    signal: Mapped[EvidenceSignal] = mapped_column(
+        Enum(EvidenceSignal, name="genome_evidence_signal"), nullable=False
+    )
+    outcome: Mapped[EvidenceOutcome] = mapped_column(
+        Enum(EvidenceOutcome, name="genome_evidence_outcome"), nullable=False
+    )
+    numeric_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 8), nullable=True)
+    unit: Mapped[EvidenceUnit | None] = mapped_column(
+        Enum(EvidenceUnit, name="genome_evidence_unit"), nullable=True
+    )
+    metadata_: Mapped[dict[str, object]] = mapped_column(
+        "metadata", MutableDict.as_mutable(JSONB), default=dict, nullable=False
+    )
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

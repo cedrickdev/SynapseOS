@@ -6,6 +6,7 @@ from infrastructure.database.models.genome import (
     AgentCapabilityMetric,
     AgentFailurePattern,
     AgentGenome,
+    AgentGenomeEvidence,
     AgentGenomeVersion,
     AgentPerformanceMetric,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "AgentCapabilityMetric",
     "AgentFailurePattern",
     "AgentGenome",
+    "AgentGenomeEvidence",
     "AgentGenomeVersion",
     "AgentPermission",
     "AgentPerformanceMetric",

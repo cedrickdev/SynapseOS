@@ -3201,6 +3201,27 @@ versioned policy, then classify the result without altering operational authorit
   critical-event handling, or explainability
 - permission, autonomy, assignment, routing, API, frontend, or runtime changes
 
+## EXT-TRUST-05 — Trust decay
+
+### Objective
+
+Apply a deterministic, versioned recency factor to immutable historical Trust-event impact without
+modifying event history or changing any operational authority.
+
+### Checklist
+
+- [x] Define immutable strict decay-policy, observation, and derived-event contracts
+- [x] Apply a bounded discrete half-life factor to historical positive and negative event impact
+- [x] Preserve source-event identity and reject future, duplicate, malformed, or unbounded inputs
+- [x] Keep decay derived and non-persistent; immutable historical events are never updated
+- [x] Add unit tests for half-life boundaries, negative signals, and invalid history
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- recovery, critical-event handling, overall-score recomputation, persistence, or explainability
+- permission, autonomy, assignment, routing, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

@@ -1,5 +1,12 @@
 """Provider-neutral contracts for Agent Trust Score."""
 
+from core.trust.critical_events import (
+    CriticalTrustDisposition,
+    CriticalTrustEventResult,
+    TrustCriticalEventCalculator,
+    TrustCriticalEventObservation,
+    TrustCriticalEventPolicy,
+)
 from core.trust.decay import (
     DecayedTrustEvent,
     TrustDecayObservation,
@@ -21,9 +28,14 @@ from core.trust.scoring import (
 from core.trust.types import TrustClass, TrustDimension, TrustEventSeverity, TrustEventType
 
 __all__ = [
+    "CriticalTrustDisposition",
+    "CriticalTrustEventResult",
     "DecayedTrustEvent",
     "TrustClass",
     "TrustClassThresholds",
+    "TrustCriticalEventCalculator",
+    "TrustCriticalEventObservation",
+    "TrustCriticalEventPolicy",
     "TrustDecayObservation",
     "TrustDecayPolicy",
     "TrustDimension",

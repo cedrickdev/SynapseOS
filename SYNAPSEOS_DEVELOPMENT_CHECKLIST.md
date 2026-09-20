@@ -3222,6 +3222,27 @@ modifying event history or changing any operational authority.
 - recovery, critical-event handling, overall-score recomputation, persistence, or explainability
 - permission, autonomy, assignment, routing, API, frontend, or runtime changes
 
+## EXT-TRUST-06 — Critical-event handling
+
+### Objective
+
+Classify configured critical Trust evidence deterministically and emit a bounded restriction
+recommendation for future Governor handling, without directly changing an agent's authority.
+
+### Checklist
+
+- [x] Define immutable strict policy, event-observation, disposition, and result contracts
+- [x] Require a configured event type, critical severity, and negative impact before triggering
+- [x] Emit a non-mutating restriction recommendation and Governor-recomputation signal
+- [x] Preserve event identity and algorithm version in every result
+- [x] Add unit tests for configured critical security events and ignored noncritical or unconfigured events
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- direct permission or autonomy changes, suspension, quarantine, cancellation, or Governor integration
+- persistence, overall-score recomputation, recovery, explainability, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

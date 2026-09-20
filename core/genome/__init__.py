@@ -38,6 +38,7 @@ from core.genome.scoring import (
     CapabilityScoringPolicy,
     CapabilityScoringRequest,
 )
+from core.genome.snapshots import GenomeRunSnapshotRequest
 from core.genome.types import (
     GenomeCreationSource,
     GenomeFailureSeverity,
@@ -77,5 +78,6 @@ __all__ = [
     "GenomeFailureSeverity",
     "GenomeMetricWindow",
     "GenomeVersionStatus",
+    "GenomeRunSnapshotRequest",
     "filter_evidence_metadata",
 ]

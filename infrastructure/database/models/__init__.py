@@ -2,6 +2,14 @@
 
 from infrastructure.database.models.budget import UsageRecord
 from infrastructure.database.models.execution import AgentRun, Decision, ToolCall
+from infrastructure.database.models.genome import (
+    AgentCapabilityMetric,
+    AgentFailurePattern,
+    AgentGenome,
+    AgentGenomeEvidence,
+    AgentGenomeVersion,
+    AgentPerformanceMetric,
+)
 from infrastructure.database.models.history import AgentScore, AuditEvent
 from infrastructure.database.models.incidents import Incident, IncidentEvent, Postmortem
 from infrastructure.database.models.memory import MemoryEntry
@@ -17,7 +25,13 @@ from infrastructure.database.models.work import Task, TaskDependency
 __all__ = [
     "Agent",
     "AgentCapability",
+    "AgentCapabilityMetric",
+    "AgentFailurePattern",
+    "AgentGenome",
+    "AgentGenomeEvidence",
+    "AgentGenomeVersion",
     "AgentPermission",
+    "AgentPerformanceMetric",
     "AgentRun",
     "AgentScore",
     "Approval",

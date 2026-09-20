@@ -1,5 +1,6 @@
 """Provider-neutral contracts for the future Autonomy Governor."""
 
+from core.autonomy.policy import AutonomyPolicyEngine, PolicyReasonCode, PolicyRecommendation
 from core.autonomy.risk import (
     ExecutionEnvironment,
     GovernedActionType,
@@ -16,6 +17,7 @@ from core.autonomy.types import AutonomyDecision, AutonomyLevel, AutonomyReasonC
 __all__ = [
     "AutonomyDecision",
     "AutonomyLevel",
+    "AutonomyPolicyEngine",
     "AutonomyReasonCode",
     "ExecutionEnvironment",
     "GovernedActionType",
@@ -26,4 +28,6 @@ __all__ = [
     "RiskLevel",
     "RiskReasonCode",
     "RiskSeverity",
+    "PolicyReasonCode",
+    "PolicyRecommendation",
 ]

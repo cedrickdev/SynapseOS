@@ -3361,6 +3361,30 @@ duplicating the Permission Engine or executing runtime actions.
 
 ---
 
+## EXT-GOV-04 — Trust integration
+
+### Objective
+
+Consume the existing non-authorizing Trust signal only to reduce a Governor policy ceiling when
+critical, traceable Trust evidence recommends restriction.
+
+### Checklist
+
+- [x] Accept the canonical immutable Trust Governor signal as optional policy evidence
+- [x] Keep neutral Trust signals unable to expand the risk-policy autonomy ceiling
+- [x] Cap a traceable Trust restriction signal at `LEVEL_1_OBSERVE`
+- [x] Preserve Trust algorithm and critical-event provenance in the recommendation
+- [x] Reject restriction signals that lack mandatory critical-event provenance
+- [x] Add unit tests for restrictive, neutral, and malformed Trust signals
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Trust-score calculation, direct permission or autonomy changes, security veto, approvals, leases,
+  persistence, API, frontend, runtime enforcement, or AI Manager integration
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

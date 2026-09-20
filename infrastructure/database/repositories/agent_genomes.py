@@ -12,11 +12,13 @@ from sqlalchemy.orm import Session
 from core.genome import EvidenceSignal, EvidenceSourceType, GenomeEvidenceDraft
 from infrastructure.database.models.genome import (
     AgentCapabilityMetric,
+    AgentCapabilityMetricEvidence,
     AgentFailurePattern,
     AgentGenome,
     AgentGenomeEvidence,
     AgentGenomeVersion,
     AgentPerformanceMetric,
+    AgentPerformanceMetricEvidence,
 )
 from infrastructure.genome.adapters import GenomeEvidenceAdapter
 
@@ -77,6 +79,23 @@ class AgentGenomeRepository:
         )
         return list(self._session.scalars(statement))
 
+    def list_capability_metric_evidence(
+        self, metric_id: uuid.UUID, *, limit: int = 100, offset: int = 0
+    ) -> list[AgentCapabilityMetricEvidence]:
+        _validate_page(limit, offset)
+        statement = (
+            select(AgentCapabilityMetricEvidence)
+            .join(
+                AgentGenomeEvidence,
+                AgentGenomeEvidence.id == AgentCapabilityMetricEvidence.evidence_id,
+            )
+            .where(AgentCapabilityMetricEvidence.metric_id == metric_id)
+            .order_by(AgentGenomeEvidence.observed_at, AgentGenomeEvidence.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._session.scalars(statement))
+
     def list_performance_metrics(
         self, genome_version_id: uuid.UUID, *, limit: int = 100, offset: int = 0
     ) -> list[AgentPerformanceMetric]:
@@ -85,6 +104,19 @@ class AgentGenomeRepository:
             select(AgentPerformanceMetric)
             .where(AgentPerformanceMetric.genome_version_id == genome_version_id)
             .order_by(AgentPerformanceMetric.metric_name, AgentPerformanceMetric.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._session.scalars(statement))
+
+    def list_performance_metric_evidence(
+        self, metric_id: uuid.UUID, *, limit: int = 100, offset: int = 0
+    ) -> list[AgentPerformanceMetricEvidence]:
+        _validate_page(limit, offset)
+        statement = (
+            select(AgentPerformanceMetricEvidence)
+            .where(AgentPerformanceMetricEvidence.metric_id == metric_id)
+            .order_by(AgentPerformanceMetricEvidence.evidence_id)
             .limit(limit)
             .offset(offset)
         )

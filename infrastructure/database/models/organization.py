@@ -39,6 +39,7 @@ if TYPE_CHECKING:
         PullRequest,
         PullRequestReview,
     )
+    from infrastructure.database.models.trust import AgentTrustEvent, AgentTrustSnapshot
     from infrastructure.database.models.work import Task
 
 
@@ -77,6 +78,8 @@ class Agent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     capabilities: Mapped[list[AgentCapability]] = relationship(back_populates="agent")
     permissions: Mapped[list[AgentPermission]] = relationship(back_populates="agent")
     genome: Mapped[AgentGenome | None] = relationship(back_populates="agent", uselist=False)
+    trust_snapshots: Mapped[list[AgentTrustSnapshot]] = relationship(back_populates="agent")
+    trust_events: Mapped[list[AgentTrustEvent]] = relationship(back_populates="agent")
     authored_pull_requests: Mapped[list[PullRequest]] = relationship(
         back_populates="author", foreign_keys="PullRequest.author_agent_id"
     )

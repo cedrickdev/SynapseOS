@@ -3243,6 +3243,28 @@ recommendation for future Governor handling, without directly changing an agent'
 - direct permission or autonomy changes, suspension, quarantine, cancellation, or Governor integration
 - persistence, overall-score recomputation, recovery, explainability, API, frontend, or runtime changes
 
+## EXT-TRUST-07 — Explainability
+
+### Objective
+
+Produce reproducible, content-free Trust score explanations from calculated dimensions and the
+explicit scoring policy, without an LLM-generated judgment or any authority change.
+
+### Checklist
+
+- [x] Define immutable strict contribution and explanation contracts
+- [x] Recompute the overall score from dimensions and the supplied policy before explaining it
+- [x] Return stable dimension scores, event counts, normalized weights, and weighted contributions
+- [x] Preserve Trust class and algorithm version without exposing raw event content
+- [x] Reject a supplied overall result that does not match the evidence and policy
+- [x] Add unit tests for stable contributions and inconsistent result rejection
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- raw-event retrieval, natural-language generation, persistence, API, frontend, or runtime changes
+- permission, autonomy, assignment, Governor integration, suspension, or quarantine
+
 ---
 
 # Ordre recommandé réel

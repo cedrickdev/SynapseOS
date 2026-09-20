@@ -3336,6 +3336,31 @@ policy evaluation, without making any permission or authority decision.
 
 ---
 
+## EXT-GOV-03 — Policy engine
+
+### Objective
+
+Apply deterministic, non-authorizing autonomy ceilings from verified risk evidence without
+duplicating the Permission Engine or executing runtime actions.
+
+### Checklist
+
+- [x] Define immutable strict policy recommendation and closed reason-code contracts
+- [x] Recompute and verify the supplied risk assessment against its complete risk context
+- [x] Apply monotonic default autonomy ceilings from low through critical risk
+- [x] Cap a production database migration at `LEVEL_2_RECOMMEND`
+- [x] Keep policy output non-authorizing: no permission, approval, execution, or final decision fields
+- [x] Add unit tests for the production-migration ceiling, monotonic risk ceilings, and inconsistent
+  risk evidence rejection
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Permission Engine duplication or bypass, Trust/Genome integration, security-veto integration,
+  approval workflow, leases, persistence, API, frontend, or runtime enforcement
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

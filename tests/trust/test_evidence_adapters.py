@@ -41,6 +41,7 @@ def test_adapter_maps_trusted_security_block_to_severe_source_linked_event() -> 
 
     draft = TrustEvidenceAdapter.from_genome_evidence(evidence)
 
+    assert draft is not None
     assert draft.agent_id == evidence.agent_id
     assert draft.event_type is TrustEventType.SECURITY_OUTCOME
     assert draft.impact == Decimal("-25.00")

@@ -8,6 +8,12 @@ from core.genome.evidence import (
     GenomeEvidenceDraft,
     filter_evidence_metadata,
 )
+from core.genome.failures import (
+    FailurePatternAnalyzer,
+    FailurePatternObservation,
+    FailurePatternRequest,
+    FailurePatternResult,
+)
 from core.genome.matching import (
     GenomeCapabilityCandidate,
     GenomeCapabilityMatcher,
@@ -62,6 +68,10 @@ __all__ = [
     "GenomeCapabilityMatchingResult",
     "RankedGenomeAgent",
     "RejectedGenomeAgent",
+    "FailurePatternAnalyzer",
+    "FailurePatternObservation",
+    "FailurePatternRequest",
+    "FailurePatternResult",
     "GenomeEvidenceDraft",
     "GenomeCreationSource",
     "GenomeFailureSeverity",

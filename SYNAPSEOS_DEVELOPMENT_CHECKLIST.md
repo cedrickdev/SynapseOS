@@ -3029,6 +3029,33 @@ capability metrics without assigning work or changing permissions.
 - task assignment, workload scheduling, cost routing, or AI Manager integration
 - Trust Score, Autonomy Governor, permission grants, API, frontend, or runtime changes
 
+## EXT-GEN-06 — Agent Genome failure-pattern tracking
+
+### Objective
+
+Classify trusted Agent Genome failure evidence into deterministic, severity-aware, append-only
+failure-pattern observations without changing reputation, autonomy, permissions, routing, or runtime
+behavior.
+
+### Checklist
+
+- [x] Define bounded failure-pattern observations, requests, results, and deterministic analysis
+- [x] Classify trusted agent-run, review, QA, and security failure outcomes with fixed severities
+- [x] Ignore successful and cancelled outcomes without LLM interpretation
+- [x] Persist grouped patterns with evidence provenance, counts, severity, and last-seen timestamps
+- [x] Preserve append-only history and reuse identical evidence revisions idempotently
+- [x] Validate evidence existence and requested-agent ownership before persistence
+- [x] Add unit and real-PostgreSQL tests for grouping, ignored outcomes, severity, idempotence,
+      revisions, cross-agent rejection, and append-only behavior
+- [x] Run the complete test suite, Ruff, formatting checks on changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Trust Score, reputation calculation, autonomy, permissions, routing, API, frontend, or runtime
+  changes
+- aggregation across agents, promotion or demotion, behavioral baselines, or anomaly detection
+- PostgreSQL triggers, RLS, database permissions, or external provider integrations
+
 ---
 
 # Ordre recommandé réel

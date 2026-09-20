@@ -1,5 +1,10 @@
 """Phase 28 agent registry and deterministic matching."""
 
+from core.agent_registry.genome import (
+    AgentGenomeCapabilitySignal,
+    AgentGenomeManagerSignal,
+    AgentGenomeManagerSignalMatcher,
+)
 from core.agent_registry.matcher import AgentMatcher
 from core.agent_registry.registry import AgentRegistry, AgentRegistrySource
 from core.agent_registry.types import (
@@ -17,6 +22,9 @@ __all__ = [
     "AgentCandidate",
     "AgentCapabilitySnapshot",
     "AgentCostEstimate",
+    "AgentGenomeCapabilitySignal",
+    "AgentGenomeManagerSignal",
+    "AgentGenomeManagerSignalMatcher",
     "AgentMatcher",
     "AgentRegistry",
     "AgentRegistrySource",

@@ -3265,6 +3265,27 @@ explicit scoring policy, without an LLM-generated judgment or any authority chan
 - raw-event retrieval, natural-language generation, persistence, API, frontend, or runtime changes
 - permission, autonomy, assignment, Governor integration, suspension, or quarantine
 
+## EXT-TRUST-08 — Governor integration signal
+
+### Objective
+
+Expose a typed, non-authorizing Trust signal for a future Autonomy Governor so that critical Trust
+evidence can recommend restriction without granting or directly changing authority.
+
+### Checklist
+
+- [x] Define immutable strict Governor-signal contracts and dispositions
+- [x] Carry the bounded overall Trust score, class, algorithm version, and critical-event provenance
+- [x] Emit a restriction recommendation only from a critical Trust restriction result
+- [x] Make non-authorizing behavior explicit: Trust signals can never expand authority
+- [x] Add unit tests for critical restriction signals and high-Trust neutral signals
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Autonomy Governor policies, leases, permissions, approval gates, suspension, quarantine, or runtime action
+- persistence, API, frontend, AI Manager integration, or direct authority changes
+
 ---
 
 # Ordre recommandé réel

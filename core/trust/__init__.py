@@ -23,6 +23,11 @@ from core.trust.explanations import (
     TrustExplanationBuilder,
     TrustScoreExplanation,
 )
+from core.trust.governor_signal import (
+    TrustGovernorSignal,
+    TrustGovernorSignalBuilder,
+    TrustGovernorSignalDisposition,
+)
 from core.trust.scoring import (
     TrustClassThresholds,
     TrustDimensionWeight,
@@ -53,6 +58,9 @@ __all__ = [
     "TrustEventSeverity",
     "TrustEventType",
     "TrustExplanationBuilder",
+    "TrustGovernorSignal",
+    "TrustGovernorSignalBuilder",
+    "TrustGovernorSignalDisposition",
     "TrustOverallScore",
     "TrustOverallScoreCalculator",
     "TrustScoringPolicy",

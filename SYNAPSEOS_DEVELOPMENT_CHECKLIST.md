@@ -3385,6 +3385,30 @@ critical, traceable Trust evidence recommends restriction.
 
 ---
 
+## EXT-GOV-05 — Genome integration
+
+### Objective
+
+Consume versioned, evidence-backed Agent Genome capability signals only as a restrictive Governor
+constraint; strong Genome evidence must never enlarge an autonomy ceiling.
+
+### Checklist
+
+- [x] Accept canonical active Genome capability signals and bounded required-capability inputs
+- [x] Evaluate capability evidence from the score-confidence bound rather than a raw declared skill
+- [x] Cap the policy recommendation at `LEVEL_1_OBSERVE` for missing or insufficient evidence
+- [x] Preserve Genome-version provenance in every Genome-informed recommendation
+- [x] Keep strong Genome evidence unable to expand a risk or Trust policy ceiling
+- [x] Add unit tests for weak evidence restriction and strong-evidence non-escalation
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Genome scoring or persistence, direct permission or autonomy changes, Trust calculation, security
+  veto, approvals, leases, API, frontend, runtime enforcement, or AI Manager integration
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

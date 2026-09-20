@@ -3310,6 +3310,32 @@ an agent's real permissions or runtime authority.
 
 ---
 
+## EXT-GOV-02 — Task/action risk classification
+
+### Objective
+
+Classify the bounded risk of one proposed task/action deterministically before future Governor
+policy evaluation, without making any permission or authority decision.
+
+### Checklist
+
+- [x] Define immutable strict contexts for action, tool, environment, data, blast-radius,
+  reversibility, cost, external-side-effect, and production-impact risk inputs
+- [x] Define closed action, environment, severity, reversibility, risk-level, and reason-code enums
+- [x] Implement a deterministic, conservative classifier with a bounded `0.00..1.00` score
+- [x] Escalate critical action categories in production to `CRITICAL`
+- [x] Return stable, content-free reason codes for every contributing factor
+- [x] Add unit tests for low-risk reads, critical production migrations, every required input, and
+  strict input validation
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- policy evaluation, permission or autonomy decisions, Trust/Genome integration, approvals, leases,
+  security-veto integration, persistence, API, frontend, or runtime enforcement
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

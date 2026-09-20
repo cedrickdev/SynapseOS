@@ -3056,6 +3056,32 @@ behavior.
 - aggregation across agents, promotion or demotion, behavioral baselines, or anomaly detection
 - PostgreSQL triggers, RLS, database permissions, or external provider integrations
 
+## EXT-GEN-07 — Agent Genome version snapshots
+
+### Objective
+
+Freeze the active immutable Agent Genome version once for each Agent Run, preserving a reproducible
+point-in-time binding without changing existing runtime orchestration.
+
+### Checklist
+
+- [x] Define a strict bounded request for capturing one agent's Genome snapshot for one Agent Run
+- [x] Persist an append-only snapshot binding agent, run, Genome, and active Genome version
+- [x] Enforce one snapshot per Agent Run and database-level ownership consistency across agent,
+      run, Genome, and version
+- [x] Capture only the currently active Genome version for the requested agent
+- [x] Reuse an existing run snapshot idempotently after later Genome version changes
+- [x] Add an Alembic migration and downgrade path for the snapshot table and ownership key
+- [x] Add unit and real-PostgreSQL tests for capture, immutability, idempotence, version freezing,
+      cross-agent rejection, migration, and constraints
+- [x] Run the complete test suite, Ruff, formatting checks on changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- automatic runtime capture hooks, Agent Runtime changes, task assignment, or Manager integration
+- Trust Score, autonomy, permissions, routing, API, frontend, or runtime behavior changes
+- snapshot aggregation, behavioral baselines, anomaly detection, or PostgreSQL RLS and triggers
+
 ---
 
 # Ordre recommandé réel

@@ -278,6 +278,40 @@ class AgentFailurePattern(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
     agent: Mapped[Agent] = relationship()
 
 
+class AgentGenomeRunSnapshot(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable binding of one agent run to its active Genome version."""
+
+    __tablename__ = "agent_genome_run_snapshots"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["agent_run_id", "agent_id"],
+            ["agent_runs.id", "agent_runs.agent_id"],
+            name="fk_agent_genome_run_snapshots_run_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "agent_id"],
+            ["agent_genomes.id", "agent_genomes.agent_id"],
+            name="fk_agent_genome_run_snapshots_genome_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "genome_version_id"],
+            ["agent_genome_versions.agent_genome_id", "agent_genome_versions.id"],
+            name="fk_agent_genome_run_snapshots_version_genome",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("agent_run_id", name="uq_agent_genome_run_snapshots_run"),
+        Index("ix_agent_genome_run_snapshots_agent_created", "agent_id", "created_at"),
+        Index("ix_agent_genome_run_snapshots_version_created", "genome_version_id", "created_at"),
+    )
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_genome_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    genome_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+
 class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     """One immutable, provenance-bound observation used by future Genome calculations."""
 

@@ -25,6 +25,7 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.genome import (
+    CapabilityScoringPolicy,
     EvidenceOutcome,
     EvidenceSignal,
     EvidenceSourceType,
@@ -53,6 +54,7 @@ class AgentGenome(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             ondelete="RESTRICT",
             use_alter=True,
         ),
+        UniqueConstraint("id", "agent_id", name="uq_agent_genomes_id_agent"),
         Index("uq_agent_genomes_agent_id", "agent_id", unique=True),
         Index("ix_agent_genomes_current_version_id", "current_version_id"),
     )
@@ -99,7 +101,7 @@ class AgentGenomeVersion(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, B
         back_populates="versions", foreign_keys=[agent_genome_id]
     )
     capability_metrics: Mapped[list[AgentCapabilityMetric]] = relationship(
-        back_populates="genome_version"
+        back_populates="genome_version", foreign_keys="AgentCapabilityMetric.genome_version_id"
     )
     performance_metrics: Mapped[list[AgentPerformanceMetric]] = relationship(
         back_populates="genome_version"
@@ -121,6 +123,26 @@ class AgentCapabilityMetric(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin
         CheckConstraint(
             "success_count + failure_count = sample_count", name="counts_match_samples"
         ),
+        CheckConstraint(
+            "(scoring_policy IS NULL AND total_weight IS NULL "
+            "AND agent_genome_id IS NULL AND agent_id IS NULL) OR "
+            "(scoring_policy IS NOT NULL AND total_weight BETWEEN 1 AND 768 "
+            "AND agent_genome_id IS NOT NULL AND agent_id IS NOT NULL)",
+            name="scoring_provenance_pair",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "genome_version_id"],
+            ["agent_genome_versions.agent_genome_id", "agent_genome_versions.id"],
+            name="fk_agent_capability_metrics_version_owner",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "agent_id"],
+            ["agent_genomes.id", "agent_genomes.agent_id"],
+            name="fk_agent_capability_metrics_genome_agent",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("id", "agent_id", name="uq_agent_capability_metrics_id_agent"),
         Index(
             "uq_agent_capability_metrics_version_key",
             "genome_version_id",
@@ -135,6 +157,8 @@ class AgentCapabilityMetric(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin
         ForeignKey("agent_genome_versions.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    agent_genome_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    agent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     capability_key: Mapped[str] = mapped_column(String(128), nullable=False)
     score: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
     sample_count: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -142,8 +166,17 @@ class AgentCapabilityMetric(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin
     failure_count: Mapped[int] = mapped_column(Integer, nullable=False)
     confidence: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
     last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    scoring_policy: Mapped[CapabilityScoringPolicy | None] = mapped_column(
+        Enum(CapabilityScoringPolicy, name="capability_scoring_policy"), nullable=True
+    )
+    total_weight: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    genome_version: Mapped[AgentGenomeVersion] = relationship(back_populates="capability_metrics")
+    genome_version: Mapped[AgentGenomeVersion] = relationship(
+        back_populates="capability_metrics", foreign_keys=[genome_version_id]
+    )
+    evidence_links: Mapped[list[AgentCapabilityMetricEvidence]] = relationship(
+        back_populates="metric", foreign_keys="AgentCapabilityMetricEvidence.metric_id"
+    )
 
 
 class AgentPerformanceMetric(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -177,6 +210,43 @@ class AgentPerformanceMetric(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixi
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     genome_version: Mapped[AgentGenomeVersion] = relationship(back_populates="performance_metrics")
+    evidence_links: Mapped[list[AgentPerformanceMetricEvidence]] = relationship(
+        back_populates="metric", foreign_keys="AgentPerformanceMetricEvidence.metric_id"
+    )
+
+
+class AgentPerformanceMetricEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable attribution of trusted evidence to one performance metric."""
+
+    __tablename__ = "agent_performance_metric_evidence"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["metric_id"],
+            ["agent_performance_metrics.id"],
+            name="fk_agent_performance_metric_evidence_metric",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["evidence_id"],
+            ["agent_genome_evidence.id"],
+            name="fk_agent_performance_metric_evidence_evidence",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "metric_id", "evidence_id", name="uq_agent_performance_metric_evidence_pair"
+        ),
+        Index("ix_agent_performance_metric_evidence_evidence", "evidence_id", "metric_id"),
+    )
+
+    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    evidence_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+    metric: Mapped[AgentPerformanceMetric] = relationship(
+        back_populates="evidence_links", foreign_keys=[metric_id]
+    )
+    evidence: Mapped[AgentGenomeEvidence] = relationship(
+        back_populates="performance_metric_links", foreign_keys=[evidence_id]
+    )
 
 
 class AgentFailurePattern(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -206,6 +276,40 @@ class AgentFailurePattern(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
     )
 
     agent: Mapped[Agent] = relationship()
+
+
+class AgentGenomeRunSnapshot(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable binding of one agent run to its active Genome version."""
+
+    __tablename__ = "agent_genome_run_snapshots"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["agent_run_id", "agent_id"],
+            ["agent_runs.id", "agent_runs.agent_id"],
+            name="fk_agent_genome_run_snapshots_run_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "agent_id"],
+            ["agent_genomes.id", "agent_genomes.agent_id"],
+            name="fk_agent_genome_run_snapshots_genome_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "genome_version_id"],
+            ["agent_genome_versions.agent_genome_id", "agent_genome_versions.id"],
+            name="fk_agent_genome_run_snapshots_version_genome",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("agent_run_id", name="uq_agent_genome_run_snapshots_run"),
+        Index("ix_agent_genome_run_snapshots_agent_created", "agent_id", "created_at"),
+        Index("ix_agent_genome_run_snapshots_version_created", "genome_version_id", "created_at"),
+    )
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_genome_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    genome_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
 
 class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -266,6 +370,7 @@ class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
             "signal",
             name="uq_agent_genome_evidence_source_signal",
         ),
+        UniqueConstraint("id", "agent_id", name="uq_agent_genome_evidence_id_agent"),
         Index("ix_agent_genome_evidence_agent_observed", "agent_id", "observed_at"),
         Index("ix_agent_genome_evidence_project_observed", "project_id", "observed_at"),
         Index("ix_agent_genome_evidence_task_observed", "task_id", "observed_at"),
@@ -300,3 +405,56 @@ class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
         "metadata", MutableDict.as_mutable(JSONB), default=dict, nullable=False
     )
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    capability_metric_links: Mapped[list[AgentCapabilityMetricEvidence]] = relationship(
+        back_populates="evidence", foreign_keys="AgentCapabilityMetricEvidence.evidence_id"
+    )
+    performance_metric_links: Mapped[list[AgentPerformanceMetricEvidence]] = relationship(
+        back_populates="evidence", foreign_keys="AgentPerformanceMetricEvidence.evidence_id"
+    )
+
+
+class AgentCapabilityMetricEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable attribution of one evidence row to one calculated capability metric."""
+
+    __tablename__ = "agent_capability_metric_evidence"
+    __table_args__ = (
+        CheckConstraint("weight BETWEEN 1 AND 3", name="weight_range"),
+        CheckConstraint("contribution IN (0, 1)", name="contribution_binary"),
+        ForeignKeyConstraint(
+            ["metric_id", "agent_id"],
+            ["agent_capability_metrics.id", "agent_capability_metrics.agent_id"],
+            name="fk_agent_capability_metric_evidence_metric_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["evidence_id", "agent_id"],
+            ["agent_genome_evidence.id", "agent_genome_evidence.agent_id"],
+            name="fk_agent_capability_metric_evidence_evidence_agent",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "metric_id", "evidence_id", name="uq_agent_capability_metric_evidence_pair"
+        ),
+        Index("ix_agent_capability_metric_evidence_evidence", "evidence_id", "metric_id"),
+    )
+
+    metric_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("agent_capability_metrics.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    evidence_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("agent_genome_evidence.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    weight: Mapped[int] = mapped_column(Integer, nullable=False)
+    contribution: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    metric: Mapped[AgentCapabilityMetric] = relationship(
+        back_populates="evidence_links", foreign_keys=[metric_id]
+    )
+    evidence: Mapped[AgentGenomeEvidence] = relationship(
+        back_populates="capability_metric_links", foreign_keys=[evidence_id]
+    )

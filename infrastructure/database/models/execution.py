@@ -7,7 +7,17 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -33,6 +43,7 @@ class AgentRun(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
         Index("ix_agent_runs_agent_status", "agent_id", "status"),
         Index("ix_agent_runs_task_status", "task_id", "status"),
         Index("ix_agent_runs_created_at", "created_at"),
+        UniqueConstraint("id", "agent_id", name="uq_agent_runs_id_agent"),
     )
 
     agent_id: Mapped[uuid.UUID] = mapped_column(

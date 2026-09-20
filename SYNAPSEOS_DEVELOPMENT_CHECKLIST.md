@@ -3108,6 +3108,30 @@ assign work.
 - Genome score generation, aggregation, recency, or reputation formulas
 - persistence of selection decisions or automatic reassignment
 
+## EXT-TRUST-01 — Agent Trust data model
+
+### Objective
+
+Introduce an immutable, multi-dimensional Trust history foundation without calculating trust,
+altering permissions, changing autonomy, or affecting assignment or runtime behavior.
+
+### Checklist
+
+- [x] Define closed Trust classes, dimensions, event severities, and source event types
+- [x] Add append-only `AgentTrustSnapshot`, `AgentTrustDimension`, and `AgentTrustEvent` models
+- [x] Store algorithm version and explicit evidence-window boundaries on every snapshot
+- [x] Enforce score, weight, timestamp-window, nonblank, relationship, and uniqueness constraints
+- [x] Add indexes for bounded agent-history, class, dimension, and event queries
+- [x] Add a reversible Alembic migration and bounded append/read repository operations
+- [x] Add unit and real-PostgreSQL tests for persistence, constraints, repository bounds, and immutability
+- [x] Run the complete test suite, Ruff, changed-file formatting, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- evidence adapters, deterministic dimension scoring, overall-score calculation, or trust classes policy
+- decay, recovery, critical-event handling, explainability, or Governor integration
+- permission, autonomy, assignment, routing, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

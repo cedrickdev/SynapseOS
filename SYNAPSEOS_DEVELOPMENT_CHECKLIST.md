@@ -3132,6 +3132,28 @@ altering permissions, changing autonomy, or affecting assignment or runtime beha
 - decay, recovery, critical-event handling, explainability, or Governor integration
 - permission, autonomy, assignment, routing, API, frontend, or runtime changes
 
+## EXT-TRUST-02 — Trust evidence adapters
+
+### Objective
+
+Derive append-only Trust events exclusively from existing immutable, vetted Agent Genome evidence,
+without calculating Trust scores or changing authority.
+
+### Checklist
+
+- [x] Adapt trusted Agent Run, Review, QA, and Security outcomes through a closed mapping
+- [x] Ignore usage-only and cancelled evidence instead of inferring a Trust outcome
+- [x] Preserve source references and deterministic impact/severity values for later aggregation
+- [x] Add database-enforced source-event deduplication and idempotent event ingestion
+- [x] Add unit and real-PostgreSQL tests for mapping, rejection, persistence, and idempotency
+- [x] Run the complete test suite, Ruff, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- dimension or overall-score calculation, class thresholds, decay, recovery, or explainability
+- permission, autonomy, assignment, routing, API, frontend, or runtime changes
+- raw prompts, provider output, agent self-reports, and untrusted free-form content
+
 ---
 
 # Ordre recommandé réel

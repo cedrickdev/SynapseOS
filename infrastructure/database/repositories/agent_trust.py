@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import Table, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from infrastructure.database.models import AgentTrustDimension, AgentTrustEvent, AgentTrustSnapshot
@@ -27,6 +29,35 @@ class AgentTrustRepository:
     def add_event(self, event: AgentTrustEvent) -> AgentTrustEvent:
         self._session.add(event)
         return event
+
+    def add_event_idempotent(self, event: AgentTrustEvent) -> AgentTrustEvent:
+        if type(event) is not AgentTrustEvent:
+            raise TypeError("Trust event must be canonical")
+        table = cast(Table, AgentTrustEvent.__table__)
+        event_id = self._session.scalar(
+            insert(table)
+            .values(
+                id=uuid.uuid4(),
+                agent_id=event.agent_id,
+                event_type=event.event_type,
+                impact=event.impact,
+                severity=event.severity,
+                source_ref=event.source_ref,
+            )
+            .on_conflict_do_nothing(constraint="uq_agent_trust_events_source")
+            .returning(table.c.id)
+        )
+        if event_id is None:
+            event_id = self._session.scalar(
+                select(AgentTrustEvent.id).where(
+                    AgentTrustEvent.event_type == event.event_type,
+                    AgentTrustEvent.source_ref == event.source_ref,
+                )
+            )
+        persisted = self._session.get(AgentTrustEvent, event_id)
+        if persisted is None:
+            raise RuntimeError("Trust event persistence failed")
+        return persisted
 
     def get_snapshot(self, snapshot_id: uuid.UUID) -> AgentTrustSnapshot | None:
         return self._session.get(AgentTrustSnapshot, snapshot_id)

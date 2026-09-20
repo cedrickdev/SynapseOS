@@ -14,6 +14,7 @@ from alembic import command
 EXPECTED_TABLES = {
     "agent_capability_metric_evidence",
     "agent_genome_evidence",
+    "agent_performance_metric_evidence",
     "agent_permissions",
     "agent_runs",
     "agent_scores",
@@ -47,6 +48,7 @@ def test_migration_supports_upgrade_downgrade_and_second_upgrade(
         phase_2_tables = EXPECTED_TABLES - {
             "agent_capability_metric_evidence",
             "agent_genome_evidence",
+            "agent_performance_metric_evidence",
             "agent_permissions",
             "approvals",
             "pull_request_reviews",

@@ -210,6 +210,43 @@ class AgentPerformanceMetric(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixi
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     genome_version: Mapped[AgentGenomeVersion] = relationship(back_populates="performance_metrics")
+    evidence_links: Mapped[list[AgentPerformanceMetricEvidence]] = relationship(
+        back_populates="metric", foreign_keys="AgentPerformanceMetricEvidence.metric_id"
+    )
+
+
+class AgentPerformanceMetricEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable attribution of trusted evidence to one performance metric."""
+
+    __tablename__ = "agent_performance_metric_evidence"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["metric_id"],
+            ["agent_performance_metrics.id"],
+            name="fk_agent_performance_metric_evidence_metric",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["evidence_id"],
+            ["agent_genome_evidence.id"],
+            name="fk_agent_performance_metric_evidence_evidence",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "metric_id", "evidence_id", name="uq_agent_performance_metric_evidence_pair"
+        ),
+        Index("ix_agent_performance_metric_evidence_evidence", "evidence_id", "metric_id"),
+    )
+
+    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    evidence_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+    metric: Mapped[AgentPerformanceMetric] = relationship(
+        back_populates="evidence_links", foreign_keys=[metric_id]
+    )
+    evidence: Mapped[AgentGenomeEvidence] = relationship(
+        back_populates="performance_metric_links", foreign_keys=[evidence_id]
+    )
 
 
 class AgentFailurePattern(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -239,6 +276,40 @@ class AgentFailurePattern(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
     )
 
     agent: Mapped[Agent] = relationship()
+
+
+class AgentGenomeRunSnapshot(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable binding of one agent run to its active Genome version."""
+
+    __tablename__ = "agent_genome_run_snapshots"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["agent_run_id", "agent_id"],
+            ["agent_runs.id", "agent_runs.agent_id"],
+            name="fk_agent_genome_run_snapshots_run_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "agent_id"],
+            ["agent_genomes.id", "agent_genomes.agent_id"],
+            name="fk_agent_genome_run_snapshots_genome_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "genome_version_id"],
+            ["agent_genome_versions.agent_genome_id", "agent_genome_versions.id"],
+            name="fk_agent_genome_run_snapshots_version_genome",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("agent_run_id", name="uq_agent_genome_run_snapshots_run"),
+        Index("ix_agent_genome_run_snapshots_agent_created", "agent_id", "created_at"),
+        Index("ix_agent_genome_run_snapshots_version_created", "genome_version_id", "created_at"),
+    )
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_genome_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    genome_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
 
 class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -336,6 +407,9 @@ class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, 
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     capability_metric_links: Mapped[list[AgentCapabilityMetricEvidence]] = relationship(
         back_populates="evidence", foreign_keys="AgentCapabilityMetricEvidence.evidence_id"
+    )
+    performance_metric_links: Mapped[list[AgentPerformanceMetricEvidence]] = relationship(
+        back_populates="evidence", foreign_keys="AgentPerformanceMetricEvidence.evidence_id"
     )
 
 

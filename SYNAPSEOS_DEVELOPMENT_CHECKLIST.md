@@ -2977,6 +2977,111 @@ implementation begins, reconcile their exact placement and dependencies against 
 roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =
 one validation.
 
+## EXT-GEN-04 — Agent Genome performance profiles
+
+### Objective
+
+Compute deterministic, evidence-backed performance metrics for a candidate Genome version without
+changing capability matching, trust, autonomy, manager, permission, routing, API, frontend, or
+runtime behavior.
+
+### Checklist
+
+- [x] Define strict performance profile requests, observations, metric names, results, and windows
+- [x] Compute success rate, review acceptance, QA pass rate, and failure rate
+- [x] Compute median iterations, median tokens, and median wall-clock duration deterministically
+- [x] Exclude cancelled runs and ignore evidence outside the requested time window
+- [x] Require a candidate Genome version and same-agent trusted evidence
+- [x] Persist immutable performance metrics with exact evidence provenance
+- [x] Make repeated profile recording idempotent and reject conflicting evidence sets
+- [x] Add bounded repository reads without update or delete operations
+- [x] Add a reversible Alembic migration for performance provenance
+- [x] Add unit and real-PostgreSQL tests for formulas, sparse evidence, windows, isolation,
+      idempotence, append-only behavior, and migration lifecycle
+- [x] Run the complete test suite, Ruff, formatting, and mypy
+
+### Explicit exclusions
+
+- capability matching, failure-pattern tracking, Genome snapshots, or version activation
+- Trust Score, Autonomy Governor, AI Manager, permissions, routing, API, frontend, or runtime changes
+
+## EXT-GEN-05 — Agent Genome capability matching
+
+### Objective
+
+Expose a deterministic, read-only ranking service for eligible agents using persisted Genome
+capability metrics without assigning work or changing permissions.
+
+### Checklist
+
+- [x] Define bounded matching requests, candidate snapshots, ranked matches, and rejection reasons
+- [x] Rank candidates by conservative capability score adjusted by metric confidence
+- [x] Require available agents, active declared capabilities, and matching Genome evidence
+- [x] Reject duplicate candidates and duplicate Genome versions for one agent
+- [x] Keep matching read-only with no assignment, permission, routing, or manager side effects
+- [x] Add a bounded PostgreSQL adapter for candidate and metric reads
+- [x] Add unit and real-PostgreSQL tests for ranking, ties, missing capability declarations,
+      missing evidence, unavailable agents, bounds, and read-only behavior
+- [x] Run the complete test suite, Ruff, formatting, mypy, and diff hygiene checks
+
+### Explicit exclusions
+
+- task assignment, workload scheduling, cost routing, or AI Manager integration
+- Trust Score, Autonomy Governor, permission grants, API, frontend, or runtime changes
+
+## EXT-GEN-06 — Agent Genome failure-pattern tracking
+
+### Objective
+
+Classify trusted Agent Genome failure evidence into deterministic, severity-aware, append-only
+failure-pattern observations without changing reputation, autonomy, permissions, routing, or runtime
+behavior.
+
+### Checklist
+
+- [x] Define bounded failure-pattern observations, requests, results, and deterministic analysis
+- [x] Classify trusted agent-run, review, QA, and security failure outcomes with fixed severities
+- [x] Ignore successful and cancelled outcomes without LLM interpretation
+- [x] Persist grouped patterns with evidence provenance, counts, severity, and last-seen timestamps
+- [x] Preserve append-only history and reuse identical evidence revisions idempotently
+- [x] Validate evidence existence and requested-agent ownership before persistence
+- [x] Add unit and real-PostgreSQL tests for grouping, ignored outcomes, severity, idempotence,
+      revisions, cross-agent rejection, and append-only behavior
+- [x] Run the complete test suite, Ruff, formatting checks on changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Trust Score, reputation calculation, autonomy, permissions, routing, API, frontend, or runtime
+  changes
+- aggregation across agents, promotion or demotion, behavioral baselines, or anomaly detection
+- PostgreSQL triggers, RLS, database permissions, or external provider integrations
+
+## EXT-GEN-07 — Agent Genome version snapshots
+
+### Objective
+
+Freeze the active immutable Agent Genome version once for each Agent Run, preserving a reproducible
+point-in-time binding without changing existing runtime orchestration.
+
+### Checklist
+
+- [x] Define a strict bounded request for capturing one agent's Genome snapshot for one Agent Run
+- [x] Persist an append-only snapshot binding agent, run, Genome, and active Genome version
+- [x] Enforce one snapshot per Agent Run and database-level ownership consistency across agent,
+      run, Genome, and version
+- [x] Capture only the currently active Genome version for the requested agent
+- [x] Reuse an existing run snapshot idempotently after later Genome version changes
+- [x] Add an Alembic migration and downgrade path for the snapshot table and ownership key
+- [x] Add unit and real-PostgreSQL tests for capture, immutability, idempotence, version freezing,
+      cross-agent rejection, migration, and constraints
+- [x] Run the complete test suite, Ruff, formatting checks on changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- automatic runtime capture hooks, Agent Runtime changes, task assignment, or Manager integration
+- Trust Score, autonomy, permissions, routing, API, frontend, or runtime behavior changes
+- snapshot aggregation, behavioral baselines, anomaly detection, or PostgreSQL RLS and triggers
+
 ---
 
 # Ordre recommandé réel

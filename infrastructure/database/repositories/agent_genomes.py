@@ -18,6 +18,7 @@ from infrastructure.database.models.genome import (
     AgentGenomeEvidence,
     AgentGenomeVersion,
     AgentPerformanceMetric,
+    AgentPerformanceMetricEvidence,
 )
 from infrastructure.genome.adapters import GenomeEvidenceAdapter
 
@@ -103,6 +104,19 @@ class AgentGenomeRepository:
             select(AgentPerformanceMetric)
             .where(AgentPerformanceMetric.genome_version_id == genome_version_id)
             .order_by(AgentPerformanceMetric.metric_name, AgentPerformanceMetric.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._session.scalars(statement))
+
+    def list_performance_metric_evidence(
+        self, metric_id: uuid.UUID, *, limit: int = 100, offset: int = 0
+    ) -> list[AgentPerformanceMetricEvidence]:
+        _validate_page(limit, offset)
+        statement = (
+            select(AgentPerformanceMetricEvidence)
+            .where(AgentPerformanceMetricEvidence.metric_id == metric_id)
+            .order_by(AgentPerformanceMetricEvidence.evidence_id)
             .limit(limit)
             .offset(offset)
         )

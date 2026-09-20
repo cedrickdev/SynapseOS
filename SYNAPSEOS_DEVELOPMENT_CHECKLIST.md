@@ -2977,6 +2977,34 @@ implementation begins, reconcile their exact placement and dependencies against 
 roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =
 one validation.
 
+## EXT-GEN-04 — Agent Genome performance profiles
+
+### Objective
+
+Compute deterministic, evidence-backed performance metrics for a candidate Genome version without
+changing capability matching, trust, autonomy, manager, permission, routing, API, frontend, or
+runtime behavior.
+
+### Checklist
+
+- [x] Define strict performance profile requests, observations, metric names, results, and windows
+- [x] Compute success rate, review acceptance, QA pass rate, and failure rate
+- [x] Compute median iterations, median tokens, and median wall-clock duration deterministically
+- [x] Exclude cancelled runs and ignore evidence outside the requested time window
+- [x] Require a candidate Genome version and same-agent trusted evidence
+- [x] Persist immutable performance metrics with exact evidence provenance
+- [x] Make repeated profile recording idempotent and reject conflicting evidence sets
+- [x] Add bounded repository reads without update or delete operations
+- [x] Add a reversible Alembic migration for performance provenance
+- [x] Add unit and real-PostgreSQL tests for formulas, sparse evidence, windows, isolation,
+      idempotence, append-only behavior, and migration lifecycle
+- [x] Run the complete test suite, Ruff, formatting, and mypy
+
+### Explicit exclusions
+
+- capability matching, failure-pattern tracking, Genome snapshots, or version activation
+- Trust Score, Autonomy Governor, AI Manager, permissions, routing, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

@@ -8,6 +8,13 @@ from core.genome.evidence import (
     GenomeEvidenceDraft,
     filter_evidence_metadata,
 )
+from core.genome.performance import (
+    PerformanceMetricName,
+    PerformanceMetricResult,
+    PerformanceObservation,
+    PerformanceProfileCalculator,
+    PerformanceProfileRequest,
+)
 from core.genome.scoring import (
     CapabilityEvidence,
     CapabilityEvidenceContribution,
@@ -34,6 +41,11 @@ __all__ = [
     "CapabilityScorer",
     "CapabilityScoringPolicy",
     "CapabilityScoringRequest",
+    "PerformanceMetricName",
+    "PerformanceMetricResult",
+    "PerformanceObservation",
+    "PerformanceProfileCalculator",
+    "PerformanceProfileRequest",
     "GenomeEvidenceDraft",
     "GenomeCreationSource",
     "GenomeFailureSeverity",

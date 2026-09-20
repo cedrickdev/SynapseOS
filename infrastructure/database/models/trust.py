@@ -94,6 +94,7 @@ class AgentTrustEvent(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base
     __table_args__ = (
         CheckConstraint("impact BETWEEN -100 AND 100", name="impact_range"),
         CheckConstraint("length(trim(source_ref)) > 0", name="source_ref_nonblank"),
+        UniqueConstraint("event_type", "source_ref", name="uq_agent_trust_events_source"),
         Index("ix_agent_trust_events_agent_created", "agent_id", "created_at"),
         Index(
             "ix_agent_trust_events_type_severity_created", "event_type", "severity", "created_at"

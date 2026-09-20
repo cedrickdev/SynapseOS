@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -10,15 +11,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from core.enums import AgentSeniority, AgentStatus
+from core.genome import EvidenceOutcome, EvidenceSignal, EvidenceSourceType
 from core.trust import TrustClass, TrustDimension, TrustEventSeverity, TrustEventType
 from infrastructure.database.append_only import AppendOnlyViolationError
 from infrastructure.database.models import (
     Agent,
+    AgentGenomeEvidence,
     AgentTrustDimension,
     AgentTrustEvent,
     AgentTrustSnapshot,
 )
 from infrastructure.database.repositories.agent_trust import AgentTrustRepository
+from infrastructure.trust.ingestion import TrustEvidenceIngestor
 
 
 def _agent() -> Agent:
@@ -106,6 +110,37 @@ def test_repository_exposes_only_bounded_append_and_read_operations(db_session: 
     assert repository.list_events(agent.id, limit=10) == [event]
     assert not hasattr(repository, "update")
     assert not hasattr(repository, "delete")
+
+
+def test_ingestion_persists_one_idempotent_event_from_trusted_genome_evidence(
+    db_session: Session,
+) -> None:
+    agent = _agent()
+    db_session.add(agent)
+    db_session.flush()
+    evidence = AgentGenomeEvidence(
+        agent_id=agent.id,
+        source_type=EvidenceSourceType.SECURITY_APPROVAL,
+        source_id=uuid.uuid4(),
+        signal=EvidenceSignal.SECURITY_OUTCOME,
+        outcome=EvidenceOutcome.BLOCKED,
+        metadata_={},
+        observed_at=datetime.now(UTC),
+    )
+    db_session.add(evidence)
+    db_session.flush()
+    ingestor = TrustEvidenceIngestor(db_session)
+
+    first = ingestor.ingest(evidence)
+    second = ingestor.ingest(evidence)
+    db_session.flush()
+
+    assert first is not None
+    assert second is not None
+    assert first.id == second.id
+    assert first.agent_id == agent.id
+    assert first.impact == Decimal("-25.00")
+    assert AgentTrustRepository(db_session).list_events(agent.id, limit=10) == [first]
 
 
 @pytest.mark.parametrize(

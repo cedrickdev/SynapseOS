@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from core.genome import EvidenceSignal, EvidenceSourceType, GenomeEvidenceDraft
 from infrastructure.database.models.genome import (
     AgentCapabilityMetric,
+    AgentCapabilityMetricEvidence,
     AgentFailurePattern,
     AgentGenome,
     AgentGenomeEvidence,
@@ -72,6 +73,23 @@ class AgentGenomeRepository:
             select(AgentCapabilityMetric)
             .where(AgentCapabilityMetric.genome_version_id == genome_version_id)
             .order_by(AgentCapabilityMetric.capability_key, AgentCapabilityMetric.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._session.scalars(statement))
+
+    def list_capability_metric_evidence(
+        self, metric_id: uuid.UUID, *, limit: int = 100, offset: int = 0
+    ) -> list[AgentCapabilityMetricEvidence]:
+        _validate_page(limit, offset)
+        statement = (
+            select(AgentCapabilityMetricEvidence)
+            .join(
+                AgentGenomeEvidence,
+                AgentGenomeEvidence.id == AgentCapabilityMetricEvidence.evidence_id,
+            )
+            .where(AgentCapabilityMetricEvidence.metric_id == metric_id)
+            .order_by(AgentGenomeEvidence.observed_at, AgentGenomeEvidence.id)
             .limit(limit)
             .offset(offset)
         )

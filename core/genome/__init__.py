@@ -8,6 +8,14 @@ from core.genome.evidence import (
     GenomeEvidenceDraft,
     filter_evidence_metadata,
 )
+from core.genome.scoring import (
+    CapabilityEvidence,
+    CapabilityEvidenceContribution,
+    CapabilityScore,
+    CapabilityScorer,
+    CapabilityScoringPolicy,
+    CapabilityScoringRequest,
+)
 from core.genome.types import (
     GenomeCreationSource,
     GenomeFailureSeverity,
@@ -20,6 +28,12 @@ __all__ = [
     "EvidenceSignal",
     "EvidenceSourceType",
     "EvidenceUnit",
+    "CapabilityEvidence",
+    "CapabilityEvidenceContribution",
+    "CapabilityScore",
+    "CapabilityScorer",
+    "CapabilityScoringPolicy",
+    "CapabilityScoringRequest",
     "GenomeEvidenceDraft",
     "GenomeCreationSource",
     "GenomeFailureSeverity",

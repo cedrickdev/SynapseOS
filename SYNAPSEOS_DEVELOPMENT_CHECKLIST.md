@@ -2943,6 +2943,32 @@ implementation begins, reconcile their exact placement and dependencies against 
 roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =
 one validation.
 
+## EXT-GEN-08 — AI Manager selection signal
+
+### Objective
+
+Allow the future AI Manager to read active Agent Genome capability evidence as one bounded,
+reproducible input to existing read-only candidate ranking. Genome evidence must only reduce a
+declared capability fit; it must never create capabilities, grant permissions, expand autonomy, or
+assign work.
+
+### Checklist
+
+- [x] Define immutable bounded Genome capability and manager-signal contracts
+- [x] Add a conservative matcher that delegates final eligibility and ranking to `AgentMatcher`
+- [x] Preserve existing capability, permission, autonomy, cost, and assignment authority boundaries
+- [x] Add a bounded PostgreSQL read adapter for current active Genome capability metrics
+- [x] Exclude stale, inactive, missing, and non-candidate Genome signals
+- [x] Verify unit and real-PostgreSQL behavior, bounds, and session non-mutation
+- [x] Run the complete test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Agent Trust Score, Autonomy Governor, or a complete AI Manager
+- permissions, autonomy leases, assignment, routing, or runtime changes
+- Genome score generation, aggregation, recency, or reputation formulas
+- persistence of selection decisions or automatic reassignment
+
 ---
 
 # Ordre recommandé réel

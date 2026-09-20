@@ -2938,6 +2938,40 @@ computing capability scores or changing runtime decisions.
 - behavioral baselines and deviation detection
 - matching, Trust Score, Governor, Manager, permissions, or routing changes
 
+## EXT-GEN-03 — Agent Genome capability scoring
+
+### Objective
+
+Calculate deterministic, conservative, and fully attributable capability metrics from explicitly
+selected trusted GEN-2 evidence without activating Genome versions or changing agent selection,
+permissions, trust, autonomy, routing, or runtime behavior.
+
+### Checklist
+
+- [x] Define strict bounded capability evidence, scoring request, contribution, result, and policy
+      contracts
+- [x] Implement the versioned deterministic `BAYESIAN_V1` policy with conservative priors
+- [x] Weight independent Review, QA, and Security evidence above self-execution evidence
+- [x] Exclude usage evidence and cancelled runs from capability score contributions
+- [x] Require an active persisted agent capability and a `CANDIDATE` Genome version
+- [x] Reject missing, duplicated, cross-agent, malformed, or unscorable evidence sets
+- [x] Persist scoring policy, total evidence weight, and immutable per-evidence contributions
+- [x] Make repeated and concurrent recording idempotent for the same canonical evidence set
+- [x] Reject replacement of an existing metric with a different evidence set
+- [x] Add bounded provenance reads without update or delete operations
+- [x] Add a reversible Alembic migration
+- [x] Add unit and real-PostgreSQL tests for formulas, validation, provenance, append-only behavior,
+      idempotence, concurrency, constraints, and migration lifecycle
+- [x] Run the complete test suite, Ruff, changed-file formatting, and mypy
+
+### Explicit exclusions
+
+- performance profiles, cost efficiency, token efficiency, duration, or tool-usage scoring
+- recency decay, time windows, task similarity, or capability matching
+- automatic or LLM-based task-to-capability attribution
+- Genome snapshot generation, status transitions, or current-version activation
+- Trust Score, Autonomy Governor, AI Manager, permissions, routing, API, frontend, or runtime changes
+
 These identifiers must not be merged into or substituted for existing V1 phase numbers. Before V2
 implementation begins, reconcile their exact placement and dependencies against the completed V1
 roadmap. Delivery retains the repository rule: one extension phase = one clear objective = one PR =

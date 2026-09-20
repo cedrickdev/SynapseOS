@@ -12,6 +12,7 @@ from sqlalchemy import Numeric, create_engine, inspect, text
 from alembic import command
 
 EXPECTED_TABLES = {
+    "agent_capability_metric_evidence",
     "agent_genome_evidence",
     "agent_permissions",
     "agent_runs",
@@ -44,6 +45,7 @@ def test_migration_supports_upgrade_downgrade_and_second_upgrade(
     engine = create_engine(migration_database_url)
     try:
         phase_2_tables = EXPECTED_TABLES - {
+            "agent_capability_metric_evidence",
             "agent_genome_evidence",
             "agent_permissions",
             "approvals",
@@ -230,6 +232,55 @@ def test_genome_evidence_migration_has_reversible_table_and_enums(
                     "('genome_evidence_source_type', 'genome_evidence_signal', "
                     "'genome_evidence_outcome', 'genome_evidence_unit')"
                 )
+            ).scalar_one()
+            assert enum_count == 0
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+
+
+def test_capability_scoring_migration_is_reversible(migration_database_url: str) -> None:
+    config = _config(migration_database_url)
+    command.upgrade(config, "head")
+    engine = create_engine(migration_database_url)
+    try:
+        inspector = inspect(engine)
+        assert "agent_capability_metric_evidence" in inspector.get_table_names()
+        metric_columns = {
+            column["name"] for column in inspector.get_columns("agent_capability_metrics")
+        }
+        assert {"scoring_policy", "total_weight", "agent_genome_id", "agent_id"} <= metric_columns
+        with engine.connect() as connection:
+            policy_values = connection.execute(
+                text(
+                    "SELECT enumlabel FROM pg_enum "
+                    "JOIN pg_type ON pg_type.oid = pg_enum.enumtypid "
+                    "WHERE pg_type.typname = 'capability_scoring_policy' "
+                    "ORDER BY enumsortorder"
+                )
+            ).scalars()
+            assert list(policy_values) == ["BAYESIAN_V1"]
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "20260913_0010")
+    engine = create_engine(migration_database_url)
+    try:
+        inspector = inspect(engine)
+        assert "agent_capability_metric_evidence" not in inspector.get_table_names()
+        metric_columns = {
+            column["name"] for column in inspector.get_columns("agent_capability_metrics")
+        }
+        assert {
+            "scoring_policy",
+            "total_weight",
+            "agent_genome_id",
+            "agent_id",
+        }.isdisjoint(metric_columns)
+        with engine.connect() as connection:
+            enum_count = connection.execute(
+                text("SELECT count(*) FROM pg_type WHERE typname = 'capability_scoring_policy'")
             ).scalar_one()
             assert enum_count == 0
     finally:

@@ -3154,6 +3154,31 @@ without calculating Trust scores or changing authority.
 - permission, autonomy, assignment, routing, API, frontend, or runtime changes
 - raw prompts, provider output, agent self-reports, and untrusted free-form content
 
+## EXT-TRUST-03 — Deterministic Trust dimension scores
+
+### Objective
+
+Calculate bounded, deterministic per-dimension Trust scores exclusively from immutable
+`AgentTrustEvent` history, without calculating an overall score, assigning Trust classes, or
+changing any operational authority.
+
+### Checklist
+
+- [x] Define immutable strict observation and dimension-score contracts
+- [x] Map each supported Trust event type to exactly one explainable Trust dimension
+- [x] Calculate each evidence-backed dimension as `clamp(100 + sum(event.impact), 0, 100)`
+- [x] Keep event identifiers unique, input bounded, outputs bounded, and result order stable
+- [x] Keep `QA_OUTCOME` explicitly within the `RELIABILITY` dimension
+- [x] Add unit tests for grouping, isolation, clamping, empty history, invalid input, and stable order
+- [x] Run the complete real-PostgreSQL test suite, Ruff, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- overall-score aggregation, dimension weights, Trust classes, decay, recovery, critical-event
+  handling, or explainability
+- persistence of calculated dimensions or snapshots
+- permission, autonomy, assignment, routing, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

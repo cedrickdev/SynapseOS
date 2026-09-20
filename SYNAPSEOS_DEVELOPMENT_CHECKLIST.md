@@ -3179,6 +3179,28 @@ changing any operational authority.
 - persistence of calculated dimensions or snapshots
 - permission, autonomy, assignment, routing, API, frontend, or runtime changes
 
+## EXT-TRUST-04 — Overall Trust score and classes
+
+### Objective
+
+Calculate a reproducible overall Trust score from already-calculated dimensions using an explicit,
+versioned policy, then classify the result without altering operational authority.
+
+### Checklist
+
+- [x] Define immutable strict contracts for dimension weights, ordered class thresholds, policy, and result
+- [x] Calculate a normalized weighted mean from exactly the dimensions covered by the supplied policy
+- [x] Classify the bounded overall score through injected policy thresholds rather than global constants
+- [x] Preserve algorithm version and dimension count on every calculated result
+- [x] Add unit tests for aggregation, configurable thresholds, normalized weights, and invalid policies
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- default global policies, persistence of calculated dimensions or snapshots, decay, recovery,
+  critical-event handling, or explainability
+- permission, autonomy, assignment, routing, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

@@ -3286,6 +3286,28 @@ evidence can recommend restriction without granting or directly changing authori
 - Autonomy Governor policies, leases, permissions, approval gates, suspension, quarantine, or runtime action
 - persistence, API, frontend, AI Manager integration, or direct authority changes
 
+## EXT-GOV-01 — Autonomy levels and contracts
+
+### Objective
+
+Define immutable, bounded Autonomy Governor decision contracts without evaluating policy or changing
+an agent's real permissions or runtime authority.
+
+### Checklist
+
+- [x] Define the six bounded Autonomy levels from disabled to high autonomy
+- [x] Define closed reason codes for future policy, risk, approval, security, and Trust decisions
+- [x] Define a temporary, provenance-bearing `AutonomyDecision` contract
+- [x] Enforce bounded risk, nonblank action/policy version, unique reasons, and timezone-aware expiry
+- [x] Reject internally inconsistent disabled, denied, or approval-required decisions
+- [x] Add unit tests for valid approval-gated decisions and invalid contract combinations
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- risk classification, policy evaluation, Trust/Genome integration, approval workflow, security veto,
+  persistence, API, frontend, or runtime action
+
 ---
 
 # Ordre recommandé réel

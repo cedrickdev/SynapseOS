@@ -8,6 +8,15 @@ from core.genome.evidence import (
     GenomeEvidenceDraft,
     filter_evidence_metadata,
 )
+from core.genome.matching import (
+    GenomeCapabilityCandidate,
+    GenomeCapabilityMatcher,
+    GenomeCapabilityMatchingRequest,
+    GenomeCapabilityMatchingResult,
+    GenomeCapabilityMetricSnapshot,
+    RankedGenomeAgent,
+    RejectedGenomeAgent,
+)
 from core.genome.performance import (
     PerformanceMetricName,
     PerformanceMetricResult,
@@ -46,6 +55,13 @@ __all__ = [
     "PerformanceObservation",
     "PerformanceProfileCalculator",
     "PerformanceProfileRequest",
+    "GenomeCapabilityCandidate",
+    "GenomeCapabilityMatcher",
+    "GenomeCapabilityMetricSnapshot",
+    "GenomeCapabilityMatchingRequest",
+    "GenomeCapabilityMatchingResult",
+    "RankedGenomeAgent",
+    "RejectedGenomeAgent",
     "GenomeEvidenceDraft",
     "GenomeCreationSource",
     "GenomeFailureSeverity",

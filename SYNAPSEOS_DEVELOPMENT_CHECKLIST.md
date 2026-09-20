@@ -3005,6 +3005,30 @@ runtime behavior.
 - capability matching, failure-pattern tracking, Genome snapshots, or version activation
 - Trust Score, Autonomy Governor, AI Manager, permissions, routing, API, frontend, or runtime changes
 
+## EXT-GEN-05 — Agent Genome capability matching
+
+### Objective
+
+Expose a deterministic, read-only ranking service for eligible agents using persisted Genome
+capability metrics without assigning work or changing permissions.
+
+### Checklist
+
+- [x] Define bounded matching requests, candidate snapshots, ranked matches, and rejection reasons
+- [x] Rank candidates by conservative capability score adjusted by metric confidence
+- [x] Require available agents, active declared capabilities, and matching Genome evidence
+- [x] Reject duplicate candidates and duplicate Genome versions for one agent
+- [x] Keep matching read-only with no assignment, permission, routing, or manager side effects
+- [x] Add a bounded PostgreSQL adapter for candidate and metric reads
+- [x] Add unit and real-PostgreSQL tests for ranking, ties, missing capability declarations,
+      missing evidence, unavailable agents, bounds, and read-only behavior
+- [x] Run the complete test suite, Ruff, formatting, mypy, and diff hygiene checks
+
+### Explicit exclusions
+
+- task assignment, workload scheduling, cost routing, or AI Manager integration
+- Trust Score, Autonomy Governor, permission grants, API, frontend, or runtime changes
+
 ---
 
 # Ordre recommandé réel

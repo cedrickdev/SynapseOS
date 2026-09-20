@@ -18,6 +18,11 @@ from core.trust.dimensions import (
     TrustDimensionScore,
     TrustEventObservation,
 )
+from core.trust.explanations import (
+    TrustDimensionContribution,
+    TrustExplanationBuilder,
+    TrustScoreExplanation,
+)
 from core.trust.scoring import (
     TrustClassThresholds,
     TrustDimensionWeight,
@@ -40,13 +45,16 @@ __all__ = [
     "TrustDecayPolicy",
     "TrustDimension",
     "TrustDimensionCalculator",
+    "TrustDimensionContribution",
     "TrustDimensionScore",
     "TrustDimensionWeight",
     "TrustEventObservation",
     "TrustEventDecayCalculator",
     "TrustEventSeverity",
     "TrustEventType",
+    "TrustExplanationBuilder",
     "TrustOverallScore",
     "TrustOverallScoreCalculator",
     "TrustScoringPolicy",
+    "TrustScoreExplanation",
 ]

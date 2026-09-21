@@ -1,5 +1,15 @@
 """Provider-neutral Agent Genome persistence contracts."""
 
+from core.genome.behavior import (
+    BehaviorMetricObservation,
+    GenomeBehavioralBaseline,
+    GenomeBehavioralBaselineBuilder,
+    GenomeBehavioralBaselineState,
+    GenomeBehavioralDeviation,
+    GenomeBehavioralDeviationDetector,
+    GenomeBehaviorDeviationSeverity,
+    GenomeBehaviorMetric,
+)
 from core.genome.evidence import (
     EvidenceOutcome,
     EvidenceSignal,
@@ -47,6 +57,14 @@ from core.genome.types import (
 )
 
 __all__ = [
+    "BehaviorMetricObservation",
+    "GenomeBehavioralBaseline",
+    "GenomeBehavioralBaselineBuilder",
+    "GenomeBehavioralBaselineState",
+    "GenomeBehavioralDeviation",
+    "GenomeBehavioralDeviationDetector",
+    "GenomeBehaviorDeviationSeverity",
+    "GenomeBehaviorMetric",
     "EvidenceOutcome",
     "EvidenceSignal",
     "EvidenceSourceType",

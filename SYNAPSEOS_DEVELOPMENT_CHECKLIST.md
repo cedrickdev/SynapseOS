@@ -2875,7 +2875,7 @@ constraints.
 The future extension phase families are reserved as follows:
 
 ```text
-EXT-GEN-01 → EXT-GEN-08
+EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-08
 EXT-GOV-01 → EXT-GOV-08
 EXT-MGR-01 → EXT-MGR-10
@@ -3107,6 +3107,33 @@ assign work.
 - permissions, autonomy leases, assignment, routing, or runtime changes
 - Genome score generation, aggregation, recency, or reputation formulas
 - persistence of selection decisions or automatic reassignment
+
+---
+
+## EXT-GEN-09 — Behavioral baseline
+
+### Objective
+
+Derive a bounded, versioned behavioral expectation from trusted historical observations and expose
+explainable runtime deviations without making the baseline an authority policy.
+
+### Checklist
+
+- [x] Define strict immutable bounded runtime behavior observations and baseline metric ranges
+- [x] Build versioned per-agent baselines from unique historical evidence identifiers
+- [x] Represent cold start explicitly when no historical behavior is available
+- [x] Detect explainable elevated and critical deviations from established metric ranges
+- [x] Expose critical deviations as a Governor re-evaluation signal only
+- [x] Keep deviation detection non-authorizing with no permission, task, or runtime mutation
+- [x] Add a unit test proving a large tool-call deviation requests Governor re-evaluation
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Persistent baseline storage, behavioral event ingestion, Trust scoring, Governor evaluation or
+  enforcement, permission changes, task mutation, automatic containment, API, frontend, or LLM use
+
+---
 
 ## EXT-TRUST-01 — Agent Trust data model
 

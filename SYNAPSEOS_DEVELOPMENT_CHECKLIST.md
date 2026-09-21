@@ -3627,6 +3627,31 @@ Manager selection without changing Governor, permissions, or task state.
 
 ---
 
+## EXT-MGR-07 — Blocker detection
+
+### Objective
+
+Derive closed, explainable Manager blocker codes from bounded observed state without executing a
+recovery action, persisting state, or mutating workflow state.
+
+### Checklist
+
+- [x] Define closed blocker codes for progress, dependency, review, provider, security, approval,
+  and candidate availability conditions
+- [x] Add a strict immutable bounded blocker snapshot and report contract
+- [x] Detect no progress and reviewer backlog at deterministic thresholds
+- [x] Detect dependency, provider, security, approval, and no-eligible-agent blockers directly
+- [x] Preserve a stable deterministic blocker-code order
+- [x] Add a unit test for concurrent no-progress and provider blockers
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Polling, event subscriptions, persistence, task mutation, reassignment, escalation, approval
+  resolution, API, frontend, or optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

@@ -1,5 +1,11 @@
 """Provider-neutral contracts for the future AI Manager."""
 
+from core.manager.blockers import (
+    ManagerBlockerCode,
+    ManagerBlockerDetector,
+    ManagerBlockerReport,
+    ManagerBlockerSnapshot,
+)
 from core.manager.contracts import ManagerDecision
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
@@ -12,6 +18,10 @@ __all__ = [
     "AgentWorkload",
     "AgentTrustManagerSignal",
     "AgentGovernorManagerRecommendation",
+    "ManagerBlockerCode",
+    "ManagerBlockerDetector",
+    "ManagerBlockerReport",
+    "ManagerBlockerSnapshot",
     "GenomeAwareManagerSelector",
     "GovernorAwareManagerSelector",
     "ManagerCandidateSelection",

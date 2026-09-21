@@ -28,6 +28,12 @@ from core.trust.governor_signal import (
     TrustGovernorSignalBuilder,
     TrustGovernorSignalDisposition,
 )
+from core.trust.recovery import (
+    RuntimeTrustRecoveryEngine,
+    RuntimeTrustRecoveryPolicy,
+    RuntimeTrustRecoveryResult,
+    RuntimeTrustRecoverySignal,
+)
 from core.trust.runtime import (
     RuntimeTrustEngine,
     RuntimeTrustPolicy,
@@ -79,4 +85,8 @@ __all__ = [
     "RuntimeTrustSignalType",
     "RuntimeTrustSnapshot",
     "RuntimeTrustState",
+    "RuntimeTrustRecoveryEngine",
+    "RuntimeTrustRecoveryPolicy",
+    "RuntimeTrustRecoveryResult",
+    "RuntimeTrustRecoverySignal",
 ]

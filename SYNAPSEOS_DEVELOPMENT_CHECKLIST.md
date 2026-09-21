@@ -2876,7 +2876,7 @@ The future extension phase families are reserved as follows:
 
 ```text
 EXT-GEN-01 → EXT-GEN-09
-EXT-TRUST-01 → EXT-TRUST-09
+EXT-TRUST-01 → EXT-TRUST-10
 EXT-GOV-01 → EXT-GOV-08
 EXT-MGR-01 → EXT-MGR-10
 ```
@@ -3337,6 +3337,31 @@ altering historical Trust, permissions, autonomy, or workflow state.
 
 - Runtime Trust degradation or recovery, explanations, persistent snapshots, historical/effective
   score combination, Governor evaluation, permission or autonomy changes, containment, API, or LLM use
+
+---
+
+## EXT-TRUST-10 — Runtime Trust degradation and recovery
+
+### Objective
+
+Support temporary, bounded recovery of a current-run Trust snapshot while preserving the prior
+snapshot and without altering historical Trust or authority.
+
+### Checklist
+
+- [x] Define strict immutable recovery signals, policy, and result contracts
+- [x] Require unique evidence-backed recovery credits with UTC provenance
+- [x] Create a new runtime snapshot instead of mutating the previous snapshot
+- [x] Cap cumulative recovery and recovered runtime score through a versioned policy
+- [x] Reclassify the recovered state using explicit bounded thresholds
+- [x] Preserve previous snapshot and recovery signal identifiers for future audit storage
+- [x] Add a unit test proving recovery respects both score caps and prior-snapshot preservation
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Automatic recovery, persistent recovery records, runtime explanations, historical/effective score
+  combination, Governor evaluation, permission or autonomy changes, containment, API, or LLM use
 
 ---
 

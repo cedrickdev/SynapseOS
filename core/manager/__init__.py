@@ -2,5 +2,6 @@
 
 from core.manager.contracts import ManagerDecision
 from core.manager.types import ManagerDecisionType, ManagerReasonCode
+from core.manager.workload import AgentWorkload
 
-__all__ = ["ManagerDecision", "ManagerDecisionType", "ManagerReasonCode"]
+__all__ = ["AgentWorkload", "ManagerDecision", "ManagerDecisionType", "ManagerReasonCode"]

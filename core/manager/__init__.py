@@ -9,6 +9,11 @@ from core.manager.blockers import (
 from core.manager.contracts import ManagerDecision
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
+from core.manager.recovery import (
+    ManagerRecoveryAction,
+    ManagerRecoveryPlanner,
+    ManagerRecoveryRecommendation,
+)
 from core.manager.selection import ManagerCandidateSelection, ManagerCandidateSelector
 from core.manager.trust import AgentTrustManagerSignal, TrustAwareManagerSelector
 from core.manager.types import ManagerDecisionType, ManagerReasonCode
@@ -29,5 +34,8 @@ __all__ = [
     "ManagerDecision",
     "ManagerDecisionType",
     "ManagerReasonCode",
+    "ManagerRecoveryAction",
+    "ManagerRecoveryPlanner",
+    "ManagerRecoveryRecommendation",
     "TrustAwareManagerSelector",
 ]

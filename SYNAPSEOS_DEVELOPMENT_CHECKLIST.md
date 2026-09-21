@@ -3409,6 +3409,29 @@ constraint; strong Genome evidence must never enlarge an autonomy ceiling.
 
 ---
 
+## EXT-GOV-06 — Approval gate integration
+
+### Objective
+
+Emit a deterministic, non-mutating human-approval requirement from the Governor policy output
+without creating, recording, resolving, or bypassing an approval.
+
+### Checklist
+
+- [x] Add an explicit immutable `approval_required` policy-output field
+- [x] Emit a closed `APPROVAL_REQUIRED` reason for autonomy ceilings that cannot execute alone
+- [x] Require approval for `LEVEL_3_ACT_WITH_APPROVAL` and more restrictive policy ceilings
+- [x] Keep bounded low-risk autonomy free of an unnecessary approval gate
+- [x] Add unit tests for production migrations, medium-risk actions, and low-risk actions
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Creating, persisting, resolving, or expiring approvals; Permission Engine changes; security veto;
+  direct runtime execution; API, frontend, or AI Manager integration
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

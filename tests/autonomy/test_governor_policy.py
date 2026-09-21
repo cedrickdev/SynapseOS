@@ -42,17 +42,30 @@ def test_policy_caps_a_production_database_migration_at_recommendation() -> None
 
 
 @pytest.mark.parametrize(
-    ("changes", "expected_level"),
+    ("changes", "expected_level", "expected_reasons"),
     [
-        ({}, AutonomyLevel.BOUNDED_AUTONOMY),
-        ({"tool_risk": ToolRiskLevel.MEDIUM}, AutonomyLevel.ACT_WITH_APPROVAL),
-        ({"tool_risk": ToolRiskLevel.HIGH}, AutonomyLevel.RECOMMEND),
-        ({"tool_risk": ToolRiskLevel.CRITICAL}, AutonomyLevel.OBSERVE),
+        ({}, AutonomyLevel.BOUNDED_AUTONOMY, (PolicyReasonCode.RISK_CEILING,)),
+        (
+            {"tool_risk": ToolRiskLevel.MEDIUM},
+            AutonomyLevel.ACT_WITH_APPROVAL,
+            (PolicyReasonCode.RISK_CEILING, PolicyReasonCode.APPROVAL_REQUIRED),
+        ),
+        (
+            {"tool_risk": ToolRiskLevel.HIGH},
+            AutonomyLevel.RECOMMEND,
+            (PolicyReasonCode.RISK_CEILING, PolicyReasonCode.APPROVAL_REQUIRED),
+        ),
+        (
+            {"tool_risk": ToolRiskLevel.CRITICAL},
+            AutonomyLevel.OBSERVE,
+            (PolicyReasonCode.RISK_CEILING, PolicyReasonCode.APPROVAL_REQUIRED),
+        ),
     ],
 )
 def test_policy_applies_a_monotonic_risk_ceiling(
     changes: dict[str, object],
     expected_level: AutonomyLevel,
+    expected_reasons: tuple[PolicyReasonCode, ...],
 ) -> None:
     values: dict[str, object] = {
         "action_type": GovernedActionType.READ,
@@ -71,7 +84,7 @@ def test_policy_applies_a_monotonic_risk_ceiling(
     recommendation = AutonomyPolicyEngine().evaluate(context, RiskClassifier().classify(context))
 
     assert recommendation.maximum_autonomy_level is expected_level
-    assert recommendation.reason_codes == (PolicyReasonCode.RISK_CEILING,)
+    assert recommendation.reason_codes == expected_reasons
 
 
 def test_policy_rejects_an_assessment_that_does_not_match_its_context() -> None:

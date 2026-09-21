@@ -2876,7 +2876,7 @@ The future extension phase families are reserved as follows:
 
 ```text
 EXT-GEN-01 → EXT-GEN-09
-EXT-TRUST-01 → EXT-TRUST-10
+EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-08
 EXT-MGR-01 → EXT-MGR-10
 ```
@@ -3362,6 +3362,31 @@ snapshot and without altering historical Trust or authority.
 
 - Automatic recovery, persistent recovery records, runtime explanations, historical/effective score
   combination, Governor evaluation, permission or autonomy changes, containment, API, or LLM use
+
+---
+
+## EXT-TRUST-11 — Runtime Trust explanations
+
+### Objective
+
+Explain each transient Runtime Trust change with structured score, reason, signal, and expiry
+provenance without free-form generation, persistence, or authority changes.
+
+### Checklist
+
+- [x] Define a strict immutable bounded Runtime Trust change-explanation contract
+- [x] Preserve previous and current snapshots for same-agent, same-run comparison
+- [x] Calculate the exact bounded score delta deterministically
+- [x] Retain closed reason codes, unique source signal identifiers, and current expiry
+- [x] Reject cross-agent, cross-run, reversed-time, duplicate-source, and expiry-inconsistent input
+- [x] Keep explanations content-free and non-authorizing with no persistence or enforcement
+- [x] Add a unit test proving score, reason, signal, and expiry provenance are preserved
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Natural-language or LLM explanations, persistent explanation records, effective Trust calculation,
+  Governor evaluation, permission or autonomy changes, containment, API, or frontend
 
 ---
 

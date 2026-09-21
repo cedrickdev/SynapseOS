@@ -3676,6 +3676,30 @@ executing reassignment or escalation, mutating tasks, or resolving approvals.
 
 ---
 
+## EXT-MGR-09 — Human override contract
+
+### Objective
+
+Represent an auditable, immutable human replacement of a Manager recommendation without executing
+the replacement, changing authority, or mutating tasks.
+
+### Checklist
+
+- [x] Add a strict immutable human override record with bounded actor and justification fields
+- [x] Retain both the original and replacement Manager recommendations as audit evidence
+- [x] Require a UTC timestamp and bind both recommendations to the same project and task
+- [x] Reject no-op replacements so every override expresses a material human choice
+- [x] Keep the record non-authorizing and side-effect-free
+- [x] Add a unit test proving the auditable recommendation pair is preserved
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Persistence, AuditEvent writes, approval resolution, actual reassignment or escalation, task
+  mutation, permission or Governor changes, API, frontend, or optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

@@ -3577,6 +3577,31 @@ evidence-backed capability signals can deterministically influence a recommendat
 
 ---
 
+## EXT-MGR-05 — Trust-aware ranking
+
+### Objective
+
+Use immutable agent-bound Trust signals to remove restricted candidates and deterministically
+prefer higher Trust among otherwise eligible candidates before capacity selection.
+
+### Checklist
+
+- [x] Add a strict immutable association between an agent and its non-authorizing Trust signal
+- [x] Require complete, unique Trust coverage for the currently ranked candidates
+- [x] Exclude candidates carrying a Trust restriction recommendation
+- [x] Rank neutral Trust candidates by overall Trust while preserving deterministic tie order
+- [x] Reuse the existing fail-closed capacity selector after Trust filtering
+- [x] Add a unit test proving a restricted candidate cannot be selected
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Trust scoring or persistence, Trust decay, Governor integration, workload persistence or
+  calculation, assignment execution, reassignment, escalation, API, frontend, or optional LLM
+  planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

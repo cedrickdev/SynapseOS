@@ -2877,7 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
-EXT-GOV-01 → EXT-GOV-08
+EXT-GOV-01 → EXT-GOV-09
 EXT-MGR-01 → EXT-MGR-10
 ```
 
@@ -3580,6 +3580,31 @@ evidence and expose a deterministic, side-effect-free policy delta.
 
 - Persistence, polling or event-bus triggers, permission changes, runtime enforcement, API,
   frontend, security scanning, approval workflows, or AI Manager integration
+
+---
+
+## EXT-GOV-09 — Per-action evaluation
+
+### Objective
+
+Re-evaluate every proposed runtime action independently from its complete bounded risk context while
+preserving Security, Trust, Genome, approval, and Permission Engine authority boundaries.
+
+### Checklist
+
+- [x] Define strict immutable per-action request and result contracts with UTC provenance
+- [x] Require bounded opaque action references instead of raw arguments or tool output
+- [x] Recompute risk and Governor policy from scratch for every proposed action
+- [x] Preserve existing Trust, Genome, approval, and authoritative Security constraints
+- [x] Make non-execution explicit and require a separate Permission Engine check
+- [x] Keep evaluation stateless with no inherited authorization from earlier actions
+- [x] Add a unit test proving a sensitive action is restricted after a low-risk action
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Permission decisions, tool execution, persistence, event subscriptions, runtime interception,
+  scope/intent detection, Runtime Trust integration, economic governance, API, or frontend
 
 ---
 

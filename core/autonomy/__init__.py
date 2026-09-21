@@ -1,5 +1,10 @@
 """Provider-neutral contracts for the future Autonomy Governor."""
 
+from core.autonomy.action_evaluation import (
+    GovernorActionEvaluationRequest,
+    GovernorActionEvaluationResult,
+    GovernorPerActionEvaluator,
+)
 from core.autonomy.policy import AutonomyPolicyEngine, PolicyReasonCode, PolicyRecommendation
 from core.autonomy.recomputation import AutonomyRecomputationEngine, AutonomyRecomputationResult
 from core.autonomy.risk import (
@@ -24,6 +29,9 @@ __all__ = [
     "AutonomyReasonCode",
     "ExecutionEnvironment",
     "GovernedActionType",
+    "GovernorActionEvaluationRequest",
+    "GovernorActionEvaluationResult",
+    "GovernorPerActionEvaluator",
     "Reversibility",
     "RiskAssessment",
     "RiskClassifier",

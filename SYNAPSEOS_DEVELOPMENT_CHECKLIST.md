@@ -2876,7 +2876,7 @@ The future extension phase families are reserved as follows:
 
 ```text
 EXT-GEN-01 → EXT-GEN-09
-EXT-TRUST-01 → EXT-TRUST-08
+EXT-TRUST-01 → EXT-TRUST-09
 EXT-GOV-01 → EXT-GOV-08
 EXT-MGR-01 → EXT-MGR-10
 ```
@@ -3312,6 +3312,33 @@ evidence can recommend restriction without granting or directly changing authori
 
 - Autonomy Governor policies, leases, permissions, approval gates, suspension, quarantine, or runtime action
 - persistence, API, frontend, AI Manager integration, or direct authority changes
+
+---
+
+## EXT-TRUST-09 — Runtime Trust engine
+
+### Objective
+
+Compute bounded, ephemeral Trust for one active agent run from explicit runtime evidence without
+altering historical Trust, permissions, autonomy, or workflow state.
+
+### Checklist
+
+- [x] Define closed runtime signal types and strict immutable signal, policy, and snapshot contracts
+- [x] Calculate a bounded current-run score from unique explicit penalty signals
+- [x] Classify ephemeral runtime Trust as healthy, degraded, or critical through versioned thresholds
+- [x] Require UTC calculation and expiry timestamps with a bounded time-to-live
+- [x] Retain only bounded opaque evidence references and closed reason codes
+- [x] Keep the engine non-authorizing with no persistence, historical-score mutation, or enforcement
+- [x] Add a unit test for critical runtime signals and deterministic expiry
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Runtime Trust degradation or recovery, explanations, persistent snapshots, historical/effective
+  score combination, Governor evaluation, permission or autonomy changes, containment, API, or LLM use
+
+---
 
 ## EXT-GOV-01 — Autonomy levels and contracts
 

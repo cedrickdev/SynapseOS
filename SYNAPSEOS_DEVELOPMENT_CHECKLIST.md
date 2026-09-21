@@ -2877,7 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
-EXT-GOV-01 → EXT-GOV-09
+EXT-GOV-01 → EXT-GOV-10
 EXT-MGR-01 → EXT-MGR-10
 ```
 
@@ -3605,6 +3605,31 @@ preserving Security, Trust, Genome, approval, and Permission Engine authority bo
 
 - Permission decisions, tool execution, persistence, event subscriptions, runtime interception,
   scope/intent detection, Runtime Trust integration, economic governance, API, or frontend
+
+---
+
+## EXT-GOV-10 — Scope and intent guard
+
+### Objective
+
+Detect whether each proposed action remains inside an explicit authorized task mission using
+deterministic action, tool, and resource constraints without relying on an LLM security boundary.
+
+### Checklist
+
+- [x] Define strict immutable authorized-scope and scope-evaluation contracts
+- [x] Bind every scope policy and evaluated action to the same task identifier
+- [x] Validate unique bounded allowed action types, tool references, and resource prefixes
+- [x] Detect action, tool, and resource mismatches in stable deterministic order
+- [x] Fail closed when a required resource does not match an authorized prefix
+- [x] Keep scope results non-authorizing and require a separate Permission Engine check
+- [x] Add a unit test rejecting a production customer export from an authentication task
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Semantic or LLM classification, permission decisions, tool execution, persistence, Runtime Trust
+  integration, economic governance, quarantine, automatic containment, API, or frontend
 
 ---
 

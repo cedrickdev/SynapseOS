@@ -18,6 +18,13 @@ from core.autonomy.risk import (
     RiskReasonCode,
     RiskSeverity,
 )
+from core.autonomy.scope_guard import (
+    GovernorAuthorizedScope,
+    GovernorScopeDisposition,
+    GovernorScopeEvaluation,
+    GovernorScopeIntentGuard,
+    ScopeMismatchReason,
+)
 from core.autonomy.types import AutonomyDecision, AutonomyLevel, AutonomyReasonCode
 
 __all__ = [
@@ -32,6 +39,10 @@ __all__ = [
     "GovernorActionEvaluationRequest",
     "GovernorActionEvaluationResult",
     "GovernorPerActionEvaluator",
+    "GovernorAuthorizedScope",
+    "GovernorScopeDisposition",
+    "GovernorScopeEvaluation",
+    "GovernorScopeIntentGuard",
     "Reversibility",
     "RiskAssessment",
     "RiskClassifier",
@@ -39,6 +50,7 @@ __all__ = [
     "RiskLevel",
     "RiskReasonCode",
     "RiskSeverity",
+    "ScopeMismatchReason",
     "PolicyReasonCode",
     "PolicyRecommendation",
 ]

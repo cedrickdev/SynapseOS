@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-13
-EXT-MGR-01 → EXT-MGR-10
+EXT-MGR-01 → EXT-MGR-11
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -3952,6 +3952,31 @@ or response data, or allowing model output to replace deterministic Manager reco
 
 - Provider calls, prompt or response persistence, routing, retries, task mutation, permission or
   Governor changes, approval resolution, actual reassignment or escalation, API, or frontend
+
+---
+
+## EXT-MGR-11 — Runtime Trust monitoring
+
+### Objective
+
+Detect meaningful Runtime Trust state transitions for one active agent run and emit a bounded
+Manager signal without polling, persistence, Trust mutation, or reassignment.
+
+### Checklist
+
+- [x] Define strict immutable Runtime Trust transition direction and Manager signal contracts
+- [x] Require previous and current snapshots to belong to the same agent and run
+- [x] Require the current snapshot to be strictly newer than the previous snapshot
+- [x] Ignore score noise when the canonical Runtime Trust state is unchanged
+- [x] Distinguish degradation from recovery deterministically
+- [x] Request Governor recomputation and flag critical transitions for reassignment evaluation only
+- [x] Add a unit test proving a critical transition emits a non-executing Manager signal
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Event-bus subscriptions, polling, persistence, Trust calculation or mutation, Governor
+  enforcement, actual reassignment, task mutation, permissions, provider calls, API, or frontend
 
 ---
 

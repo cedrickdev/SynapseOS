@@ -2877,7 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
-EXT-GOV-01 → EXT-GOV-11
+EXT-GOV-01 → EXT-GOV-12
 EXT-MGR-01 → EXT-MGR-10
 ```
 
@@ -3655,6 +3655,32 @@ allowing Trust to grant authority or bypass existing Governor and Permission Eng
 
 - Runtime Trust calculation or persistence, permission decisions, tool execution, economic
   governance, quarantine, automatic containment, API, frontend, or AI Manager reassignment
+
+---
+
+## EXT-GOV-12 — Economic governance
+
+### Objective
+
+Apply bounded run-budget evidence as a restrictive per-action autonomy signal without reserving,
+spending, or changing provider, permission, or runtime state.
+
+### Checklist
+
+- [x] Define strict immutable economic context, policy, disposition, and result contracts
+- [x] Validate bounded Decimal budgets and exact remaining-budget consistency
+- [x] Compute projected spend without reserving or spending funds
+- [x] Expose deterministic budget-pressure evidence without expanding authority
+- [x] Cap projected overspend at approval-gated autonomy while preserving stricter ceilings
+- [x] Keep economic evaluation unable to authorize or execute an action
+- [x] Add a unit test proving projected overspend requires approval without spending funds
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Provider calls or selection, price discovery, financial transactions, budget reservation or
+  persistence, permission decisions, tool execution, runtime cancellation, quarantine, API,
+  frontend, or AI Manager cost optimization
 
 ---
 

@@ -20,6 +20,11 @@ from core.manager.recovery import (
     ManagerRecoveryPlanner,
     ManagerRecoveryRecommendation,
 )
+from core.manager.runtime_trust import (
+    ManagerRuntimeTrustChange,
+    ManagerRuntimeTrustMonitor,
+    RuntimeTrustChangeDirection,
+)
 from core.manager.selection import ManagerCandidateSelection, ManagerCandidateSelector
 from core.manager.trust import AgentTrustManagerSignal, TrustAwareManagerSelector
 from core.manager.types import ManagerDecisionType, ManagerReasonCode
@@ -47,5 +52,8 @@ __all__ = [
     "ManagerRecoveryAction",
     "ManagerRecoveryPlanner",
     "ManagerRecoveryRecommendation",
+    "ManagerRuntimeTrustChange",
+    "ManagerRuntimeTrustMonitor",
+    "RuntimeTrustChangeDirection",
     "TrustAwareManagerSelector",
 ]

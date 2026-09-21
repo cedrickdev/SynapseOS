@@ -2,6 +2,7 @@
 
 from core.manager.contracts import ManagerDecision
 from core.manager.genome import GenomeAwareManagerSelector
+from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
 from core.manager.selection import ManagerCandidateSelection, ManagerCandidateSelector
 from core.manager.trust import AgentTrustManagerSignal, TrustAwareManagerSelector
 from core.manager.types import ManagerDecisionType, ManagerReasonCode
@@ -10,7 +11,9 @@ from core.manager.workload import AgentWorkload
 __all__ = [
     "AgentWorkload",
     "AgentTrustManagerSignal",
+    "AgentGovernorManagerRecommendation",
     "GenomeAwareManagerSelector",
+    "GovernorAwareManagerSelector",
     "ManagerCandidateSelection",
     "ManagerCandidateSelector",
     "ManagerDecision",

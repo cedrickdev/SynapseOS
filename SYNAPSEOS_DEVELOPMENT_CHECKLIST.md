@@ -3505,6 +3505,30 @@ without selecting, assigning, or executing work.
 
 ---
 
+## EXT-MGR-02 — AI Manager workload model
+
+### Objective
+
+Introduce an immutable, bounded workload snapshot for Manager decision inputs without computing
+load, persisting workload state, or assigning work.
+
+### Checklist
+
+- [x] Add a strict immutable `AgentWorkload` contract
+- [x] Represent active and queued task counts, remaining work estimate, current run, and capacity
+- [x] Bound task counts, remaining duration, and normalized capacity score
+- [x] Require UTC provenance for workload snapshots
+- [x] Add a unit test for invalid normalized capacity
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Workload persistence or aggregation, reservations, capacity calculation, candidate ranking,
+  Genome, Trust, or Governor integration, assignment execution, reassignment, escalation, API,
+  frontend, or optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

@@ -2877,7 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
-EXT-GOV-01 → EXT-GOV-10
+EXT-GOV-01 → EXT-GOV-11
 EXT-MGR-01 → EXT-MGR-10
 ```
 
@@ -3630,6 +3630,31 @@ deterministic action, tool, and resource constraints without relying on an LLM s
 
 - Semantic or LLM classification, permission decisions, tool execution, persistence, Runtime Trust
   integration, economic governance, quarantine, automatic containment, API, or frontend
+
+---
+
+## EXT-GOV-11 — Runtime Trust integration
+
+### Objective
+
+Apply fresh Runtime Trust as a restrictive per-action autonomy ceiling during an active run without
+allowing Trust to grant authority or bypass existing Governor and Permission Engine constraints.
+
+### Checklist
+
+- [x] Define strict immutable Runtime Trust Governor evaluation contracts and reason codes
+- [x] Require Runtime Trust to match the evaluated agent and active run
+- [x] Reject future-dated and expired Runtime Trust snapshots
+- [x] Cap degraded Runtime Trust at approval-gated autonomy and critical Trust at observe-only
+- [x] Preserve stricter existing risk, Security, historical Trust, Genome, and approval ceilings
+- [x] Keep Runtime Trust unable to authorize or execute an action
+- [x] Add a unit test proving a critical snapshot restricts the same active-run action
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Runtime Trust calculation or persistence, permission decisions, tool execution, economic
+  governance, quarantine, automatic containment, API, frontend, or AI Manager reassignment
 
 ---
 

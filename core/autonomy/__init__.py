@@ -18,6 +18,11 @@ from core.autonomy.risk import (
     RiskReasonCode,
     RiskSeverity,
 )
+from core.autonomy.runtime_trust import (
+    GovernorRuntimeTrustEvaluation,
+    GovernorRuntimeTrustEvaluator,
+    RuntimeTrustGovernorReason,
+)
 from core.autonomy.scope_guard import (
     GovernorAuthorizedScope,
     GovernorScopeDisposition,
@@ -39,6 +44,8 @@ __all__ = [
     "GovernorActionEvaluationRequest",
     "GovernorActionEvaluationResult",
     "GovernorPerActionEvaluator",
+    "GovernorRuntimeTrustEvaluation",
+    "GovernorRuntimeTrustEvaluator",
     "GovernorAuthorizedScope",
     "GovernorScopeDisposition",
     "GovernorScopeEvaluation",
@@ -50,6 +57,7 @@ __all__ = [
     "RiskLevel",
     "RiskReasonCode",
     "RiskSeverity",
+    "RuntimeTrustGovernorReason",
     "ScopeMismatchReason",
     "PolicyReasonCode",
     "PolicyRecommendation",

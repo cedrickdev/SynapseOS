@@ -3456,6 +3456,29 @@ risk, or approval result can override a blocking Security decision.
 
 ---
 
+## EXT-GOV-08 — Dynamic policy recomputation
+
+### Objective
+
+Re-evaluate a previously produced Governor policy recommendation against current, canonical risk
+evidence and expose a deterministic, side-effect-free policy delta.
+
+### Checklist
+
+- [x] Add strict immutable recomputation result contracts retaining the previous and current policy
+- [x] Re-evaluate current canonical risk evidence through the existing deterministic policy engine
+- [x] Expose a bounded deterministic list of changed policy-output fields
+- [x] Preserve recomputation as a pure operation with no persistence, permission, or runtime side effect
+- [x] Add tests for changed and unchanged policy evaluations
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Persistence, polling or event-bus triggers, permission changes, runtime enforcement, API,
+  frontend, security scanning, approval workflows, or AI Manager integration
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

@@ -3553,6 +3553,30 @@ recomputing eligibility, scores, or permissions and without assigning work.
 
 ---
 
+## EXT-MGR-04 — Genome-aware ranking
+
+### Objective
+
+Compose the existing conservative Agent Genome matcher with the Manager capacity selector so that
+evidence-backed capability signals can deterministically influence a recommendation.
+
+### Checklist
+
+- [x] Reuse the existing conservative `AgentGenomeManagerSignalMatcher` without duplicating scoring
+- [x] Compose Genome-adjusted matching with the bounded Manager capacity selection contract
+- [x] Preserve the Matcher’s capability, permission, and autonomy eligibility checks
+- [x] Preserve the selection layer’s fail-closed workload handling
+- [x] Add a unit test showing low Genome evidence promotes a capacity-available fallback
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- New Genome scoring or persistence, Trust or Governor integration, workload persistence or
+  calculation, assignment execution, reassignment, escalation, API, frontend, or optional LLM
+  planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

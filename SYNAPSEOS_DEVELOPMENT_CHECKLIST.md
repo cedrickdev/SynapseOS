@@ -3652,6 +3652,30 @@ recovery action, persisting state, or mutating workflow state.
 
 ---
 
+## EXT-MGR-08 — Reassignment and escalation recommendations
+
+### Objective
+
+Derive immutable, deterministic recovery recommendations from canonical blocker reports without
+executing reassignment or escalation, mutating tasks, or resolving approvals.
+
+### Checklist
+
+- [x] Define closed non-executing recovery actions and a strict immutable recommendation contract
+- [x] Prioritize escalation for dependency, provider, security, approval, and eligibility blockers
+- [x] Recommend reassignment only for safe progress or reviewer-backlog blockers
+- [x] Preserve stable blocker ordering and return no action when no recovery is warranted
+- [x] Keep planning side-effect-free with no persistence, task mutation, or external execution
+- [x] Add a unit test proving a security hold escalates instead of recommending reassignment
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Persistence, actual reassignment or escalation, task mutation, approval resolution, polling,
+  event subscriptions, API, frontend, or optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

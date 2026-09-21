@@ -2877,7 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
-EXT-GOV-01 → EXT-GOV-12
+EXT-GOV-01 → EXT-GOV-13
 EXT-MGR-01 → EXT-MGR-10
 ```
 
@@ -3681,6 +3681,32 @@ spending, or changing provider, permission, or runtime state.
 - Provider calls or selection, price discovery, financial transactions, budget reservation or
   persistence, permission decisions, tool execution, runtime cancellation, quarantine, API,
   frontend, or AI Manager cost optimization
+
+---
+
+## EXT-GOV-13 — Runtime downgrade and quarantine
+
+### Objective
+
+Apply immediate run- and action-bound autonomy reduction from explicit runtime containment evidence
+without directly mutating permissions, credentials, agent state, or executing the action.
+
+### Checklist
+
+- [x] Define strict immutable runtime containment dispositions, reasons, signals, and results
+- [x] Bind every containment signal to the evaluated agent, run, and action sequence
+- [x] Reject non-UTC and future containment observations
+- [x] Apply downgrade and quarantine as monotone autonomy ceilings only
+- [x] Reduce quarantine to disabled autonomy and expose write restriction and reassignment signals
+- [x] Require a fresh Permission Engine check and make non-execution explicit
+- [x] Add a unit test proving a critical incident quarantines the active run without side effects
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Permission mutation, credential revocation, persisted quarantine state, task cancellation,
+  runtime interception, tool execution, automatic reassignment, event subscriptions, API, or
+  frontend
 
 ---
 

@@ -27,6 +27,13 @@ from core.autonomy.risk import (
     RiskReasonCode,
     RiskSeverity,
 )
+from core.autonomy.runtime_containment import (
+    GovernorRuntimeContainmentEvaluation,
+    GovernorRuntimeContainmentEvaluator,
+    RuntimeContainmentDisposition,
+    RuntimeContainmentReason,
+    RuntimeContainmentSignal,
+)
 from core.autonomy.runtime_trust import (
     GovernorRuntimeTrustEvaluation,
     GovernorRuntimeTrustEvaluator,
@@ -61,6 +68,8 @@ __all__ = [
     "GovernorEconomicEvaluator",
     "GovernorRuntimeTrustEvaluation",
     "GovernorRuntimeTrustEvaluator",
+    "GovernorRuntimeContainmentEvaluation",
+    "GovernorRuntimeContainmentEvaluator",
     "GovernorAuthorizedScope",
     "GovernorScopeDisposition",
     "GovernorScopeEvaluation",
@@ -73,6 +82,9 @@ __all__ = [
     "RiskReasonCode",
     "RiskSeverity",
     "RuntimeTrustGovernorReason",
+    "RuntimeContainmentDisposition",
+    "RuntimeContainmentReason",
+    "RuntimeContainmentSignal",
     "ScopeMismatchReason",
     "PolicyReasonCode",
     "PolicyRecommendation",

@@ -3602,6 +3602,31 @@ prefer higher Trust among otherwise eligible candidates before capacity selectio
 
 ---
 
+## EXT-MGR-06 — Governor integration
+
+### Objective
+
+Apply agent-bound Autonomy Governor policy ceilings as fail-closed constraints on automatic
+Manager selection without changing Governor, permissions, or task state.
+
+### Checklist
+
+- [x] Add a strict immutable association between an agent and its Governor recommendation
+- [x] Require complete, unique Governor coverage for the currently ranked candidates
+- [x] Exclude disabled candidates from automatic Manager selection
+- [x] Exclude approval-gated candidates from automatic Manager selection
+- [x] Reuse the existing fail-closed capacity selector after Governor filtering
+- [x] Add a unit test proving an approval-gated candidate is not selected automatically
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Governor policy evaluation or persistence, permission changes, approval resolution, workload
+  persistence or calculation, assignment execution, reassignment, escalation, API, frontend, or
+  optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

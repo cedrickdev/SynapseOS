@@ -9,6 +9,7 @@ from core.manager.blockers import (
 from core.manager.contracts import ManagerDecision
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
+from core.manager.overrides import ManagerHumanOverride
 from core.manager.recovery import (
     ManagerRecoveryAction,
     ManagerRecoveryPlanner,
@@ -33,6 +34,7 @@ __all__ = [
     "ManagerCandidateSelector",
     "ManagerDecision",
     "ManagerDecisionType",
+    "ManagerHumanOverride",
     "ManagerReasonCode",
     "ManagerRecoveryAction",
     "ManagerRecoveryPlanner",

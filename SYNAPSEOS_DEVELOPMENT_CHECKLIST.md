@@ -3479,6 +3479,32 @@ evidence and expose a deterministic, side-effect-free policy delta.
 
 ---
 
+## EXT-MGR-01 — AI Manager contracts
+
+### Objective
+
+Introduce strict, immutable, provider-neutral contracts for explainable AI Manager recommendations
+without selecting, assigning, or executing work.
+
+### Checklist
+
+- [x] Define closed Manager decision types and explainable reason codes
+- [x] Add a strict immutable Manager decision contract with project, task, selected agent,
+  alternatives, evidence, confidence, and UTC provenance
+- [x] Bound and validate alternatives, evidence references, confidence, and timestamps
+- [x] Require a selected agent for assignment and reassignment recommendations
+- [x] Prevent a selected agent from appearing among its fallback alternatives
+- [x] Add unit tests for invalid assignment recommendations and ambiguous alternatives
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Persistent Manager decisions, workload accounting, candidate ranking, Genome, Trust, or Governor
+  integration, assignment execution, reassignment, escalation, human override, API, frontend, or
+  optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

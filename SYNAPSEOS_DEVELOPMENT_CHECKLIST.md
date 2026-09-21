@@ -3432,6 +3432,30 @@ without creating, recording, resolving, or bypassing an approval.
 
 ---
 
+## EXT-GOV-07 — Security veto / quarantine
+
+### Objective
+
+Apply the authoritative Security veto to disable Governor autonomy immediately; no Trust, Genome,
+risk, or approval result can override a blocking Security decision.
+
+### Checklist
+
+- [x] Accept the closed canonical Security decision as restrictive policy evidence
+- [x] Force `LEVEL_0_DISABLED` when Security returns `BLOCK`
+- [x] Clear approval requirements under a Security veto
+- [x] Record an explicit closed `SECURITY_VETO` reason after all other policy reasons
+- [x] Preserve nonblocking Security decisions without changing an existing policy ceiling
+- [x] Add unit tests for blocking and nonblocking Security decisions
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Persistent quarantine state, credential revocation, permission mutation, security scanning,
+  approval workflows, API, frontend, runtime enforcement, or AI Manager integration
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

@@ -19,6 +19,7 @@ from core.autonomy.risk import (
     RiskLevel,
 )
 from core.autonomy.types import AutonomyLevel
+from core.security import SecurityDecision
 from core.trust.governor_signal import TrustGovernorSignal, TrustGovernorSignalDisposition
 
 
@@ -30,6 +31,7 @@ class PolicyReasonCode(StrEnum):
     TRUST_RESTRICTION = "TRUST_RESTRICTION"
     GENOME_CAPABILITY_GAP = "GENOME_CAPABILITY_GAP"
     APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+    SECURITY_VETO = "SECURITY_VETO"
 
 
 class _StrictPolicyModel(BaseModel):
@@ -69,6 +71,7 @@ class AutonomyPolicyEngine:
         trust_signal: TrustGovernorSignal | None = None,
         genome_signal: AgentGenomeManagerSignal | None = None,
         required_capabilities: tuple[str, ...] = (),
+        security_decision: SecurityDecision | None = None,
     ) -> PolicyRecommendation:
         """Return a ceiling only when the supplied assessment matches the full risk context."""
         if RiskClassifier().classify(context) != risk_assessment:
@@ -98,7 +101,27 @@ class AutonomyPolicyEngine:
                 genome_signal=genome_signal,
                 required_capabilities=required_capabilities,
             )
-        return self._apply_approval_requirement(recommendation)
+        recommendation = self._apply_approval_requirement(recommendation)
+        return self._apply_security_veto(recommendation, security_decision)
+
+    @staticmethod
+    def _apply_security_veto(
+        recommendation: PolicyRecommendation,
+        security_decision: SecurityDecision | None,
+    ) -> PolicyRecommendation:
+        if security_decision is None:
+            return recommendation
+        if type(security_decision) is not SecurityDecision:
+            raise TypeError("Security decision must be canonical")
+        if security_decision is not SecurityDecision.BLOCK:
+            return recommendation
+        return recommendation.model_copy(
+            update={
+                "maximum_autonomy_level": AutonomyLevel.DISABLED,
+                "approval_required": False,
+                "reason_codes": (*recommendation.reason_codes, PolicyReasonCode.SECURITY_VETO),
+            }
+        )
 
     @staticmethod
     def _apply_approval_requirement(recommendation: PolicyRecommendation) -> PolicyRecommendation:

@@ -42,6 +42,10 @@ from core.trust.runtime import (
     RuntimeTrustSnapshot,
     RuntimeTrustState,
 )
+from core.trust.runtime_explanations import (
+    RuntimeTrustChangeExplanation,
+    RuntimeTrustChangeExplanationBuilder,
+)
 from core.trust.scoring import (
     TrustClassThresholds,
     TrustDimensionWeight,
@@ -85,6 +89,8 @@ __all__ = [
     "RuntimeTrustSignalType",
     "RuntimeTrustSnapshot",
     "RuntimeTrustState",
+    "RuntimeTrustChangeExplanation",
+    "RuntimeTrustChangeExplanationBuilder",
     "RuntimeTrustRecoveryEngine",
     "RuntimeTrustRecoveryPolicy",
     "RuntimeTrustRecoveryResult",

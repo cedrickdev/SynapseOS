@@ -3700,6 +3700,30 @@ the replacement, changing authority, or mutating tasks.
 
 ---
 
+## EXT-MGR-10 — Optional advisory LLM planning
+
+### Objective
+
+Represent bounded optional LLM-shaped planning advice without calling a provider, persisting prompt
+or response data, or allowing model output to replace deterministic Manager recommendations.
+
+### Checklist
+
+- [x] Add strict immutable bounded advisory proposal and result contracts
+- [x] Require UTC provenance and bounded non-blank rationale entries
+- [x] Retain provider reference as an opaque bounded identifier
+- [x] Preserve the deterministic recommendation as the sole authoritative output
+- [x] Keep advisory planning side-effect-free with no provider invocation or execution authority
+- [x] Add a unit test proving an advisory proposal cannot replace a security escalation
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Provider calls, prompt or response persistence, routing, retries, task mutation, permission or
+  Governor changes, approval resolution, actual reassignment or escalation, API, or frontend
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

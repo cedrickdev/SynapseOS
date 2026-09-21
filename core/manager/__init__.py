@@ -10,6 +10,11 @@ from core.manager.contracts import ManagerDecision
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
 from core.manager.overrides import ManagerHumanOverride
+from core.manager.planning import (
+    ManagerAdvisoryPlanner,
+    ManagerAdvisoryPlanningResult,
+    ManagerPlanningProposal,
+)
 from core.manager.recovery import (
     ManagerRecoveryAction,
     ManagerRecoveryPlanner,
@@ -35,6 +40,9 @@ __all__ = [
     "ManagerDecision",
     "ManagerDecisionType",
     "ManagerHumanOverride",
+    "ManagerAdvisoryPlanner",
+    "ManagerAdvisoryPlanningResult",
+    "ManagerPlanningProposal",
     "ManagerReasonCode",
     "ManagerRecoveryAction",
     "ManagerRecoveryPlanner",

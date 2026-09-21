@@ -29,6 +29,7 @@ class PolicyReasonCode(StrEnum):
     PRODUCTION_DATABASE_MIGRATION = "PRODUCTION_DATABASE_MIGRATION"
     TRUST_RESTRICTION = "TRUST_RESTRICTION"
     GENOME_CAPABILITY_GAP = "GENOME_CAPABILITY_GAP"
+    APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
 
 
 class _StrictPolicyModel(BaseModel):
@@ -47,6 +48,7 @@ class PolicyRecommendation(_StrictPolicyModel):
     maximum_autonomy_level: AutonomyLevel
     reason_codes: Annotated[tuple[PolicyReasonCode, ...], Field(min_length=1, max_length=8)]
     policy_version: Annotated[str, Field(min_length=1, max_length=128)]
+    approval_required: bool = False
     trust_algorithm_version: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     trust_critical_event_id: UUID | None = None
     genome_version_id: UUID | None = None
@@ -95,6 +97,24 @@ class AutonomyPolicyEngine:
                 recommendation,
                 genome_signal=genome_signal,
                 required_capabilities=required_capabilities,
+            )
+        return self._apply_approval_requirement(recommendation)
+
+    @staticmethod
+    def _apply_approval_requirement(recommendation: PolicyRecommendation) -> PolicyRecommendation:
+        if recommendation.maximum_autonomy_level in {
+            AutonomyLevel.OBSERVE,
+            AutonomyLevel.RECOMMEND,
+            AutonomyLevel.ACT_WITH_APPROVAL,
+        }:
+            return recommendation.model_copy(
+                update={
+                    "approval_required": True,
+                    "reason_codes": (
+                        *recommendation.reason_codes,
+                        PolicyReasonCode.APPROVAL_REQUIRED,
+                    ),
+                }
             )
         return recommendation
 

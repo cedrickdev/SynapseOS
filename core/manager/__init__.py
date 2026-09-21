@@ -1,7 +1,15 @@
 """Provider-neutral contracts for the future AI Manager."""
 
 from core.manager.contracts import ManagerDecision
+from core.manager.selection import ManagerCandidateSelection, ManagerCandidateSelector
 from core.manager.types import ManagerDecisionType, ManagerReasonCode
 from core.manager.workload import AgentWorkload
 
-__all__ = ["AgentWorkload", "ManagerDecision", "ManagerDecisionType", "ManagerReasonCode"]
+__all__ = [
+    "AgentWorkload",
+    "ManagerCandidateSelection",
+    "ManagerCandidateSelector",
+    "ManagerDecision",
+    "ManagerDecisionType",
+    "ManagerReasonCode",
+]

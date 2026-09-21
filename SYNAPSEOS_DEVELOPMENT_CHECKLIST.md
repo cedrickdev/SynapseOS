@@ -3529,6 +3529,30 @@ load, persisting workload state, or assigning work.
 
 ---
 
+## EXT-MGR-03 — Deterministic candidate selection
+
+### Objective
+
+Select a capacity-available agent from the existing deterministic registry ranking without
+recomputing eligibility, scores, or permissions and without assigning work.
+
+### Checklist
+
+- [x] Compose the existing ordered, eligible `AgentMatchingResult` instead of duplicating matching
+- [x] Add a strict immutable selection result with an optional winner and bounded fallback order
+- [x] Fail closed when a ranked candidate has no workload snapshot or no remaining capacity
+- [x] Select the first capacity-available candidate while preserving matcher order for alternatives
+- [x] Add a unit test proving overloaded candidates are skipped without reordering
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Recomputing candidate eligibility or ranking, workload persistence or calculation, Genome, Trust,
+  or Governor integration, assignment execution, reassignment, escalation, API, frontend, or
+  optional LLM planning
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

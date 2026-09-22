@@ -33,6 +33,13 @@ from core.genome.matching import (
     RankedGenomeAgent,
     RejectedGenomeAgent,
 )
+from core.genome.outcome_integrity import (
+    AgentOutcomeIntegrityProfile,
+    AgentOutcomeIntegrityProfileCalculator,
+    OutcomeIntegrityObservation,
+    OutcomeIntegrityProfileState,
+    OutcomeVerificationSource,
+)
 from core.genome.performance import (
     PerformanceMetricName,
     PerformanceMetricResult,
@@ -57,6 +64,8 @@ from core.genome.types import (
 )
 
 __all__ = [
+    "AgentOutcomeIntegrityProfile",
+    "AgentOutcomeIntegrityProfileCalculator",
     "BehaviorMetricObservation",
     "GenomeBehavioralBaseline",
     "GenomeBehavioralBaselineBuilder",
@@ -97,5 +106,8 @@ __all__ = [
     "GenomeMetricWindow",
     "GenomeVersionStatus",
     "GenomeRunSnapshotRequest",
+    "OutcomeIntegrityObservation",
+    "OutcomeIntegrityProfileState",
+    "OutcomeVerificationSource",
     "filter_evidence_metadata",
 ]

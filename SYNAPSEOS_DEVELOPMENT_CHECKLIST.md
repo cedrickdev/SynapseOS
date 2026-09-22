@@ -2880,6 +2880,7 @@ EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-14
+EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-15
 EXT-MGR-22
 ```
@@ -3789,6 +3790,31 @@ without transferring enforcement authority to the Governor or destroying forensi
 - Permission mutation, credential or capability backends, process termination, workspace mutation,
   event-bus delivery, persisted containment state, recovery execution, automatic reassignment, API,
   or frontend
+
+---
+
+## EXT-GOV-17 — Delegated authority validation
+
+### Objective
+
+Fail closed on each proposed action unless a valid delegation chain binds the acting agent to the
+same project and task and explicitly contains the required scope and capability.
+
+### Checklist
+
+- [x] Define strict immutable delegated-authority requests, reasons, dispositions, and results
+- [x] Consume canonical per-action Governor evaluation and TRUST-13 delegation integrity evidence
+- [x] Bind delegation leaf, agent, project, task, and evaluation chronology
+- [x] Require the action scope and capability to exist explicitly on the leaf delegation
+- [x] Deny any chain-integrity violation before the Permission Engine check
+- [x] Keep validation unable to execute or mutate permissions and require authoritative rechecking
+- [x] Add a unit test proving an agent cannot use a capability omitted from its delegation
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Delegation issuance or persistence, Permission Engine decisions, credential leases, action
+  execution, Trust mutation, Manager chain creation, API, frontend, or LLM inference
 
 ---
 

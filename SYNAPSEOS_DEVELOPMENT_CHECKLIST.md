@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-13
-EXT-MGR-01 → EXT-MGR-11
+EXT-MGR-01 → EXT-MGR-12
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -3977,6 +3977,32 @@ Manager signal without polling, persistence, Trust mutation, or reassignment.
 
 - Event-bus subscriptions, polling, persistence, Trust calculation or mutation, Governor
   enforcement, actual reassignment, task mutation, permissions, provider calls, API, or frontend
+
+---
+
+## EXT-MGR-12 — Trust-triggered reassignment
+
+### Objective
+
+Produce a deterministic reassignment or escalation recommendation when fresh Runtime Trust makes
+the currently assigned agent ineligible, without changing assignments or task state.
+
+### Checklist
+
+- [x] Define strict immutable Trust reassignment dispositions and recommendation contracts
+- [x] Consume the canonical meaningful Runtime Trust transition from MGR-11
+- [x] Require a fresh, unexpired critical Runtime Trust snapshot before reassignment evaluation
+- [x] Require replacement candidates to exclude the ineligible current agent
+- [x] Recommend the upstream-selected eligible replacement without recomputing candidate ranking
+- [x] Escalate when no eligible replacement exists and return no action for non-critical changes
+- [x] Add a unit test proving critical Runtime Trust recommends an eligible replacement
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Candidate discovery or ranking, actual reassignment, task or assignment mutation, Trust or
+  Governor mutation, event subscriptions, persistence, permissions, provider calls, API, or
+  frontend
 
 ---
 

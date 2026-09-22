@@ -2876,6 +2876,7 @@ The future extension phase families are reserved as follows:
 
 ```text
 EXT-GEN-01 → EXT-GEN-09
+EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-14
 EXT-MGR-01 → EXT-MGR-15
@@ -3132,6 +3133,32 @@ explainable runtime deviations without making the baseline an authority policy.
 
 - Persistent baseline storage, behavioral event ingestion, Trust scoring, Governor evaluation or
   enforcement, permission changes, task mutation, automatic containment, API, frontend, or LLM use
+
+---
+
+## EXT-GEN-12 — Outcome integrity metrics
+
+### Objective
+
+Derive bounded, versioned Agent Genome measures from independently verified task outcomes so local
+metric success cannot hide objective failure, escaped acceptance criteria, or reopened work.
+
+### Checklist
+
+- [x] Define strict immutable outcome observations, verification sources, and profile contracts
+- [x] Require explicit agent, task, run, evidence, verification-source, and UTC provenance
+- [x] Represent cold start explicitly instead of treating missing evidence as perfect integrity
+- [x] Calculate objective alignment, metric-gaming incidents, acceptance-criteria escapes, and
+  post-completion reopen rates deterministically
+- [x] Bound observations, reject duplicate evidence, and reject cross-agent or future observations
+- [x] Keep outcome metrics unable to grant authority or mutate Trust or runtime state
+- [x] Add a unit test proving green proxy metrics cannot hide objective and completion failures
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Outcome event persistence, task completion, Manager gates, Trust or reputation calculation,
+  permissions, autonomy, runtime mutation, API, frontend, LLM inference, or cross-agent aggregation
 
 ---
 

@@ -27,6 +27,11 @@ from core.manager.runtime_trust import (
 )
 from core.manager.selection import ManagerCandidateSelection, ManagerCandidateSelector
 from core.manager.trust import AgentTrustManagerSignal, TrustAwareManagerSelector
+from core.manager.trust_reassignment import (
+    TrustReassignmentDisposition,
+    TrustTriggeredReassignmentPlanner,
+    TrustTriggeredReassignmentRecommendation,
+)
 from core.manager.types import ManagerDecisionType, ManagerReasonCode
 from core.manager.workload import AgentWorkload
 
@@ -56,4 +61,7 @@ __all__ = [
     "ManagerRuntimeTrustMonitor",
     "RuntimeTrustChangeDirection",
     "TrustAwareManagerSelector",
+    "TrustReassignmentDisposition",
+    "TrustTriggeredReassignmentPlanner",
+    "TrustTriggeredReassignmentRecommendation",
 ]

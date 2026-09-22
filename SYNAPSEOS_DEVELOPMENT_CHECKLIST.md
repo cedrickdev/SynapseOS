@@ -2875,7 +2875,7 @@ constraints.
 The future extension phase families are reserved as follows:
 
 ```text
-EXT-GEN-01 → EXT-GEN-09
+EXT-GEN-01 → EXT-GEN-10
 EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-TRUST-13
@@ -3137,6 +3137,31 @@ explainable runtime deviations without making the baseline an authority policy.
 
 - Persistent baseline storage, behavioral event ingestion, Trust scoring, Governor evaluation or
   enforcement, permission changes, task mutation, automatic containment, API, frontend, or LLM use
+
+---
+
+## EXT-GEN-10 — Collaboration behavioral baseline
+
+### Objective
+
+Derive a bounded, versioned description of an agent's normal peers, channels, message frequency,
+delegation usage, and shared data classes without treating historical behavior as authorization.
+
+### Checklist
+
+- [x] Define strict immutable collaboration observations, enums, states, and baseline contracts
+- [x] Require project, task, agent, peer, channel, data class, evidence, and UTC provenance
+- [x] Represent cold start explicitly and bound all historical observations
+- [x] Derive deterministic normal peers, channels, data classes, frequency range, and delegation rate
+- [x] Reject duplicate evidence, cross-agent observations, and future observations
+- [x] Keep the baseline unable to grant communication authority or mutate permissions
+- [x] Add a unit test preserving normal collaboration patterns and delegation frequency
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Communication-event persistence, Trust or collusion signals, communication policy enforcement,
+  Manager coordination graphs, permissions, runtime messaging, API, frontend, or LLM inference
 
 ---
 

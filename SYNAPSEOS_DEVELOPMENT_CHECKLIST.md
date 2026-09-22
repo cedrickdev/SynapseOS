@@ -2878,6 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-09
 EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-11
+EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-14
 EXT-MGR-01 → EXT-MGR-15
 EXT-MGR-22
@@ -3415,6 +3416,31 @@ provenance without free-form generation, persistence, or authority changes.
 
 - Natural-language or LLM explanations, persistent explanation records, effective Trust calculation,
   Governor evaluation, permission or autonomy changes, containment, API, or frontend
+
+---
+
+## EXT-TRUST-13 — Delegation integrity signals
+
+### Objective
+
+Validate bounded root-to-leaf delegation provenance and emit restrictive Trust signals whenever a
+child exceeds its parent's scope, capabilities, lifetime, identity chain, or active grant state.
+
+### Checklist
+
+- [x] Define strict immutable delegation snapshots, integrity signals, dispositions, and results
+- [x] Require principal, project, task, agents, scope, capabilities, evidence, and UTC provenance
+- [x] Validate unique bounded chains with explicit root and parent/delegator continuity
+- [x] Enforce child scope, capabilities, and lifetime as subsets of the parent grant
+- [x] Detect revoked, expired, identity-mismatched, and broken delegation chains deterministically
+- [x] Keep integrity signals unable to grant authority or mutate Trust or permissions
+- [x] Add a unit test proving a child cannot introduce a capability absent from its parent
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Delegation persistence or issuance, permission decisions, Governor enforcement, credential leases,
+  runtime action, Manager chain creation, Trust-score mutation, API, frontend, or LLM inference
 
 ---
 

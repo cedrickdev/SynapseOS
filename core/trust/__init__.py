@@ -13,6 +13,13 @@ from core.trust.decay import (
     TrustDecayPolicy,
     TrustEventDecayCalculator,
 )
+from core.trust.delegation import (
+    DelegationGrantSnapshot,
+    DelegationIntegrityAnalyzer,
+    DelegationIntegrityDisposition,
+    DelegationIntegrityResult,
+    DelegationIntegritySignal,
+)
 from core.trust.dimensions import (
     TrustDimensionCalculator,
     TrustDimensionScore,
@@ -59,6 +66,11 @@ __all__ = [
     "CriticalTrustDisposition",
     "CriticalTrustEventResult",
     "DecayedTrustEvent",
+    "DelegationGrantSnapshot",
+    "DelegationIntegrityAnalyzer",
+    "DelegationIntegrityDisposition",
+    "DelegationIntegrityResult",
+    "DelegationIntegritySignal",
     "TrustClass",
     "TrustClassThresholds",
     "TrustCriticalEventCalculator",

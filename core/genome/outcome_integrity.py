@@ -50,6 +50,7 @@ class OutcomeIntegrityObservation(_StrictOutcomeIntegrityModel):
     """One independently verified comparison between proxy success and task outcome."""
 
     evidence_id: UUID
+    project_id: UUID
     agent_id: UUID
     task_id: UUID
     run_id: UUID

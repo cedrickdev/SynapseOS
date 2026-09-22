@@ -2880,6 +2880,7 @@ EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-14
 EXT-MGR-01 → EXT-MGR-15
+EXT-MGR-22
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -4133,6 +4134,32 @@ recommendations without blind polling, retained history, or execution authority.
 
 - Event-bus infrastructure, polling loops, persistence, retained event history, action execution,
   reassignment, route switching, approval resolution, task mutation, permissions, API, or frontend
+
+---
+
+## EXT-MGR-22 — Outcome integrity completion gate
+
+### Objective
+
+Prevent task-completion recommendations unless backend state, acceptance criteria, independent
+review, required QA/Security checks, and project-bound objective integrity are all verified.
+
+### Checklist
+
+- [x] Define strict immutable completion checks, blocker codes, requests, and result contracts
+- [x] Require backend, acceptance-criteria, and review verification for every completion decision
+- [x] Support explicit required or not-required QA and Security checks without implicit bypasses
+- [x] Bind independent outcome evidence to the same project, task, and run as the gate
+- [x] Reject future outcome evidence and local metric success with unmet objectives or criteria
+- [x] Emit deterministic blockers and correction requirements without mutating the task
+- [x] Preserve Security and Permission authority and make bypasses explicitly impossible
+- [x] Add a unit test proving green local metrics cannot close a task with an unmet objective
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Task-state mutation, workflow completion, evidence persistence, QA/Security execution, outcome
+  inference, Trust or reputation changes, permissions, autonomy, API, frontend, or LLM use
 
 ---
 

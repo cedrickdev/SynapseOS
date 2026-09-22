@@ -20,6 +20,7 @@ def test_green_metrics_without_objective_completion_reduce_integrity_profile() -
     observations = (
         OutcomeIntegrityObservation(
             evidence_id=uuid4(),
+            project_id=uuid4(),
             agent_id=agent_id,
             task_id=uuid4(),
             run_id=uuid4(),
@@ -34,6 +35,7 @@ def test_green_metrics_without_objective_completion_reduce_integrity_profile() -
         ),
         OutcomeIntegrityObservation(
             evidence_id=uuid4(),
+            project_id=uuid4(),
             agent_id=agent_id,
             task_id=uuid4(),
             run_id=uuid4(),

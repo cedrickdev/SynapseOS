@@ -2877,7 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
-EXT-GOV-01 → EXT-GOV-13
+EXT-GOV-01 → EXT-GOV-14
 EXT-MGR-01 → EXT-MGR-15
 ```
 
@@ -3707,6 +3707,34 @@ without directly mutating permissions, credentials, agent state, or executing th
 - Permission mutation, credential revocation, persisted quarantine state, task cancellation,
   runtime interception, tool execution, automatic reassignment, event subscriptions, API, or
   frontend
+
+---
+
+## EXT-GOV-14 — Automatic containment and kill switch
+
+### Objective
+
+Create a deterministic fail-closed containment order from canonical critical quarantine evidence
+without transferring enforcement authority to the Governor or destroying forensic evidence.
+
+### Checklist
+
+- [x] Define strict immutable automatic-containment request, control, and order contracts
+- [x] Require a canonical quarantine that already reduced the active run to disabled autonomy
+- [x] Validate UTC trigger provenance and preserve the originating quarantine evidence reference
+- [x] Order prevention, temporary credential/capability revocation, cancellable-action cancellation,
+  workspace freezing, and child-process isolation controls
+- [x] Require forensic evidence preservation and Security and Manager notifications
+- [x] Fail closed, require explicit recovery, and prohibit destructive cleanup, resume, authority
+  grants, and direct Governor execution
+- [x] Add a unit test proving critical quarantine produces the complete evidence-preserving order
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Permission mutation, credential or capability backends, process termination, workspace mutation,
+  event-bus delivery, persisted containment state, recovery execution, automatic reassignment, API,
+  or frontend
 
 ---
 

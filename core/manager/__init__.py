@@ -11,6 +11,14 @@ from core.manager.budget_pressure import (
     BudgetPressurePlanner,
     ManagerBudgetPressureRecommendation,
 )
+from core.manager.completion_gate import (
+    CompletionGateBlocker,
+    CompletionGateCheck,
+    CompletionGateCheckState,
+    ManagerOutcomeCompletionGate,
+    ManagerOutcomeCompletionGateRequest,
+    ManagerOutcomeCompletionGateResult,
+)
 from core.manager.contracts import ManagerDecision
 from core.manager.cost_routing import (
     CostAwareRouteSelector,
@@ -60,6 +68,9 @@ __all__ = [
     "BudgetPressureAction",
     "BudgetPressurePlanner",
     "CostAwareRouteSelector",
+    "CompletionGateBlocker",
+    "CompletionGateCheck",
+    "CompletionGateCheckState",
     "ManagerBlockerCode",
     "ManagerBlockerDetector",
     "ManagerBlockerReport",
@@ -72,6 +83,9 @@ __all__ = [
     "ManagerDecision",
     "ManagerDecisionType",
     "ManagerHumanOverride",
+    "ManagerOutcomeCompletionGate",
+    "ManagerOutcomeCompletionGateRequest",
+    "ManagerOutcomeCompletionGateResult",
     "ManagerAdvisoryPlanner",
     "ManagerAdvisoryPlanningResult",
     "ManagerPlanningProposal",

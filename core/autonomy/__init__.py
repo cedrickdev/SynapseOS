@@ -5,6 +5,12 @@ from core.autonomy.action_evaluation import (
     GovernorActionEvaluationResult,
     GovernorPerActionEvaluator,
 )
+from core.autonomy.automatic_containment import (
+    AutomaticContainmentControl,
+    AutomaticContainmentRequest,
+    GovernorAutomaticContainmentOrder,
+    GovernorAutomaticContainmentPlanner,
+)
 from core.autonomy.economic import (
     EconomicGovernanceContext,
     EconomicGovernanceDisposition,
@@ -49,6 +55,8 @@ from core.autonomy.scope_guard import (
 from core.autonomy.types import AutonomyDecision, AutonomyLevel, AutonomyReasonCode
 
 __all__ = [
+    "AutomaticContainmentControl",
+    "AutomaticContainmentRequest",
     "AutonomyDecision",
     "AutonomyLevel",
     "AutonomyPolicyEngine",
@@ -63,6 +71,8 @@ __all__ = [
     "GovernedActionType",
     "GovernorActionEvaluationRequest",
     "GovernorActionEvaluationResult",
+    "GovernorAutomaticContainmentOrder",
+    "GovernorAutomaticContainmentPlanner",
     "GovernorPerActionEvaluator",
     "GovernorEconomicEvaluation",
     "GovernorEconomicEvaluator",

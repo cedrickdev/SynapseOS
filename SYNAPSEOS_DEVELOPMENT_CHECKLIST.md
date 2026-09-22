@@ -2883,6 +2883,7 @@ EXT-GOV-01 → EXT-GOV-14
 EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-15
 EXT-MGR-22
+EXT-MGR-23
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -4212,6 +4213,31 @@ review, required QA/Security checks, and project-bound objective integrity are a
 
 - Task-state mutation, workflow completion, evidence persistence, QA/Security execution, outcome
   inference, Trust or reputation changes, permissions, autonomy, API, frontend, or LLM use
+
+---
+
+## EXT-MGR-23 — Delegation chain management
+
+### Objective
+
+Plan one explicit bounded child delegation from an integrity-verified parent chain without issuing
+authority, widening parent scope or capabilities, or mutating permissions.
+
+### Checklist
+
+- [x] Define strict immutable delegation-plan requests, drafts, reasons, dispositions, and results
+- [x] Consume canonical TRUST-13 parent-chain integrity evidence
+- [x] Preserve principal, project, task, delegator, parent, and evidence provenance in drafts
+- [x] Enforce bounded chain depth and scope, capability, and lifetime subsets
+- [x] Reject invalid, expired, revoked, over-broad, or integrity-violating parent delegation
+- [x] Keep planning unable to issue delegations, mutate permissions, or execute actions
+- [x] Add a unit test proving Manager cannot delegate a capability absent from the parent grant
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Delegation persistence or issuance, Permission Engine decisions, Governor validation, credential
+  leases, task assignment, runtime execution, Trust mutation, API, frontend, or LLM inference
 
 ---
 

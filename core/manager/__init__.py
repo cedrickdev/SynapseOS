@@ -6,6 +6,11 @@ from core.manager.blockers import (
     ManagerBlockerReport,
     ManagerBlockerSnapshot,
 )
+from core.manager.budget_pressure import (
+    BudgetPressureAction,
+    BudgetPressurePlanner,
+    ManagerBudgetPressureRecommendation,
+)
 from core.manager.contracts import ManagerDecision
 from core.manager.cost_routing import (
     CostAwareRouteSelector,
@@ -45,11 +50,14 @@ __all__ = [
     "AgentWorkload",
     "AgentTrustManagerSignal",
     "AgentGovernorManagerRecommendation",
+    "BudgetPressureAction",
+    "BudgetPressurePlanner",
     "CostAwareRouteSelector",
     "ManagerBlockerCode",
     "ManagerBlockerDetector",
     "ManagerBlockerReport",
     "ManagerBlockerSnapshot",
+    "ManagerBudgetPressureRecommendation",
     "GenomeAwareManagerSelector",
     "GovernorAwareManagerSelector",
     "ManagerCandidateSelection",

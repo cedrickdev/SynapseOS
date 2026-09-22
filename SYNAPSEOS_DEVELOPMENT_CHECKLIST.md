@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-13
-EXT-MGR-01 → EXT-MGR-13
+EXT-MGR-01 → EXT-MGR-14
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -4028,6 +4028,31 @@ Governor, approval, and provider-availability constraints have all admitted the 
 
 - Permission, Budget, Governor, or Trust evaluation; provider price discovery or calls; route
   execution; retries; persistence; task mutation; API; or frontend
+
+---
+
+## EXT-MGR-14 — Budget pressure handling
+
+### Objective
+
+Convert canonical Governor economic evidence and compliant route selection into a deterministic
+continue, route-switch, pause, or approval recommendation without spending or executing.
+
+### Checklist
+
+- [x] Define strict immutable budget-pressure actions and recommendation contracts
+- [x] Consume canonical GOV-12 economic evidence and MGR-13 compliant route selection
+- [x] Recommend switching only to a different route with lower projected cost
+- [x] Request human approval for projected overspend without a cheaper compliant route
+- [x] Pause for approval under budget pressure when no cheaper compliant route exists
+- [x] Continue unchanged only when the economic disposition remains within budget
+- [x] Add a unit test proving budget pressure recommends a compliant cheaper route
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Budget reservation or mutation, provider calls or switching, approval resolution, runtime
+  execution, retries, persistence, task mutation, permissions, API, or frontend
 
 ---
 

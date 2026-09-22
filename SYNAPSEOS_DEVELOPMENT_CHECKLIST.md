@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-13
-EXT-MGR-01 → EXT-MGR-14
+EXT-MGR-01 → EXT-MGR-15
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -4053,6 +4053,31 @@ continue, route-switch, pause, or approval recommendation without spending or ex
 
 - Budget reservation or mutation, provider calls or switching, approval resolution, runtime
   execution, retries, persistence, task mutation, permissions, API, or frontend
+
+---
+
+## EXT-MGR-15 — Runtime coordination loop
+
+### Objective
+
+Coordinate one meaningful runtime event from already computed Security, Trust, Budget, and blocker
+recommendations without blind polling, retained history, or execution authority.
+
+### Checklist
+
+- [x] Define strict immutable event-bound coordination request and result contracts
+- [x] Require project, task, run, event reference, sequence, and UTC provenance
+- [x] Validate nested Trust and Budget recommendations against the coordination scope
+- [x] Apply deterministic Security-first, then Trust, Budget, and blocker priority
+- [x] Emit one bounded action and human-attention requirement per meaningful event
+- [x] Make polling, execution, and state mutation explicitly impossible
+- [x] Add a unit test proving a Security hold escalates from one event without polling
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Event-bus infrastructure, polling loops, persistence, retained event history, action execution,
+  reassignment, route switching, approval resolution, task mutation, permissions, API, or frontend
 
 ---
 

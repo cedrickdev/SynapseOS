@@ -31,6 +31,13 @@ from core.manager.recovery import (
     ManagerRecoveryPlanner,
     ManagerRecoveryRecommendation,
 )
+from core.manager.runtime_coordination import (
+    ManagerRuntimeCoordinationRequest,
+    ManagerRuntimeCoordinationResult,
+    ManagerRuntimeCoordinator,
+    RuntimeCoordinationAction,
+    RuntimeCoordinationSource,
+)
 from core.manager.runtime_trust import (
     ManagerRuntimeTrustChange,
     ManagerRuntimeTrustMonitor,
@@ -77,7 +84,12 @@ __all__ = [
     "ManagerRouteSelection",
     "ManagerRuntimeTrustChange",
     "ManagerRuntimeTrustMonitor",
+    "ManagerRuntimeCoordinationRequest",
+    "ManagerRuntimeCoordinationResult",
+    "ManagerRuntimeCoordinator",
     "RuntimeTrustChangeDirection",
+    "RuntimeCoordinationAction",
+    "RuntimeCoordinationSource",
     "TrustAwareManagerSelector",
     "TrustReassignmentDisposition",
     "TrustTriggeredReassignmentPlanner",

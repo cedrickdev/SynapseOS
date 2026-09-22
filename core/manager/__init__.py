@@ -7,6 +7,12 @@ from core.manager.blockers import (
     ManagerBlockerSnapshot,
 )
 from core.manager.contracts import ManagerDecision
+from core.manager.cost_routing import (
+    CostAwareRouteSelector,
+    ManagerRouteCandidate,
+    ManagerRoutePolicy,
+    ManagerRouteSelection,
+)
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
 from core.manager.overrides import ManagerHumanOverride
@@ -39,6 +45,7 @@ __all__ = [
     "AgentWorkload",
     "AgentTrustManagerSignal",
     "AgentGovernorManagerRecommendation",
+    "CostAwareRouteSelector",
     "ManagerBlockerCode",
     "ManagerBlockerDetector",
     "ManagerBlockerReport",
@@ -57,6 +64,9 @@ __all__ = [
     "ManagerRecoveryAction",
     "ManagerRecoveryPlanner",
     "ManagerRecoveryRecommendation",
+    "ManagerRouteCandidate",
+    "ManagerRoutePolicy",
+    "ManagerRouteSelection",
     "ManagerRuntimeTrustChange",
     "ManagerRuntimeTrustMonitor",
     "RuntimeTrustChangeDirection",

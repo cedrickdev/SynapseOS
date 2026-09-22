@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-09
 EXT-TRUST-01 → EXT-TRUST-11
 EXT-GOV-01 → EXT-GOV-13
-EXT-MGR-01 → EXT-MGR-12
+EXT-MGR-01 → EXT-MGR-13
 ```
 
 ## EXT-GEN-01 — Agent Genome contracts and entities
@@ -4003,6 +4003,31 @@ the currently assigned agent ineligible, without changing assignments or task st
 - Candidate discovery or ranking, actual reassignment, task or assignment mutation, Trust or
   Governor mutation, event subscriptions, persistence, permissions, provider calls, API, or
   frontend
+
+---
+
+## EXT-MGR-13 — Cost-aware routing
+
+### Objective
+
+Select the lowest-cost evidence-backed execution route only after upstream Permission, Budget,
+Governor, approval, and provider-availability constraints have all admitted the route.
+
+### Checklist
+
+- [x] Define strict immutable route candidate, policy, and selection contracts
+- [x] Carry explicit Permission, Budget, Governor, approval, and provider-availability outcomes
+- [x] Require bounded projected cost and measurable historical success evidence
+- [x] Exclude every non-compliant route before economic ranking
+- [x] Rank eligible routes deterministically by cost, observed success, and stable reference
+- [x] Escalate when no compliant evidence-backed route remains
+- [x] Add a unit test proving a denied cheaper route cannot outrank compliant routes
+- [x] Run the complete real-PostgreSQL test suite, Ruff for changed files, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Permission, Budget, Governor, or Trust evaluation; provider price discovery or calls; route
+  execution; retries; persistence; task mutation; API; or frontend
 
 ---
 

@@ -26,6 +26,14 @@ from core.manager.cost_routing import (
     ManagerRoutePolicy,
     ManagerRouteSelection,
 )
+from core.manager.delegation import (
+    DelegationGrantDraft,
+    DelegationPlanDisposition,
+    DelegationPlanReason,
+    DelegationPlanRequest,
+    ManagerDelegationChainPlanner,
+    ManagerDelegationPlanResult,
+)
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
 from core.manager.overrides import ManagerHumanOverride
@@ -68,6 +76,10 @@ __all__ = [
     "BudgetPressureAction",
     "BudgetPressurePlanner",
     "CostAwareRouteSelector",
+    "DelegationGrantDraft",
+    "DelegationPlanDisposition",
+    "DelegationPlanReason",
+    "DelegationPlanRequest",
     "CompletionGateBlocker",
     "CompletionGateCheck",
     "CompletionGateCheckState",
@@ -82,6 +94,8 @@ __all__ = [
     "ManagerCandidateSelector",
     "ManagerDecision",
     "ManagerDecisionType",
+    "ManagerDelegationChainPlanner",
+    "ManagerDelegationPlanResult",
     "ManagerHumanOverride",
     "ManagerOutcomeCompletionGate",
     "ManagerOutcomeCompletionGateRequest",

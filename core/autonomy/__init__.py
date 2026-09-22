@@ -11,6 +11,13 @@ from core.autonomy.automatic_containment import (
     GovernorAutomaticContainmentOrder,
     GovernorAutomaticContainmentPlanner,
 )
+from core.autonomy.delegated_authority import (
+    DelegatedAuthorityDisposition,
+    DelegatedAuthorityReason,
+    DelegatedAuthorityRequest,
+    DelegatedAuthorityResult,
+    GovernorDelegatedAuthorityValidator,
+)
 from core.autonomy.economic import (
     EconomicGovernanceContext,
     EconomicGovernanceDisposition,
@@ -57,6 +64,10 @@ from core.autonomy.types import AutonomyDecision, AutonomyLevel, AutonomyReasonC
 __all__ = [
     "AutomaticContainmentControl",
     "AutomaticContainmentRequest",
+    "DelegatedAuthorityDisposition",
+    "DelegatedAuthorityReason",
+    "DelegatedAuthorityRequest",
+    "DelegatedAuthorityResult",
     "AutonomyDecision",
     "AutonomyLevel",
     "AutonomyPolicyEngine",
@@ -73,6 +84,7 @@ __all__ = [
     "GovernorActionEvaluationResult",
     "GovernorAutomaticContainmentOrder",
     "GovernorAutomaticContainmentPlanner",
+    "GovernorDelegatedAuthorityValidator",
     "GovernorPerActionEvaluator",
     "GovernorEconomicEvaluation",
     "GovernorEconomicEvaluator",

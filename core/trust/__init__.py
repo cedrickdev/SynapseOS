@@ -1,5 +1,12 @@
 """Provider-neutral contracts for Agent Trust Score."""
 
+from core.trust.coordination import (
+    CoordinationRiskAnalyzer,
+    CoordinationRiskObservation,
+    CoordinationRiskResult,
+    CoordinationRiskSeverity,
+    CoordinationRiskSignal,
+)
 from core.trust.critical_events import (
     CriticalTrustDisposition,
     CriticalTrustEventResult,
@@ -65,6 +72,11 @@ from core.trust.types import TrustClass, TrustDimension, TrustEventSeverity, Tru
 __all__ = [
     "CriticalTrustDisposition",
     "CriticalTrustEventResult",
+    "CoordinationRiskAnalyzer",
+    "CoordinationRiskObservation",
+    "CoordinationRiskResult",
+    "CoordinationRiskSeverity",
+    "CoordinationRiskSignal",
     "DecayedTrustEvent",
     "DelegationGrantSnapshot",
     "DelegationIntegrityAnalyzer",

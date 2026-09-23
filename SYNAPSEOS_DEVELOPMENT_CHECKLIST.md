@@ -2877,8 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-10
 EXT-GEN-12
-EXT-TRUST-01 → EXT-TRUST-11
-EXT-TRUST-13
+EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-14
 EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-15
@@ -3443,6 +3442,33 @@ provenance without free-form generation, persistence, or authority changes.
 
 - Natural-language or LLM explanations, persistent explanation records, effective Trust calculation,
   Governor evaluation, permission or autonomy changes, containment, API, or frontend
+
+---
+
+## EXT-TRUST-12 — Collusion and coordination risk
+
+### Objective
+
+Classify explicit bounded communication-policy facts into deterministic Trust signals without
+treating historical collaboration patterns as authorization or retaining raw message content.
+
+### Checklist
+
+- [x] Define strict immutable coordination-risk observations, signals, severities, and results
+- [x] Consume the canonical versioned collaboration baseline as historical context only
+- [x] Detect unauthorized peers, coordinated policy violations, repeated shared workarounds,
+  suspicious information propagation, and unauthorized external channels deterministically
+- [x] Require bounded canonical observations, unique evidence identifiers, and UTC provenance
+- [x] Keep raw communication content absent and preserve evidence references only
+- [x] Keep coordination-risk results unable to authorize communication or mutate Trust or permissions
+- [x] Add unit tests proving explicit violations are classified while authorized anomalies are not
+- [x] Run the complete real-PostgreSQL test suite, Ruff, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Communication authorization or enforcement, channel creation, message persistence, raw-content
+  inspection, Trust-score mutation, Governor decisions, Manager coordination, API, frontend, or LLM
+  inference
 
 ---
 

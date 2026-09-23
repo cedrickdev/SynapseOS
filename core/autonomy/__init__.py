@@ -19,6 +19,13 @@ from core.autonomy.communication_policy import (
     CommunicationPolicyRequest,
     CommunicationPolicyResult,
 )
+from core.autonomy.credential_leases import (
+    CredentialLease,
+    CredentialLeaseDisposition,
+    CredentialLeaseValidationRequest,
+    CredentialLeaseValidationResult,
+    GovernorCredentialLeaseValidator,
+)
 from core.autonomy.delegated_authority import (
     DelegatedAuthorityDisposition,
     DelegatedAuthorityReason,
@@ -89,6 +96,10 @@ __all__ = [
     "CommunicationPolicyReason",
     "CommunicationPolicyRequest",
     "CommunicationPolicyResult",
+    "CredentialLease",
+    "CredentialLeaseDisposition",
+    "CredentialLeaseValidationRequest",
+    "CredentialLeaseValidationResult",
     "DelegatedAuthorityDisposition",
     "DelegatedAuthorityReason",
     "DelegatedAuthorityRequest",
@@ -117,6 +128,7 @@ __all__ = [
     "GovernorActionEvaluationResult",
     "GovernorAutomaticContainmentOrder",
     "GovernorAutomaticContainmentPlanner",
+    "GovernorCredentialLeaseValidator",
     "GovernorDelegatedAuthorityValidator",
     "GovernorPerActionEvaluator",
     "GovernorEconomicEvaluation",

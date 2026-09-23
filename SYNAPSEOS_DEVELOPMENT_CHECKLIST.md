@@ -3949,6 +3949,33 @@ same project and task and explicitly contains the required scope and capability.
 
 ---
 
+## EXT-GOV-18 — Credential Lease Validation
+
+### Objective
+
+Validate one exact temporary credential lease after Security and Permission Engine decisions,
+without issuing, renewing, revoking, persisting, or broadening credentials or permissions.
+
+### Checklist
+
+- [x] Define strict immutable credential lease, request, result, and disposition contracts
+- [x] Bind every lease to one agent, task, exact scope, bounded capabilities, and UTC lifetime
+- [x] Require matching agent/task identity and exact requested scope
+- [x] Require requested capabilities to remain a subset of the lease
+- [x] Deny revoked, expired, overlong, inactive-subject, Security-blocked, or permission-denied leases
+- [x] Preserve Security veto and Permission Engine authority before Governor evaluation
+- [x] Keep validation unable to issue, renew, revoke, persist, or mutate permissions
+- [x] Add focused tests for valid leases and every fail-closed authority condition
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Credential storage, issuance, rotation, renewal, revocation execution, or secret handling
+- Agent lifecycle mutation, orphan cleanup, Permission Engine decisions, or Security containment
+- API, frontend, notifications, LLM inference, network access, or runtime credential injection
+
+---
+
 ## EXT-MGR-01 — AI Manager contracts
 
 ### Objective

@@ -4401,6 +4401,33 @@ missing evidence explicitly and never inventing causes, events, or authority.
 
 ---
 
+## EXT-MGR-19 — Incident / Misalignment Reporting
+
+### Objective
+
+Build one bounded, deterministic, sensitive-data-safe report from the canonical Agent Incident and
+its forensic reconstruction without inventing causes, authority, impacts, or corrective actions.
+
+### Checklist
+
+- [x] Define strict immutable report request, result, and explicit unknown-section contracts
+- [x] Answer the required incident questions only from canonical incident and forensic evidence
+- [x] Preserve exact incident, project, task, run, agent, authority, resource, and control scope
+- [x] Expose missing causes, authority, resources, controls, containment, actions, and evidence
+- [x] Reject mismatched incident scope and future forensic reconstructions
+- [x] Redact obvious credentials from every report text field without retaining their values
+- [x] Keep reporting unable to infer, persist, notify, mutate, authorize, or execute
+- [x] Add focused tests for complete, incomplete, foreign-scope, future, and sensitive inputs
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Root-cause, impact, or corrective-action inference; LLM generation; persistence; or notifications
+- Incident mutation, containment, reassignment, Trust/Genome/autonomy mutation, or task changes
+- API, frontend, Permission Engine changes, credential handling, or runtime execution
+
+---
+
 ## EXT-MGR-20 — Cost attribution
 
 ### Objective

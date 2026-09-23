@@ -20,6 +20,15 @@ from core.manager.completion_gate import (
     ManagerOutcomeCompletionGateResult,
 )
 from core.manager.contracts import ManagerDecision
+from core.manager.coordination_graph import (
+    CoordinationGraphDisposition,
+    CoordinationGraphEdgeDraft,
+    CoordinationGraphReason,
+    ManagerCoordinationGraphDraft,
+    ManagerCoordinationGraphPlanner,
+    ManagerCoordinationGraphRequest,
+    ManagerCoordinationGraphResult,
+)
 from core.manager.cost_routing import (
     CostAwareRouteSelector,
     ManagerRouteCandidate,
@@ -76,6 +85,9 @@ __all__ = [
     "BudgetPressureAction",
     "BudgetPressurePlanner",
     "CostAwareRouteSelector",
+    "CoordinationGraphDisposition",
+    "CoordinationGraphEdgeDraft",
+    "CoordinationGraphReason",
     "DelegationGrantDraft",
     "DelegationPlanDisposition",
     "DelegationPlanReason",
@@ -92,6 +104,10 @@ __all__ = [
     "GovernorAwareManagerSelector",
     "ManagerCandidateSelection",
     "ManagerCandidateSelector",
+    "ManagerCoordinationGraphDraft",
+    "ManagerCoordinationGraphPlanner",
+    "ManagerCoordinationGraphRequest",
+    "ManagerCoordinationGraphResult",
     "ManagerDecision",
     "ManagerDecisionType",
     "ManagerDelegationChainPlanner",

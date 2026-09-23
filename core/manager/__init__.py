@@ -19,6 +19,13 @@ from core.manager.completion_gate import (
     ManagerOutcomeCompletionGateRequest,
     ManagerOutcomeCompletionGateResult,
 )
+from core.manager.components import (
+    ComponentTrustLevel,
+    ManagerTrustedComponentSelector,
+    TrustedComponentCandidate,
+    TrustedComponentSelection,
+    TrustedComponentSelectionRequest,
+)
 from core.manager.contracts import ManagerDecision
 from core.manager.coordination_graph import (
     CoordinationGraphDisposition,
@@ -162,6 +169,7 @@ __all__ = [
     "CompletionGateBlocker",
     "CompletionGateCheck",
     "CompletionGateCheckState",
+    "ComponentTrustLevel",
     "ManagerBlockerCode",
     "ManagerBlockerDetector",
     "ManagerBlockerReport",
@@ -205,6 +213,7 @@ __all__ = [
     "ParentResourceObservation",
     "ManagerRuntimeTrustChange",
     "ManagerRuntimeTrustMonitor",
+    "ManagerTrustedComponentSelector",
     "ManagerRuntimeCoordinationRequest",
     "ManagerRuntimeCoordinationResult",
     "ManagerRuntimeCoordinator",
@@ -212,6 +221,9 @@ __all__ = [
     "RuntimeCoordinationAction",
     "RuntimeCoordinationSource",
     "TrustAwareManagerSelector",
+    "TrustedComponentCandidate",
+    "TrustedComponentSelection",
+    "TrustedComponentSelectionRequest",
     "TrustReassignmentDisposition",
     "TrustTriggeredReassignmentPlanner",
     "TrustTriggeredReassignmentRecommendation",

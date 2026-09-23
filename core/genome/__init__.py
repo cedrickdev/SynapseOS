@@ -18,6 +18,12 @@ from core.genome.collaboration import (
     CollaborationDataClass,
     CollaborationObservation,
 )
+from core.genome.cost_efficiency import (
+    AgentCostEfficiencyProfile,
+    AgentCostEfficiencyProfileBuilder,
+    CostEfficiencyObservation,
+    CostEfficiencyProfileState,
+)
 from core.genome.evidence import (
     EvidenceOutcome,
     EvidenceSignal,
@@ -74,6 +80,8 @@ from core.genome.types import (
 __all__ = [
     "AgentOutcomeIntegrityProfile",
     "AgentOutcomeIntegrityProfileCalculator",
+    "AgentCostEfficiencyProfile",
+    "AgentCostEfficiencyProfileBuilder",
     "BehaviorMetricObservation",
     "CollaborationBaseline",
     "CollaborationBaselineBuilder",
@@ -81,6 +89,8 @@ __all__ = [
     "CollaborationChannel",
     "CollaborationDataClass",
     "CollaborationObservation",
+    "CostEfficiencyObservation",
+    "CostEfficiencyProfileState",
     "GenomeBehavioralBaseline",
     "GenomeBehavioralBaselineBuilder",
     "GenomeBehavioralBaselineState",

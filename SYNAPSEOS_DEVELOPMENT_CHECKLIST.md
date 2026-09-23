@@ -2879,6 +2879,7 @@ EXT-GEN-01 → EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-16
+EXT-MGR-20
 EXT-MGR-22
 EXT-MGR-23
 ```
@@ -4341,6 +4342,33 @@ without authorizing, transporting, or persisting agent communications.
 
 - Message transport, event-bus infrastructure, graph persistence, runtime subscriptions, Permission
   Engine decisions, policy issuance, Trust mutation, task assignment, API, frontend, or LLM inference
+
+---
+
+## EXT-MGR-20 — Cost attribution
+
+### Objective
+
+Attribute bounded provider, reviewer, tool, and retry costs to the exact project, task, agent run,
+agent, and Genome version that caused them without spending, assigning, or mutating a budget.
+
+### Checklist
+
+- [x] Define strict immutable cost-source, evidence, request, and attribution contracts
+- [x] Bind every evidence item to one project, task, run, agent, and Genome version
+- [x] Aggregate input and output tokens with separate provider, tool, and retry cost buckets
+- [x] Preserve provider-call, reviewer-call, tool-execution, and retry counts
+- [x] Preserve bounded unique evidence and provider provenance
+- [x] Reject duplicate, foreign-scope, future, malformed, or unbounded evidence
+- [x] Keep attribution non-persistent and unable to spend, assign, or mutate budgets
+- [x] Add focused tests for exact aggregation, scope isolation, chronology, and uniqueness
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Usage collection, provider calls, price discovery, cost estimation, retries, or tool execution
+- Attribution persistence, budget reservation or mutation, billing, invoicing, or payment
+- Assignment, route selection, permissions, autonomy, Trust, Genome mutation, API, frontend, or LLM
 
 ---
 

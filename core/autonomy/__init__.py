@@ -11,6 +11,14 @@ from core.autonomy.automatic_containment import (
     GovernorAutomaticContainmentOrder,
     GovernorAutomaticContainmentPlanner,
 )
+from core.autonomy.communication_policy import (
+    CommunicationPolicyDisposition,
+    CommunicationPolicyEvaluator,
+    CommunicationPolicyGrant,
+    CommunicationPolicyReason,
+    CommunicationPolicyRequest,
+    CommunicationPolicyResult,
+)
 from core.autonomy.delegated_authority import (
     DelegatedAuthorityDisposition,
     DelegatedAuthorityReason,
@@ -64,6 +72,12 @@ from core.autonomy.types import AutonomyDecision, AutonomyLevel, AutonomyReasonC
 __all__ = [
     "AutomaticContainmentControl",
     "AutomaticContainmentRequest",
+    "CommunicationPolicyDisposition",
+    "CommunicationPolicyEvaluator",
+    "CommunicationPolicyGrant",
+    "CommunicationPolicyReason",
+    "CommunicationPolicyRequest",
+    "CommunicationPolicyResult",
     "DelegatedAuthorityDisposition",
     "DelegatedAuthorityReason",
     "DelegatedAuthorityRequest",

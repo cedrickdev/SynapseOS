@@ -4561,6 +4561,33 @@ mutating agents, revoking credentials, closing sessions, or overriding Security.
 
 ---
 
+## EXT-MGR-25 — Orphan Agent / Credential Detection
+
+### Objective
+
+Detect bounded stale active resources whose owning agent, task, project, or run is no longer active,
+without revoking credentials, terminating processes, or changing lifecycle state.
+
+### Checklist
+
+- [x] Define strict immutable lifecycle, credential, parent-resource, finding, and result contracts
+- [x] Detect inactive-agent credentials and retired-agent open sessions
+- [x] Detect active delegations owned by completed tasks
+- [x] Detect active tool capabilities owned by expired projects
+- [x] Detect child resources or leases owned by abandoned runs
+- [x] Reject duplicate observations and resources referencing unknown agents
+- [x] Produce deterministic findings without revocation, termination, containment, or mutation
+- [x] Add focused tests for all documented orphan conditions and healthy-resource exclusions
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Credential/session/delegation/capability persistence, revocation, termination, or cleanup execution
+- Automatic incident creation, containment, lifecycle mutation, Trust/Genome/autonomy mutation
+- API, frontend, notifications, LLM inference, Permission Engine changes, or runtime execution
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

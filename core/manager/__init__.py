@@ -29,6 +29,13 @@ from core.manager.coordination_graph import (
     ManagerCoordinationGraphRequest,
     ManagerCoordinationGraphResult,
 )
+from core.manager.cost_attribution import (
+    AgentCostAttribution,
+    AgentCostAttributionRequest,
+    AgentCostAttributor,
+    AttributableCostEvidence,
+    CostAttributionSource,
+)
 from core.manager.cost_routing import (
     CostAwareRouteSelector,
     ManagerRouteCandidate,
@@ -84,6 +91,11 @@ __all__ = [
     "AgentGovernorManagerRecommendation",
     "BudgetPressureAction",
     "BudgetPressurePlanner",
+    "AgentCostAttribution",
+    "AgentCostAttributionRequest",
+    "AgentCostAttributor",
+    "AttributableCostEvidence",
+    "CostAttributionSource",
     "CostAwareRouteSelector",
     "CoordinationGraphDisposition",
     "CoordinationGraphEdgeDraft",

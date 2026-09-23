@@ -2879,7 +2879,7 @@ EXT-GEN-01 → EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-16
-EXT-MGR-20
+EXT-MGR-20 → EXT-MGR-21
 EXT-MGR-22
 EXT-MGR-23
 ```
@@ -4369,6 +4369,35 @@ agent, and Genome version that caused them without spending, assigning, or mutat
 - Usage collection, provider calls, price discovery, cost estimation, retries, or tool execution
 - Attribution persistence, budget reservation or mutation, billing, invoicing, or payment
 - Assignment, route selection, permissions, autonomy, Trust, Genome mutation, API, frontend, or LLM
+
+---
+
+## EXT-MGR-21 — Cost-aware assignment policy
+
+### Objective
+
+Rank only already eligible and capacity-approved candidates by evidence-backed historical run cost
+under an explicit budget ceiling without creating assignment or authority.
+
+### Checklist
+
+- [x] Define strict immutable policy, ranked-candidate, and result contracts
+- [x] Consume canonical MGR-20 cost attributions for upstream-selected candidates only
+- [x] Require bounded unique historical runs and UTC attribution chronology
+- [x] Require an explicit minimum evidence sample count and maximum expected cost
+- [x] Compute deterministic median expected cost without estimating missing prices
+- [x] Exclude candidates with insufficient evidence or projected cost above the policy ceiling
+- [x] Preserve upstream order as the deterministic tie-breaker
+- [x] Escalate when no compliant evidence-backed candidate remains
+- [x] Keep the result unable to assign, mutate budgets, or grant authority
+- [x] Add focused tests for budget filtering, evidence sufficiency, scope isolation, and chronology
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Candidate discovery, eligibility, capability, Trust, Governor, permission, or workload evaluation
+- Assignment execution, task mutation, budget reservation or mutation, billing, or provider routing
+- Cost collection, price discovery, persistence, retries, API, frontend, or LLM inference
 
 ---
 

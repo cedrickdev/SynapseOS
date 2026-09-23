@@ -29,6 +29,12 @@ from core.manager.coordination_graph import (
     ManagerCoordinationGraphRequest,
     ManagerCoordinationGraphResult,
 )
+from core.manager.cost_assignment import (
+    CostAwareAssignmentCandidate,
+    CostAwareAssignmentPolicy,
+    CostAwareAssignmentResult,
+    CostAwareAssignmentSelector,
+)
 from core.manager.cost_attribution import (
     AgentCostAttribution,
     AgentCostAttributionRequest,
@@ -96,6 +102,10 @@ __all__ = [
     "AgentCostAttributor",
     "AttributableCostEvidence",
     "CostAttributionSource",
+    "CostAwareAssignmentCandidate",
+    "CostAwareAssignmentPolicy",
+    "CostAwareAssignmentResult",
+    "CostAwareAssignmentSelector",
     "CostAwareRouteSelector",
     "CoordinationGraphDisposition",
     "CoordinationGraphEdgeDraft",

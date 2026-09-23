@@ -77,6 +77,12 @@ from core.manager.recovery import (
     ManagerRecoveryPlanner,
     ManagerRecoveryRecommendation,
 )
+from core.manager.reporting import (
+    AgentIncidentReport,
+    AgentIncidentReportBuilder,
+    AgentIncidentReportRequest,
+    IncidentReportUnknown,
+)
 from core.manager.runtime_coordination import (
     ManagerRuntimeCoordinationRequest,
     ManagerRuntimeCoordinationResult,
@@ -108,6 +114,9 @@ __all__ = [
     "AgentIncidentForensicReconstruction",
     "AgentIncidentForensicReconstructor",
     "AgentIncidentForensicRequest",
+    "AgentIncidentReport",
+    "AgentIncidentReportBuilder",
+    "AgentIncidentReportRequest",
     "BudgetPressureAction",
     "BudgetPressurePlanner",
     "AgentCostAttribution",
@@ -136,6 +145,7 @@ __all__ = [
     "ManagerBlockerSnapshot",
     "ManagerBudgetPressureRecommendation",
     "GenomeAwareManagerSelector",
+    "IncidentReportUnknown",
     "ForensicEvent",
     "ForensicEventType",
     "GovernorAwareManagerSelector",

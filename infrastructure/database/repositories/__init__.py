@@ -1,5 +1,6 @@
 """Append-only persistence repositories."""
 
+from infrastructure.database.repositories.agent_incidents import AgentIncidentRepository
 from infrastructure.database.repositories.agent_scores import AgentScoreRepository
 from infrastructure.database.repositories.agent_trust import AgentTrustRepository
 from infrastructure.database.repositories.audit_events import AuditEventRepository
@@ -15,6 +16,7 @@ from infrastructure.database.repositories.usage_records import UsageRecordReposi
 
 __all__ = [
     "AgentScoreRepository",
+    "AgentIncidentRepository",
     "AgentTrustRepository",
     "ApprovalRepository",
     "AuditEventRepository",

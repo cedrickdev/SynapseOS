@@ -56,6 +56,13 @@ from core.manager.delegation import (
     ManagerDelegationChainPlanner,
     ManagerDelegationPlanResult,
 )
+from core.manager.forensics import (
+    AgentIncidentForensicReconstruction,
+    AgentIncidentForensicReconstructor,
+    AgentIncidentForensicRequest,
+    ForensicEvent,
+    ForensicEventType,
+)
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
 from core.manager.incidents import AgentIncidentRecord, AgentIncidentStatus
@@ -98,6 +105,9 @@ __all__ = [
     "AgentGovernorManagerRecommendation",
     "AgentIncidentRecord",
     "AgentIncidentStatus",
+    "AgentIncidentForensicReconstruction",
+    "AgentIncidentForensicReconstructor",
+    "AgentIncidentForensicRequest",
     "BudgetPressureAction",
     "BudgetPressurePlanner",
     "AgentCostAttribution",
@@ -126,6 +136,8 @@ __all__ = [
     "ManagerBlockerSnapshot",
     "ManagerBudgetPressureRecommendation",
     "GenomeAwareManagerSelector",
+    "ForensicEvent",
+    "ForensicEventType",
     "GovernorAwareManagerSelector",
     "ManagerCandidateSelection",
     "ManagerCandidateSelector",

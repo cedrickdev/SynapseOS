@@ -2880,7 +2880,7 @@ EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-15
 EXT-GOV-17
-EXT-MGR-01 → EXT-MGR-15
+EXT-MGR-01 → EXT-MGR-16
 EXT-MGR-22
 EXT-MGR-23
 ```
@@ -4264,6 +4264,31 @@ recommendations without blind polling, retained history, or execution authority.
 
 - Event-bus infrastructure, polling loops, persistence, retained event history, action execution,
   reassignment, route switching, approval resolution, task mutation, permissions, API, or frontend
+
+---
+
+## EXT-MGR-16 — Multi-agent coordination graph
+
+### Objective
+
+Build one bounded metadata-only coordination-graph draft from canonical GOV-15 policy results
+without authorizing, transporting, or persisting agent communications.
+
+### Checklist
+
+- [x] Define strict immutable graph requests, edge drafts, graph drafts, dispositions, and reasons
+- [x] Consume only canonical GOV-15 communication-policy results for the same project and task
+- [x] Reject any policy-denied or self-directed communication edge before graph construction
+- [x] Require bounded unique communication identifiers and UTC evaluation chronology
+- [x] Produce deterministic agent-node ordering and preserve external-edge counts
+- [x] Keep graph planning unable to authorize, send, persist, or mutate communication permissions
+- [x] Add unit tests proving denied edges are excluded and admitted edges retain policy provenance
+- [x] Run the complete real-PostgreSQL test suite, Ruff, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Message transport, event-bus infrastructure, graph persistence, runtime subscriptions, Permission
+  Engine decisions, policy issuance, Trust mutation, task assignment, API, frontend, or LLM inference
 
 ---
 

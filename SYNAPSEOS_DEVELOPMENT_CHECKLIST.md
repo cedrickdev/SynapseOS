@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-17
-EXT-MGR-01 → EXT-MGR-16
+EXT-MGR-01 → EXT-MGR-17
 EXT-MGR-20 → EXT-MGR-21
 EXT-MGR-22
 EXT-MGR-23
@@ -4342,6 +4342,34 @@ without authorizing, transporting, or persisting agent communications.
 
 - Message transport, event-bus infrastructure, graph persistence, runtime subscriptions, Permission
   Engine decisions, policy issuance, Trust mutation, task assignment, API, frontend, or LLM inference
+
+---
+
+## EXT-MGR-17 — Agent Incident Registry
+
+### Objective
+
+Register bounded, persistent agent-specific incidents with exact execution scope and governance
+evidence so later forensic reconstruction and reporting do not rely on generic error logs.
+
+### Checklist
+
+- [x] Define strict immutable Agent Incident status and record contracts
+- [x] Bind every incident to one project, task, agent run, and agent
+- [x] Preserve trigger, severity, Trust and autonomy changes, affected resources, and graph references
+- [x] Preserve bounded policy violations, security findings, root cause, impact, and corrective actions
+- [x] Enforce UTC lifecycle chronology and consistent containment and closure states
+- [x] Add a dedicated PostgreSQL Agent Incident model, indexes, constraints, and reversible migration
+- [x] Add a bounded create/read repository with cross-scope validation and no generic update/delete API
+- [x] Keep the existing generic operational incident system unchanged
+- [x] Add contract and real-PostgreSQL tests for persistence, reads, lifecycle, and scope isolation
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Forensic timeline reconstruction, root-cause inference, incident summaries, or misalignment reports
+- Automatic incident creation, containment execution, Trust or autonomy mutation, or task reassignment
+- Notification delivery, API, frontend, LLM inference, billing, or deletion workflows
 
 ---
 

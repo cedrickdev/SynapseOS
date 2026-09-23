@@ -15,6 +15,7 @@ from infrastructure.database.models.genome import (
 )
 from infrastructure.database.models.history import AgentScore, AuditEvent
 from infrastructure.database.models.incidents import Incident, IncidentEvent, Postmortem
+from infrastructure.database.models.manager_incidents import AgentIncident
 from infrastructure.database.models.memory import MemoryEntry
 from infrastructure.database.models.organization import (
     Agent,
@@ -40,6 +41,7 @@ __all__ = [
     "AgentGenomeEvidence",
     "AgentGenomeRunSnapshot",
     "AgentGenomeVersion",
+    "AgentIncident",
     "AgentPermission",
     "AgentPerformanceMetric",
     "AgentPerformanceMetricEvidence",

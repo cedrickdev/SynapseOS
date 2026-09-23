@@ -58,6 +58,7 @@ from core.manager.delegation import (
 )
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
+from core.manager.incidents import AgentIncidentRecord, AgentIncidentStatus
 from core.manager.overrides import ManagerHumanOverride
 from core.manager.planning import (
     ManagerAdvisoryPlanner,
@@ -95,6 +96,8 @@ __all__ = [
     "AgentWorkload",
     "AgentTrustManagerSignal",
     "AgentGovernorManagerRecommendation",
+    "AgentIncidentRecord",
+    "AgentIncidentStatus",
     "BudgetPressureAction",
     "BudgetPressurePlanner",
     "AgentCostAttribution",

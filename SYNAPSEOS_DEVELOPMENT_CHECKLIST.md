@@ -2877,8 +2877,7 @@ The future extension phase families are reserved as follows:
 ```text
 EXT-GEN-01 → EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
-EXT-GOV-01 → EXT-GOV-15
-EXT-GOV-17
+EXT-GOV-01 → EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-16
 EXT-MGR-22
 EXT-MGR-23
@@ -3892,6 +3891,35 @@ sender, recipient, task, channel, data class, purpose, delegation, and scope.
 - Communication-event persistence, graph construction, message transport, channel creation, raw
   message inspection, Permission Engine decisions, Trust mutation, Manager coordination, API,
   frontend, or LLM inference
+
+---
+
+## EXT-GOV-16 — Execution graph enforcement hooks
+
+### Objective
+
+Validate a bounded per-action causal execution graph before authority evaluation so incomplete,
+foreign, future, or disconnected provenance fails closed without executing or persisting anything.
+
+### Checklist
+
+- [x] Define strict immutable node, edge, request, result, disposition, and reason contracts
+- [x] Add a canonical per-action Governor execution-graph gate
+- [x] Enforce bounded unique node and edge identifiers with timezone-aware UTC chronology
+- [x] Require all graph evidence to belong to the current action run
+- [x] Require task and agent causal paths to the exact tool or command action node
+- [x] Require Genome-version, Trust-snapshot, and autonomy-decision provenance
+- [x] Deny future, dangling, foreign-run, incomplete, or mismatched action evidence
+- [x] Keep evaluation non-persistent, non-executing, and subordinate to the Permission Engine
+- [x] Add focused tests for incomplete denial and complete causal-graph progression
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Graph persistence, audit storage, event-bus delivery, or runtime interception
+- Tool or command execution and Permission Engine decisions
+- Trust, Genome, permission, delegation, or autonomy mutation
+- Manager cost attribution, API, frontend, or LLM inference
 
 ---
 

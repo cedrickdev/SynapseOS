@@ -2875,8 +2875,7 @@ constraints.
 The future extension phase families are reserved as follows:
 
 ```text
-EXT-GEN-01 → EXT-GEN-10
-EXT-GEN-12
+EXT-GEN-01 → EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-15
 EXT-GOV-17
@@ -3161,6 +3160,31 @@ delegation usage, and shared data classes without treating historical behavior a
 
 - Communication-event persistence, Trust or collusion signals, communication policy enforcement,
   Manager coordination graphs, permissions, runtime messaging, API, frontend, or LLM inference
+
+---
+
+## EXT-GEN-11 — Cost and efficiency profile
+
+### Objective
+
+Build a bounded versioned historical profile of attributed run tokens, duration, and provider cost
+without selecting routes, changing authority, or querying dynamic provider prices.
+
+### Checklist
+
+- [x] Define strict immutable cost-efficiency observations, states, profiles, and builder contracts
+- [x] Bind every observation to one agent, run, evidence identifier, and UTC timestamp
+- [x] Require bounded unique run and evidence identifiers with no future observations
+- [x] Calculate deterministic median token, duration, and provider-cost metrics
+- [x] Represent missing history as an explicit cold-start profile
+- [x] Keep profiles unable to influence authority or select providers and routes directly
+- [x] Add a unit test proving reproducible medians and exact evidence provenance
+- [x] Run the complete real-PostgreSQL test suite, Ruff, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Cost attribution persistence, dynamic pricing, provider selection, route ranking, budget mutation,
+  Trust scoring, Governor enforcement, Manager assignment, API, frontend, or LLM inference
 
 ---
 

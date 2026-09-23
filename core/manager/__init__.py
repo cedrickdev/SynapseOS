@@ -73,6 +73,16 @@ from core.manager.lifecycle import (
     AgentLifecycleState,
     LifecycleDisposition,
 )
+from core.manager.orphans import (
+    AgentLifecycleObservation,
+    CredentialLeaseObservation,
+    ManagerOrphanDetector,
+    OrphanDetectionRequest,
+    OrphanDetectionResult,
+    OrphanFinding,
+    OrphanResourceKind,
+    ParentResourceObservation,
+)
 from core.manager.overrides import ManagerHumanOverride
 from core.manager.planning import (
     ManagerAdvisoryPlanner,
@@ -122,6 +132,7 @@ __all__ = [
     "AgentLifecycleManager",
     "AgentLifecycleRequest",
     "AgentLifecycleState",
+    "AgentLifecycleObservation",
     "AgentIncidentForensicReconstruction",
     "AgentIncidentForensicReconstructor",
     "AgentIncidentForensicRequest",
@@ -140,6 +151,7 @@ __all__ = [
     "CostAwareAssignmentResult",
     "CostAwareAssignmentSelector",
     "CostAwareRouteSelector",
+    "CredentialLeaseObservation",
     "CoordinationGraphDisposition",
     "CoordinationGraphEdgeDraft",
     "CoordinationGraphReason",
@@ -175,6 +187,7 @@ __all__ = [
     "ManagerOutcomeCompletionGate",
     "ManagerOutcomeCompletionGateRequest",
     "ManagerOutcomeCompletionGateResult",
+    "ManagerOrphanDetector",
     "ManagerAdvisoryPlanner",
     "ManagerAdvisoryPlanningResult",
     "ManagerPlanningProposal",
@@ -185,6 +198,11 @@ __all__ = [
     "ManagerRouteCandidate",
     "ManagerRoutePolicy",
     "ManagerRouteSelection",
+    "OrphanDetectionRequest",
+    "OrphanDetectionResult",
+    "OrphanFinding",
+    "OrphanResourceKind",
+    "ParentResourceObservation",
     "ManagerRuntimeTrustChange",
     "ManagerRuntimeTrustMonitor",
     "ManagerRuntimeCoordinationRequest",

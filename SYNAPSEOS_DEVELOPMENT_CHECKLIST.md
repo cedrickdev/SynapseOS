@@ -4588,6 +4588,33 @@ without revoking credentials, terminating processes, or changing lifecycle state
 
 ---
 
+## EXT-MGR-26 — Trusted Component Selection
+
+### Objective
+
+Select only explicitly approved, Security-clear, Governor-admitted components that satisfy the
+required capabilities, without authorizing, installing, discovering, or executing components.
+
+### Checklist
+
+- [x] Define strict immutable component Trust, candidate, request, and selection contracts
+- [x] Support the documented component types and bounded capability declarations
+- [x] Require APPROVED Trust classification, Governor admission, and no Security block
+- [x] Require every requested capability and reject stale or duplicate evidence
+- [x] Rank eligible components deterministically by Trust and least excess capability
+- [x] Preserve Trust-manifest provenance for the selected component
+- [x] Keep selection unable to authorize, install, execute, scan, or mutate components
+- [x] Add focused tests proving restricted, quarantined, blocked, and incompatible exclusion
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Component registry/scanner implementation, dynamic discovery, installation, or execution
+- GOV-19 enforcement, Permission Engine mutation, Trust-manifest persistence, or network access
+- API, frontend, notifications, LLM inference, task mutation, or runtime component loading
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

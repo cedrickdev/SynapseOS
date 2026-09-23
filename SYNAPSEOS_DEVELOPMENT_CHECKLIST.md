@@ -4615,6 +4615,33 @@ required capabilities, without authorizing, installing, discovering, or executin
 
 ---
 
+## EXT-MGR-27 — Sentinel Agent Coordination
+
+### Objective
+
+Coordinate one independent read-only Sentinel to inspect referenced evidence under strict cost,
+time, and tool limits while preserving the rule that Sentinel signals carry no direct authority.
+
+### Checklist
+
+- [x] Define strict immutable Sentinel signal, candidate, request, and plan contracts
+- [x] Require a distinct Sentinel identity and a separate mutable scratchpad
+- [x] Require read-only authority, independent auditability, and referenced evidence
+- [x] Enforce bounded timeout, tool-call, and cost limits before selection
+- [x] Reject candidates able to grant or revoke permissions
+- [x] Select eligible Sentinels deterministically using the smallest bounded resource profile
+- [x] Keep coordination unable to suspend agents, mutate permissions, execute, or emit findings
+- [x] Add focused tests for valid coordination and independence/authority/budget exclusions
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Sentinel runtime, evidence analysis, signal persistence, Trust ingestion, or Governor decisions
+- Permission changes, suspension, containment, task mutation, shared scratchpads, or tool execution
+- API, frontend, notifications, LLM provider calls, or peer-audit workflow orchestration
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

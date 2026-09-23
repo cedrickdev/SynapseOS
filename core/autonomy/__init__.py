@@ -35,6 +35,17 @@ from core.autonomy.economic import (
     GovernorEconomicEvaluator,
     ProviderPriceClass,
 )
+from core.autonomy.execution_graph import (
+    ExecutionGraphDisposition,
+    ExecutionGraphEdge,
+    ExecutionGraphEnforcementRequest,
+    ExecutionGraphEnforcementResult,
+    ExecutionGraphNode,
+    ExecutionGraphNodeType,
+    ExecutionGraphReason,
+    ExecutionGraphRelation,
+    GovernorExecutionGraphGate,
+)
 from core.autonomy.policy import AutonomyPolicyEngine, PolicyReasonCode, PolicyRecommendation
 from core.autonomy.recomputation import AutonomyRecomputationEngine, AutonomyRecomputationResult
 from core.autonomy.risk import (
@@ -89,6 +100,14 @@ __all__ = [
     "AutonomyRecomputationResult",
     "AutonomyReasonCode",
     "ExecutionEnvironment",
+    "ExecutionGraphDisposition",
+    "ExecutionGraphEdge",
+    "ExecutionGraphEnforcementRequest",
+    "ExecutionGraphEnforcementResult",
+    "ExecutionGraphNode",
+    "ExecutionGraphNodeType",
+    "ExecutionGraphReason",
+    "ExecutionGraphRelation",
     "EconomicGovernanceContext",
     "EconomicGovernanceDisposition",
     "EconomicGovernancePolicy",
@@ -102,6 +121,7 @@ __all__ = [
     "GovernorPerActionEvaluator",
     "GovernorEconomicEvaluation",
     "GovernorEconomicEvaluator",
+    "GovernorExecutionGraphGate",
     "GovernorRuntimeTrustEvaluation",
     "GovernorRuntimeTrustEvaluator",
     "GovernorRuntimeContainmentEvaluation",

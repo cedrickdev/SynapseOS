@@ -4642,6 +4642,34 @@ time, and tool limits while preserving the rule that Sentinel signals carry no d
 
 ---
 
+## EXT-MGR-28 — Independent Peer-Audit Workflow
+
+### Objective
+
+Prepare a bounded independent peer audit of one canonical Sentinel submission while keeping signal
+acceptance and all Trust, autonomy, permission, and runtime authority outside the workflow.
+
+### Checklist
+
+- [x] Define strict immutable Sentinel submission, peer request, and peer-audit plan contracts
+- [x] Bind the submission to the exact target, primary Sentinel, evidence, and requested signals
+- [x] Require target, primary Sentinel, and peer auditor to have distinct identities
+- [x] Require separate target, primary-Sentinel, and peer-auditor scratchpads
+- [x] Require read-only, independently auditable peers with no permission-management authority
+- [x] Enforce bounded peer timeout, tool-call, and cost limits with deterministic selection
+- [x] Reject forged submissions and invalid audit chronology
+- [x] Keep peer audit unable to accept signals, mutate Trust/autonomy, authorize, or execute
+- [x] Add focused tests for valid provenance, forged submissions, and independence exclusions
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Peer runtime or analysis, signal acceptance/persistence, Trust ingestion, or Governor decisions
+- Permission changes, agent suspension, containment, task mutation, or tool execution
+- API, frontend, notifications, LLM provider calls, or automatic incident creation
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

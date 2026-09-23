@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
 EXT-GOV-01 → EXT-GOV-17
-EXT-MGR-01 → EXT-MGR-17
+EXT-MGR-01 → EXT-MGR-18
 EXT-MGR-20 → EXT-MGR-21
 EXT-MGR-22
 EXT-MGR-23
@@ -4370,6 +4370,34 @@ evidence so later forensic reconstruction and reporting do not rely on generic e
 - Forensic timeline reconstruction, root-cause inference, incident summaries, or misalignment reports
 - Automatic incident creation, containment execution, Trust or autonomy mutation, or task reassignment
 - Notification delivery, API, frontend, LLM inference, billing, or deletion workflows
+
+---
+
+## EXT-MGR-18 — Forensic Reconstruction
+
+### Objective
+
+Reconstruct a bounded chronological timeline from exact-scope incident evidence while exposing
+missing evidence explicitly and never inventing causes, events, or authority.
+
+### Checklist
+
+- [x] Define strict immutable forensic event, request, reconstruction, and event-type contracts
+- [x] Bind every event to the exact incident, project, task, and run scope
+- [x] Preserve source references, involved agents, deterministic summaries, and UTC chronology
+- [x] Sort evidence deterministically by occurrence time and stable evidence identifier
+- [x] Require unique evidence identifiers and source references
+- [x] Reject foreign-scope and future evidence
+- [x] Report missing governance-snapshot, detection, and containment evidence without inference
+- [x] Keep reconstruction unable to infer root cause, mutate incidents, persist, or execute
+- [x] Add focused tests for complete, incomplete, foreign, and future evidence
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Root-cause inference, business-impact inference, incident summaries, or corrective recommendations
+- Evidence persistence or retrieval, incident mutation, containment, reassignment, or notifications
+- API, frontend, LLM inference, Trust/Genome mutation, permission changes, or runtime execution
 
 ---
 

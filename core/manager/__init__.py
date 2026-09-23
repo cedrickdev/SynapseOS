@@ -120,6 +120,13 @@ from core.manager.runtime_trust import (
     RuntimeTrustChangeDirection,
 )
 from core.manager.selection import ManagerCandidateSelection, ManagerCandidateSelector
+from core.manager.sentinels import (
+    ManagerSentinelCoordinator,
+    SentinelCandidate,
+    SentinelCoordinationPlan,
+    SentinelCoordinationRequest,
+    SentinelRiskSignal,
+)
 from core.manager.trust import AgentTrustManagerSignal, TrustAwareManagerSelector
 from core.manager.trust_reassignment import (
     TrustReassignmentDisposition,
@@ -206,6 +213,7 @@ __all__ = [
     "ManagerRouteCandidate",
     "ManagerRoutePolicy",
     "ManagerRouteSelection",
+    "ManagerSentinelCoordinator",
     "OrphanDetectionRequest",
     "OrphanDetectionResult",
     "OrphanFinding",
@@ -218,6 +226,10 @@ __all__ = [
     "ManagerRuntimeCoordinationResult",
     "ManagerRuntimeCoordinator",
     "RuntimeTrustChangeDirection",
+    "SentinelCandidate",
+    "SentinelCoordinationPlan",
+    "SentinelCoordinationRequest",
+    "SentinelRiskSignal",
     "RuntimeCoordinationAction",
     "RuntimeCoordinationSource",
     "TrustAwareManagerSelector",

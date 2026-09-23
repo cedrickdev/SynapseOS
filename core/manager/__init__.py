@@ -91,6 +91,12 @@ from core.manager.orphans import (
     ParentResourceObservation,
 )
 from core.manager.overrides import ManagerHumanOverride
+from core.manager.peer_audit import (
+    IndependentPeerAuditCoordinator,
+    PeerAuditPlan,
+    PeerAuditRequest,
+    SentinelAuditSubmission,
+)
 from core.manager.planning import (
     ManagerAdvisoryPlanner,
     ManagerAdvisoryPlanningResult,
@@ -184,6 +190,7 @@ __all__ = [
     "ManagerBudgetPressureRecommendation",
     "GenomeAwareManagerSelector",
     "IncidentReportUnknown",
+    "IndependentPeerAuditCoordinator",
     "LifecycleDisposition",
     "ForensicEvent",
     "ForensicEventType",
@@ -219,6 +226,8 @@ __all__ = [
     "OrphanFinding",
     "OrphanResourceKind",
     "ParentResourceObservation",
+    "PeerAuditPlan",
+    "PeerAuditRequest",
     "ManagerRuntimeTrustChange",
     "ManagerRuntimeTrustMonitor",
     "ManagerTrustedComponentSelector",
@@ -230,6 +239,7 @@ __all__ = [
     "SentinelCoordinationPlan",
     "SentinelCoordinationRequest",
     "SentinelRiskSignal",
+    "SentinelAuditSubmission",
     "RuntimeCoordinationAction",
     "RuntimeCoordinationSource",
     "TrustAwareManagerSelector",

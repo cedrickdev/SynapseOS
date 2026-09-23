@@ -66,6 +66,13 @@ from core.manager.forensics import (
 from core.manager.genome import GenomeAwareManagerSelector
 from core.manager.governor import AgentGovernorManagerRecommendation, GovernorAwareManagerSelector
 from core.manager.incidents import AgentIncidentRecord, AgentIncidentStatus
+from core.manager.lifecycle import (
+    AgentLifecycleDecision,
+    AgentLifecycleManager,
+    AgentLifecycleRequest,
+    AgentLifecycleState,
+    LifecycleDisposition,
+)
 from core.manager.overrides import ManagerHumanOverride
 from core.manager.planning import (
     ManagerAdvisoryPlanner,
@@ -111,6 +118,10 @@ __all__ = [
     "AgentGovernorManagerRecommendation",
     "AgentIncidentRecord",
     "AgentIncidentStatus",
+    "AgentLifecycleDecision",
+    "AgentLifecycleManager",
+    "AgentLifecycleRequest",
+    "AgentLifecycleState",
     "AgentIncidentForensicReconstruction",
     "AgentIncidentForensicReconstructor",
     "AgentIncidentForensicRequest",
@@ -146,6 +157,7 @@ __all__ = [
     "ManagerBudgetPressureRecommendation",
     "GenomeAwareManagerSelector",
     "IncidentReportUnknown",
+    "LifecycleDisposition",
     "ForensicEvent",
     "ForensicEventType",
     "GovernorAwareManagerSelector",

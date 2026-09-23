@@ -4535,6 +4535,32 @@ authority, widening parent scope or capabilities, or mutating permissions.
 
 ---
 
+## EXT-MGR-24 — Agent Lifecycle Manager
+
+### Objective
+
+Validate the explicit company-agent lifecycle and produce bounded cleanup requirements without
+mutating agents, revoking credentials, closing sessions, or overriding Security.
+
+### Checklist
+
+- [x] Define strict immutable lifecycle state, request, decision, and disposition contracts
+- [x] Enforce only PROVISIONED, ACTIVE, PAUSED, RETIRING, and RETIRED documented transitions
+- [x] Deny activation while a Security block is active
+- [x] Require active credential leases to be revoked on pause or retirement transitions
+- [x] Require open sessions to close before final retirement
+- [x] Keep lifecycle evaluation unable to mutate agents, revoke leases, or close sessions
+- [x] Add focused tests for allowed, cleanup-required, invalid, and Security-blocked transitions
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Lifecycle persistence, credential-lease persistence, revocation execution, or session termination
+- Orphan detection, automatic containment, Trust/Genome/autonomy mutation, or task reassignment
+- API, frontend, notifications, LLM inference, Permission Engine mutation, or runtime execution
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

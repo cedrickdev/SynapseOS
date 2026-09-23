@@ -2878,7 +2878,7 @@ The future extension phase families are reserved as follows:
 EXT-GEN-01 → EXT-GEN-10
 EXT-GEN-12
 EXT-TRUST-01 → EXT-TRUST-13
-EXT-GOV-01 → EXT-GOV-14
+EXT-GOV-01 → EXT-GOV-15
 EXT-GOV-17
 EXT-MGR-01 → EXT-MGR-15
 EXT-MGR-22
@@ -3842,6 +3842,32 @@ without transferring enforcement authority to the Governor or destroying forensi
 - Permission mutation, credential or capability backends, process termination, workspace mutation,
   event-bus delivery, persisted containment state, recovery execution, automatic reassignment, API,
   or frontend
+
+---
+
+## EXT-GOV-15 — Communication policy enforcement
+
+### Objective
+
+Fail closed on every proposed agent communication unless an explicit active policy binds the
+sender, recipient, task, channel, data class, purpose, delegation, and scope.
+
+### Checklist
+
+- [x] Define strict immutable communication requests, grants, dispositions, reasons, and results
+- [x] Bind policy grants to project, task, sender, recipient, purpose, channel, and data class
+- [x] Bind every proposal to an explicit delegation identifier and communication scope
+- [x] Reject missing, inactive, mismatched, or Security-vetoed communication policies
+- [x] Permit matching proposals to proceed only to the authoritative Permission Engine check
+- [x] Keep the Governor unable to authorize, send, persist, or mutate communication permissions
+- [x] Add unit tests for deny-by-default, data-class restriction, delegation scope, and Security veto
+- [x] Run the complete real-PostgreSQL test suite, Ruff, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Communication-event persistence, graph construction, message transport, channel creation, raw
+  message inspection, Permission Engine decisions, Trust mutation, Manager coordination, API,
+  frontend, or LLM inference
 
 ---
 

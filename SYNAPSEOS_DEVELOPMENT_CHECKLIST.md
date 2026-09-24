@@ -3572,6 +3572,32 @@ signals without directly changing Trust, permissions, autonomy, or runtime state
 
 ---
 
+## EXT-TRUST-15 — Sentinel Evidence Ingestion
+
+### Objective
+
+Accept only bounded, independently peer-confirmed Sentinel signals as Trust evidence while keeping
+Sentinels unable to mutate Trust, suspend agents, change permissions, or execute actions.
+
+### Checklist
+
+- [x] Define a shared closed Sentinel signal vocabulary outside Manager and Trust packages
+- [x] Define strict canonical submission, peer-attestation, severity, and evidence contracts
+- [x] Require distinct target, primary Sentinel, and selected peer-auditor identities
+- [x] Preserve bounded unique evidence references, audit provenance, and UTC chronology
+- [x] Accept only signals confirmed by the selected independently auditable peer
+- [x] Reject forged, unplanned, duplicate, cross-identity, and chronologically invalid evidence
+- [x] Produce deterministic severity and Governor re-evaluation signals without direct authority
+- [x] Add focused tests for accepted, rejected, empty, forged, and non-independent attestations
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Sentinel runtime, signal persistence, Trust-score mutation, suspension, permissions, or containment
+- Manager coordination, Governor enforcement, API, frontend, notifications, or LLM inference
+
+---
+
 ## EXT-GOV-01 — Autonomy levels and contracts
 
 ### Objective

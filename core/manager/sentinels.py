@@ -2,21 +2,12 @@
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import StrEnum
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
-class SentinelRiskSignal(StrEnum):
-    MISLEADING_RESULT = "MISLEADING_RESULT"
-    SUSPICIOUS_COORDINATION = "SUSPICIOUS_COORDINATION"
-    EVALUATION_GAMING = "EVALUATION_GAMING"
-    POLICY_EVASION = "POLICY_EVASION"
-    MEMORY_POISONING = "MEMORY_POISONING"
-    COLLUSION_PATTERN = "COLLUSION_PATTERN"
-    UNEXPLAINED_RESULT_SHIFT = "UNEXPLAINED_RESULT_SHIFT"
+from core.sentinel import SentinelRiskSignal as SentinelRiskSignal
 
 
 class _StrictSentinelModel(BaseModel):

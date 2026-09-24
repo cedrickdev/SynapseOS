@@ -75,6 +75,13 @@ from core.trust.scoring import (
     TrustOverallScoreCalculator,
     TrustScoringPolicy,
 )
+from core.trust.sentinel_evidence import (
+    SentinelEvidenceIngestor,
+    SentinelEvidenceSeverity,
+    SentinelEvidenceSubmission,
+    SentinelPeerAttestation,
+    SentinelTrustEvidence,
+)
 from core.trust.types import TrustClass, TrustDimension, TrustEventSeverity, TrustEventType
 
 __all__ = [
@@ -127,6 +134,11 @@ __all__ = [
     "RuntimeTrustSignalType",
     "RuntimeTrustSnapshot",
     "RuntimeTrustState",
+    "SentinelEvidenceIngestor",
+    "SentinelEvidenceSubmission",
+    "SentinelEvidenceSeverity",
+    "SentinelPeerAttestation",
+    "SentinelTrustEvidence",
     "RuntimeTrustChangeExplanation",
     "RuntimeTrustChangeExplanationBuilder",
     "RuntimeTrustRecoveryEngine",

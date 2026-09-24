@@ -26,6 +26,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.genome import (
     CapabilityScoringPolicy,
+    ComponentUsageOutcome,
     EvidenceOutcome,
     EvidenceSignal,
     EvidenceSourceType,
@@ -310,6 +311,71 @@ class AgentGenomeRunSnapshot(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixi
     agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     agent_genome_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     genome_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+
+class AgentComponentUsageEvent(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable binding between an agent run and an exact component manifest."""
+
+    __tablename__ = "agent_component_usage_events"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["agent_run_id", "agent_id"],
+            ["agent_runs.id", "agent_runs.agent_id"],
+            name="fk_agent_component_usage_run_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "task_id"],
+            ["tasks.project_id", "tasks.id"],
+            name="fk_agent_component_usage_task_project",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "agent_id"],
+            ["agent_genomes.id", "agent_genomes.agent_id"],
+            name="fk_agent_component_usage_genome_agent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["agent_genome_id", "genome_version_id"],
+            ["agent_genome_versions.agent_genome_id", "agent_genome_versions.id"],
+            name="fk_agent_component_usage_version_genome",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["component_manifest_id", "component_id"],
+            ["component_trust_manifests.id", "component_trust_manifests.component_id"],
+            name="fk_agent_component_usage_manifest_component",
+            ondelete="RESTRICT",
+        ),
+        Index(
+            "ix_agent_component_usage_agent_component_observed",
+            "agent_id",
+            "component_id",
+            "observed_at",
+        ),
+        Index(
+            "ix_agent_component_usage_manifest_observed",
+            "component_manifest_id",
+            "observed_at",
+        ),
+        Index("ix_agent_component_usage_run_observed", "agent_run_id", "observed_at"),
+    )
+
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False
+    )
+    task_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    agent_genome_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    genome_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    component_manifest_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    component_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    outcome: Mapped[ComponentUsageOutcome] = mapped_column(
+        Enum(ComponentUsageOutcome, name="component_usage_outcome"), nullable=False
+    )
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class AgentGenomeEvidence(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

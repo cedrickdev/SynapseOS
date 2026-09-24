@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, Index, String
+from sqlalchemy import CheckConstraint, DateTime, Enum, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column
@@ -41,6 +41,7 @@ class ComponentTrustManifest(AppendOnlyMixin, UUIDPrimaryKeyMixin, CreatedAtMixi
         CheckConstraint(
             "jsonb_typeof(security_findings) = 'array'", name="security_findings_array"
         ),
+        UniqueConstraint("id", "component_id", name="uq_component_trust_manifests_id_component"),
         Index(
             "ix_component_trust_manifest_component_scanned",
             "component_id",

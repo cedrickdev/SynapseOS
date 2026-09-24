@@ -18,6 +18,12 @@ from core.genome.collaboration import (
     CollaborationDataClass,
     CollaborationObservation,
 )
+from core.genome.component_usage import (
+    AgentComponentUsageProfile,
+    AgentComponentUsageProfileCalculator,
+    ComponentUsageObservation,
+    ComponentUsageOutcome,
+)
 from core.genome.cost_efficiency import (
     AgentCostEfficiencyProfile,
     AgentCostEfficiencyProfileBuilder,
@@ -78,6 +84,8 @@ from core.genome.types import (
 )
 
 __all__ = [
+    "AgentComponentUsageProfile",
+    "AgentComponentUsageProfileCalculator",
     "AgentOutcomeIntegrityProfile",
     "AgentOutcomeIntegrityProfileCalculator",
     "AgentCostEfficiencyProfile",
@@ -89,6 +97,8 @@ __all__ = [
     "CollaborationChannel",
     "CollaborationDataClass",
     "CollaborationObservation",
+    "ComponentUsageObservation",
+    "ComponentUsageOutcome",
     "CostEfficiencyObservation",
     "CostEfficiencyProfileState",
     "GenomeBehavioralBaseline",

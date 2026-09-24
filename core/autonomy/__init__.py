@@ -19,6 +19,13 @@ from core.autonomy.communication_policy import (
     CommunicationPolicyRequest,
     CommunicationPolicyResult,
 )
+from core.autonomy.component_trust import (
+    ComponentTrustDisposition,
+    ComponentTrustEnforcementRequest,
+    ComponentTrustEnforcementResult,
+    ComponentTrustManifestSnapshot,
+    GovernorComponentTrustEnforcer,
+)
 from core.autonomy.credential_leases import (
     CredentialLease,
     CredentialLeaseDisposition,
@@ -96,6 +103,10 @@ __all__ = [
     "CommunicationPolicyReason",
     "CommunicationPolicyRequest",
     "CommunicationPolicyResult",
+    "ComponentTrustDisposition",
+    "ComponentTrustEnforcementRequest",
+    "ComponentTrustEnforcementResult",
+    "ComponentTrustManifestSnapshot",
     "CredentialLease",
     "CredentialLeaseDisposition",
     "CredentialLeaseValidationRequest",
@@ -128,6 +139,7 @@ __all__ = [
     "GovernorActionEvaluationResult",
     "GovernorAutomaticContainmentOrder",
     "GovernorAutomaticContainmentPlanner",
+    "GovernorComponentTrustEnforcer",
     "GovernorCredentialLeaseValidator",
     "GovernorDelegatedAuthorityValidator",
     "GovernorPerActionEvaluator",

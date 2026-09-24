@@ -32,11 +32,24 @@ class Settings(BaseSettings):
     test_postgres_port: int = 55432
     database_url: str = "postgresql+psycopg://synapseos:synapseos@localhost:55432/synapseos"
     dashboard_service_token: SecretStr | None = None
+    github_base_url: str = "https://api.github.com"
+    github_max_response_bytes: int = 16_777_216
+    github_service_token: SecretStr | None = None
+    github_app_id: int | None = None
+    github_installation_id: int | None = None
+    github_app_private_key: SecretStr | None = None
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen3:8b"
     ollama_timeout_seconds: float = Field(default=60.0, gt=0)
     ollama_max_response_bytes: int = Field(default=10_485_760, gt=0)
     workspace_base_root: Path = Path(".synapseos/workspaces")
+    git_executable: Path = Path("/usr/bin/git")
+    engineering_v1_timeout_seconds: float = Field(
+        default=900.0,
+        gt=0.0,
+        le=3_600.0,
+        allow_inf_nan=False,
+    )
     workspace_git_timeout_seconds: float = Field(
         default=120.0,
         gt=0,

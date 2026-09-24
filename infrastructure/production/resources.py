@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import httpx
 from sqlalchemy import Engine, create_engine
@@ -11,6 +11,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.production import ProductionSettings
 from infrastructure.git.github import GitHubProviderResources, build_github_provider
 from infrastructure.llm import OllamaLLMProvider
+
+if TYPE_CHECKING:
+    from core.engineering_v1 import EngineeringV1Application
+    from infrastructure.engineering_v1 import ProductionEngineeringStageSuiteFactory
 
 
 class _AsyncClosable(Protocol):
@@ -36,7 +40,27 @@ class ProductionResources:
         self._owns_http_client = owns_http_client
         self._llm_provider = llm_provider
         self._github = github
+        self._engineering_v1: EngineeringV1Application | None = None
+        self._stage_factory: ProductionEngineeringStageSuiteFactory | None = None
         self._closed = False
+
+    @property
+    def engineering_v1(self) -> EngineeringV1Application:
+        """Return the only public high-level production workflow service."""
+        if self._engineering_v1 is None:
+            raise RuntimeError("production application is not composed")
+        return self._engineering_v1
+
+    def attach_engineering_v1(
+        self,
+        application: EngineeringV1Application,
+        stage_factory: ProductionEngineeringStageSuiteFactory,
+    ) -> None:
+        """Attach the high-level application exactly once during composition."""
+        if self._engineering_v1 is not None or self._stage_factory is not None:
+            raise RuntimeError("production application is already composed")
+        self._engineering_v1 = application
+        self._stage_factory = stage_factory
 
     async def aclose(self) -> None:
         """Close each owned resource once in dependency order."""

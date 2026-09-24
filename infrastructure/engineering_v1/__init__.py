@@ -17,6 +17,11 @@ from infrastructure.engineering_v1.stages import (
     EngineeringRunState,
     ProductionEngineeringStageSuite,
     ProductionEngineeringStageSuiteFactory,
+    ProductionStageAdapter,
+    ProductionStageOperation,
+    ProductionStageOperations,
+    ProductionStageOutcome,
+    build_production_stages,
 )
 
 __all__ = [
@@ -29,5 +34,10 @@ __all__ = [
     "SQLAlchemyEngineeringContextLoader",
     "ProductionEngineeringStageSuite",
     "ProductionEngineeringStageSuiteFactory",
+    "ProductionStageAdapter",
+    "ProductionStageOperation",
+    "ProductionStageOperations",
+    "ProductionStageOutcome",
     "build_engineering_v1_orchestrator",
+    "build_production_stages",
 ]

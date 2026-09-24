@@ -2834,13 +2834,13 @@ explicit ADR and a corresponding checklist update.
 
 ## Strategic components
 
-- [ ] Agent Genome — maintain a versioned, evidence-based profile of demonstrated capabilities,
+- [x] Agent Genome — maintain a versioned, evidence-based profile of demonstrated capabilities,
       strengths, weaknesses, efficiency, historical outcomes, and normal behavior
-- [ ] Agent Trust Score — derive auditable historical and runtime trust signals from outcomes,
+- [x] Agent Trust Score — derive auditable historical and runtime trust signals from outcomes,
       failures, incidents, reviews, QA, security, and observed behavior
-- [ ] Autonomy Governor — lease bounded, scoped, observable, and revocable autonomy for a specific
+- [x] Autonomy Governor — lease bounded, scoped, observable, and revocable autonomy for a specific
       task and action
-- [ ] AI Manager — assign and reassign work, coordinate agents, and react to cost, risk, blockers,
+- [x] AI Manager — assign and reassign work, coordinate agents, and react to cost, risk, blockers,
       trust, and runtime conditions without expanding authority
 
 ## Mandatory authority hierarchy
@@ -4050,6 +4050,31 @@ without issuing, renewing, revoking, persisting, or broadening credentials or pe
 - Credential storage, issuance, rotation, renewal, revocation execution, or secret handling
 - Agent lifecycle mutation, orphan cleanup, Permission Engine decisions, or Security containment
 - API, frontend, notifications, LLM inference, network access, or runtime credential injection
+
+---
+
+## EXT-GOV-19 — Component Trust Enforcement
+
+### Objective
+
+Fail closed before component use unless Security, the Permission Engine, the exact trust manifest,
+component risk, checksum, freshness, and requested capabilities all permit the bounded request.
+
+### Checklist
+
+- [x] Define strict manifest snapshot, request, disposition, and enforcement-result contracts
+- [x] Preserve Security veto and Permission Engine authority before all Governor checks
+- [x] Bind every decision to one agent, task, component, exact manifest, and expected checksum
+- [x] Deny quarantined, stale, checksum-mismatched, undeclared, or high-risk component requests
+- [x] Restrict limited components to the explicit intersection of declared and allowed capabilities
+- [x] Keep enforcement unable to install, execute, mutate permissions, or override Security
+- [x] Add focused tests for approved, restricted, quarantined, stale, mismatched, and risky components
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Component discovery, scanning, download, installation, execution, or dynamic loading
+- Permission Engine mutation, Security containment, Trust mutation, API, frontend, or background jobs
 
 ---
 

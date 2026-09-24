@@ -3547,6 +3547,31 @@ child exceeds its parent's scope, capabilities, lifetime, identity chain, or act
 
 ---
 
+## EXT-TRUST-14 — Component Risk Signals
+
+### Objective
+
+Transform exact component manifests and GEN-13 usage outcomes into bounded deterministic Trust risk
+signals without directly changing Trust, permissions, autonomy, or runtime state.
+
+### Checklist
+
+- [x] Define strict component-risk observations, policies, signals, severities, and results
+- [x] Bind every observation to one canonical GEN-13 event and its exact manifest classification
+- [x] Detect restricted, quarantined, stale, repeatedly failing, and repeatedly blocked components
+- [x] Require bounded unique evidence, matching agent/component scope, and UTC chronology
+- [x] Produce deterministic severity and Governor re-evaluation signals
+- [x] Keep raw component data absent and results unable to mutate Trust or permissions
+- [x] Add focused tests for clean, restricted, quarantined, stale, failed, and blocked evidence
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Trust-score persistence or mutation, Governor enforcement, permissions, containment, or execution
+- Component discovery, scanning, installation, API, frontend, LLM inference, or background jobs
+
+---
+
 ## EXT-GOV-01 — Autonomy levels and contracts
 
 ### Objective

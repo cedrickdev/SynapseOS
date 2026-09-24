@@ -2,7 +2,12 @@
 
 from core.engineering_v1.errors import EngineeringV1Error, EngineeringV1ErrorCode
 from core.engineering_v1.orchestrator import EngineeringV1Orchestrator
-from core.engineering_v1.ports import EngineeringAuditSink, EngineeringStageRunner
+from core.engineering_v1.ports import (
+    EngineeringAuditSink,
+    EngineeringStageRunner,
+    EngineeringStageSuite,
+    EngineeringStageSuiteFactory,
+)
 from core.engineering_v1.types import (
     ENGINEERING_V1_STAGE_ORDER,
     EngineeringAuditEvent,
@@ -22,6 +27,8 @@ __all__ = [
     "EngineeringStage",
     "EngineeringStageEvidence",
     "EngineeringStageRunner",
+    "EngineeringStageSuite",
+    "EngineeringStageSuiteFactory",
     "EngineeringV1Error",
     "EngineeringV1ErrorCode",
     "EngineeringV1Orchestrator",

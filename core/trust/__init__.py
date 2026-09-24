@@ -1,5 +1,13 @@
 """Provider-neutral contracts for Agent Trust Score."""
 
+from core.trust.component_risk import (
+    ComponentRiskAnalyzer,
+    ComponentRiskObservation,
+    ComponentRiskPolicy,
+    ComponentRiskResult,
+    ComponentRiskSeverity,
+    ComponentRiskSignal,
+)
 from core.trust.coordination import (
     CoordinationRiskAnalyzer,
     CoordinationRiskObservation,
@@ -70,6 +78,12 @@ from core.trust.scoring import (
 from core.trust.types import TrustClass, TrustDimension, TrustEventSeverity, TrustEventType
 
 __all__ = [
+    "ComponentRiskAnalyzer",
+    "ComponentRiskObservation",
+    "ComponentRiskPolicy",
+    "ComponentRiskResult",
+    "ComponentRiskSeverity",
+    "ComponentRiskSignal",
     "CriticalTrustDisposition",
     "CriticalTrustEventResult",
     "CoordinationRiskAnalyzer",

@@ -6,6 +6,7 @@ from infrastructure.database.models.execution import AgentRun, Decision, ToolCal
 from infrastructure.database.models.genome import (
     AgentCapabilityMetric,
     AgentCapabilityMetricEvidence,
+    AgentComponentUsageEvent,
     AgentFailurePattern,
     AgentGenome,
     AgentGenomeEvidence,
@@ -37,6 +38,7 @@ __all__ = [
     "AgentCapability",
     "AgentCapabilityMetric",
     "AgentCapabilityMetricEvidence",
+    "AgentComponentUsageEvent",
     "AgentFailurePattern",
     "AgentGenome",
     "AgentGenomeEvidence",

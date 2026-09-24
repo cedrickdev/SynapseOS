@@ -3214,6 +3214,32 @@ metric success cannot hide objective failure, escaped acceptance criteria, or re
 
 ---
 
+## EXT-GEN-13 — Component Usage Profile
+
+### Objective
+
+Persist bounded immutable component-usage evidence and derive deterministic per-agent component
+profiles without mutating Trust, permissions, autonomy, Manager selection, or runtime state.
+
+### Checklist
+
+- [x] Define strict component-usage outcomes, observations, profiles, and calculator contracts
+- [x] Bind every event to one agent, project, task, run, active Genome version, and exact manifest
+- [x] Add the append-only `AgentComponentUsageEvent` PostgreSQL model and bounded repository
+- [x] Enforce agent, task, run, Genome, version, manifest, and component scope consistency
+- [x] Calculate usage, success, failure, cancellation, block, and recency measures deterministically
+- [x] Keep calculated profiles non-persistent and unable to mutate Trust, authority, or runtime state
+- [x] Build and roll back the schema exclusively through a reversible Alembic migration
+- [x] Add focused contract and real-PostgreSQL integration tests including append-only correction
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Trust scoring, component-risk classification, permissions, autonomy, or Manager selection
+- Component discovery, scanning, installation, execution, API, frontend, or background jobs
+
+---
+
 ## EXT-TRUST-01 — Agent Trust data model
 
 ### Objective

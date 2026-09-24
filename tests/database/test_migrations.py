@@ -247,6 +247,44 @@ def test_genome_evidence_migration_has_reversible_table_and_enums(
 def test_capability_scoring_migration_is_reversible(migration_database_url: str) -> None:
     config = _config(migration_database_url)
     command.upgrade(config, "head")
+
+
+def test_component_trust_registry_migration_is_reversible(
+    migration_database_url: str,
+) -> None:
+    config = _config(migration_database_url)
+    command.upgrade(config, "head")
+    engine = create_engine(migration_database_url)
+    try:
+        inspector = inspect(engine)
+        assert "component_trust_manifests" in inspector.get_table_names()
+        assert {
+            "component_id",
+            "component_type",
+            "requested_capabilities",
+            "trust_level",
+            "last_scan_at",
+            "scan_policy_version",
+        } <= {column["name"] for column in inspector.get_columns("component_trust_manifests")}
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "20260923_0016")
+    engine = create_engine(migration_database_url)
+    try:
+        assert "component_trust_manifests" not in inspect(engine).get_table_names()
+        with engine.connect() as connection:
+            enum_count = connection.execute(
+                text(
+                    "SELECT count(*) FROM pg_type WHERE typname IN "
+                    "('component_type', 'component_trust_level')"
+                )
+            ).scalar_one()
+            assert enum_count == 0
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
     engine = create_engine(migration_database_url)
     try:
         inspector = inspect(engine)

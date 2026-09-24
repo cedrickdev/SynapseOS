@@ -4697,6 +4697,35 @@ acceptance and all Trust, autonomy, permission, and runtime authority outside th
 
 ---
 
+## SEC-COMP-1 — Agent Component Trust Registry
+
+### Objective
+
+Persist bounded, immutable supply-chain trust manifests for executable agent components without
+installing, discovering, scanning, authorizing, or executing those components.
+
+### Checklist
+
+- [x] Define strict component-type, trust-level, and manifest input contracts
+- [x] Bound and validate manifest text, access declarations, findings, and UTC scan timestamps
+- [x] Add the append-only `ComponentTrustManifest` PostgreSQL model
+- [x] Add database constraints and indexes for component history, classification, and checksum lookup
+- [x] Add a repository exposing only insert, get, and bounded list operations
+- [x] Reject direct updates, deletes, and mutable JSON changes through the global append-only guard
+- [x] Allow corrected scan evidence only as a new immutable manifest row
+- [x] Build and roll back the schema exclusively through a reversible Alembic migration
+- [x] Add focused contract and real-PostgreSQL integration tests
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Component discovery, installation, execution, dynamic loading, or network access
+- Skill, MCP server, playbook, package, plugin, or model-adapter scanning
+- GOV-19 enforcement, permission mutation, runtime authorization, or automatic trust classification
+- PostgreSQL triggers, RLS, provider calls, API routes, frontend work, or background jobs
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

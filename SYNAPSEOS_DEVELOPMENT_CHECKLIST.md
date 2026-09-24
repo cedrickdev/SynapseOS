@@ -4726,6 +4726,36 @@ installing, discovering, scanning, authorizing, or executing those components.
 
 ---
 
+## SEC-COMP-2 — Skill / MCP / Playbook Scanner
+
+### Objective
+
+Scan bounded caller-supplied Skill, MCP server, and playbook snapshots through an explicit
+fail-closed trust pipeline and emit a sanitized manifest compatible with SEC-COMP-1.
+
+### Checklist
+
+- [x] Define strict immutable artifact, request, finding, stage-result, and scanner contracts
+- [x] Limit supported component types to Skill, MCP server, and playbook snapshots
+- [x] Bound artifact count, individual bytes, total bytes, paths, declarations, and timeout
+- [x] Require provenance, static inspection, permission analysis, and security-test stages once
+- [x] Run stages sequentially with one global timeout and no implicit retry
+- [x] Propagate cancellation immediately and short-circuit failed stages
+- [x] Classify incomplete, failed, high-risk, declared-access, and clean scans deterministically
+- [x] Filter provider findings to stable allowlisted metadata in the persisted manifest
+- [x] Keep artifact contents, finding summaries, and provider exceptions ephemeral
+- [x] Add focused tests for classification, bounds, timeout, cancellation, sanitization, and order
+- [x] Run the complete real-PostgreSQL test suite, Ruff, formatting checks, mypy, and diff hygiene
+
+### Explicit exclusions
+
+- Component discovery, download, installation, dynamic loading, or execution
+- Arbitrary filesystem traversal, shell commands, network calls, or external scanner processes
+- Registry mutation beyond returning a manifest for the existing append-only repository
+- GOV-19 enforcement, permissions, runtime authorization, API routes, frontend, or background jobs
+
+---
+
 # Ordre recommandé réel
 
 Ne saute pas directement aux phases avancées.

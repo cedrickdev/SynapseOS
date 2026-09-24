@@ -2,17 +2,12 @@
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import StrEnum
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
-class ComponentTrustLevel(StrEnum):
-    APPROVED = "APPROVED"
-    RESTRICTED = "RESTRICTED"
-    QUARANTINED = "QUARANTINED"
+from core.component_trust import ComponentTrustLevel as ComponentTrustLevel
 
 
 class _StrictComponentModel(BaseModel):

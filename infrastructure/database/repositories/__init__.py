@@ -4,6 +4,7 @@ from infrastructure.database.repositories.agent_incidents import AgentIncidentRe
 from infrastructure.database.repositories.agent_scores import AgentScoreRepository
 from infrastructure.database.repositories.agent_trust import AgentTrustRepository
 from infrastructure.database.repositories.audit_events import AuditEventRepository
+from infrastructure.database.repositories.component_trust import ComponentTrustManifestRepository
 from infrastructure.database.repositories.incident_events import IncidentEventRepository
 from infrastructure.database.repositories.incidents import IncidentRepository, PostmortemRepository
 from infrastructure.database.repositories.memory import MemoryRepository
@@ -20,6 +21,7 @@ __all__ = [
     "AgentTrustRepository",
     "ApprovalRepository",
     "AuditEventRepository",
+    "ComponentTrustManifestRepository",
     "IncidentEventRepository",
     "IncidentRepository",
     "MemoryRepository",

@@ -29,6 +29,7 @@ def _settings(
         github_app_id=None,
         github_installation_id=None,
         github_app_private_key=None,
+        dashboard_service_token=SecretStr("dashboard-service-token-value"),
         workspace_base_root=Path("/var/lib/synapseos/workspaces"),
         git_executable=Path("/usr/bin/git"),
         engineering_v1_timeout_seconds=900.0,

@@ -32,6 +32,7 @@ def _settings() -> ProductionSettings:
         github_app_id=None,
         github_installation_id=None,
         github_app_private_key=None,
+        dashboard_service_token=SecretStr("dashboard-service-token-value"),
         workspace_base_root=Path("/var/lib/synapseos/workspaces"),
         git_executable=Path("/usr/bin/git"),
         engineering_v1_timeout_seconds=900.0,
@@ -142,8 +143,20 @@ def test_building_resources_does_not_open_a_database_connection(
             connect_calls += 1
             raise AssertionError("database connection opened")
 
-        monkeypatch.setattr(resources.engine, "connect", forbidden_connect)
+        monkeypatch.setattr(resources._engine, "connect", forbidden_connect)
         assert connect_calls == 0
         await resources.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_public_resource_handle_does_not_expose_raw_database_authority() -> None:
+    async def scenario() -> None:
+        resources = await build_production_resources(_settings())
+        try:
+            assert not hasattr(resources, "engine")
+            assert not hasattr(resources, "session_factory")
+        finally:
+            await resources.aclose()
 
     asyncio.run(scenario())

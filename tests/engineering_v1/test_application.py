@@ -216,3 +216,33 @@ def test_application_sanitizes_unexpected_failures_without_retry() -> None:
     assert "secret" not in str(captured.value)
     assert session.rollback_calls == 1
     assert session.close_calls == 1
+
+
+def test_application_sanitizes_session_construction_failure() -> None:
+    def failing_session_factory() -> Session:
+        raise RuntimeError("postgresql://secret@private-host")
+
+    application = EngineeringV1Application(
+        failing_session_factory,
+        _Factory(tuple(_Runner(stage) for stage in ENGINEERING_V1_STAGE_ORDER)),
+    )
+
+    with pytest.raises(EngineeringV1Error) as captured:
+        asyncio.run(application.run(_request()))
+
+    assert captured.value.code is EngineeringV1ErrorCode.STAGE_FAILURE
+    assert "secret" not in str(captured.value)
+
+
+def test_application_rejects_request_above_production_timeout() -> None:
+    application = EngineeringV1Application(
+        _RecordingSession,
+        _Factory(tuple(_Runner(stage) for stage in ENGINEERING_V1_STAGE_ORDER)),
+        timeout_seconds=1.0,
+    )
+    request = _request().model_copy(update={"timeout_seconds": 2.0})
+
+    with pytest.raises(EngineeringV1Error) as captured:
+        asyncio.run(application.run(request))
+
+    assert captured.value.code is EngineeringV1ErrorCode.INVALID_INPUT

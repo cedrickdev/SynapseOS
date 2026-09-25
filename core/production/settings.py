@@ -38,6 +38,7 @@ class ProductionSettings(BaseModel):
     github_app_id: int | None
     github_installation_id: int | None
     github_app_private_key: SecretStr | None
+    dashboard_service_token: SecretStr
     workspace_base_root: Path
     git_executable: Path
     engineering_v1_timeout_seconds: float
@@ -62,6 +63,9 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
         if not settings.git_executable.is_absolute():
             raise ValueError
         _validate_github_authentication(settings)
+        dashboard_service_token = _secret_value(settings.dashboard_service_token)
+        if dashboard_service_token is None or _is_placeholder(dashboard_service_token):
+            raise ValueError
         return ProductionSettings(
             database_url=settings.database_url,
             ollama_base_url=settings.ollama_base_url.rstrip("/"),
@@ -74,6 +78,7 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
             github_app_id=settings.github_app_id,
             github_installation_id=settings.github_installation_id,
             github_app_private_key=settings.github_app_private_key,
+            dashboard_service_token=SecretStr(dashboard_service_token),
             workspace_base_root=settings.workspace_base_root,
             git_executable=settings.git_executable,
             engineering_v1_timeout_seconds=float(settings.engineering_v1_timeout_seconds),
@@ -84,14 +89,17 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
 
 def _validate_database_url(value: str) -> None:
     parsed = urlsplit(value)
+    database_name = parsed.path.removeprefix("/")
     if (
         parsed.scheme != "postgresql+psycopg"
         or not parsed.hostname
         or not parsed.username
         or not parsed.password
+        or not database_name
         or parsed.query
         or parsed.fragment
         or _is_placeholder(parsed.password)
+        or (parsed.username.casefold(), parsed.password.casefold()) == ("synapseos", "synapseos")
     ):
         raise ValueError
 

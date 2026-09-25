@@ -18,6 +18,7 @@ def _production_settings() -> Settings:
         app_env="production",
         database_url="postgresql+psycopg://synapse:strong-password@db:5432/synapseos",
         github_service_token=SecretStr("github-service-token-value"),
+        dashboard_service_token=SecretStr("dashboard-service-token-value"),
         workspace_base_root=Path("/var/lib/synapseos/workspaces"),
         git_executable=Path("/usr/bin/git"),
     )

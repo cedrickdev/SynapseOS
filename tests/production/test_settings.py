@@ -29,6 +29,7 @@ def _settings(**overrides: object) -> Settings:
         "github_app_id": None,
         "github_installation_id": None,
         "github_app_private_key": None,
+        "dashboard_service_token": SecretStr("dashboard-service-token-value"),
         "workspace_base_root": Path("/var/lib/synapseos/workspaces"),
         "git_executable": Path("/usr/bin/git"),
         "engineering_v1_timeout_seconds": 900.0,
@@ -72,6 +73,22 @@ def test_production_settings_require_exactly_one_github_auth_strategy() -> None:
                 github_app_private_key=SecretStr("private-key-value"),
             )
         )
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    (
+        {"database_url": "postgresql+psycopg://synapseos:synapseos@db:5432/synapseos"},
+        {"database_url": "postgresql+psycopg://synapse:strong-password@db:5432"},
+        {"dashboard_service_token": None},
+        {"dashboard_service_token": SecretStr("replace-me")},
+    ),
+)
+def test_production_settings_reject_development_or_missing_service_credentials(
+    overrides: dict[str, object],
+) -> None:
+    with pytest.raises(ProductionConfigurationError):
+        validate_production_settings(_settings(**overrides))
 
 
 @pytest.mark.parametrize(

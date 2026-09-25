@@ -34,8 +34,8 @@ class ProductionResources:
         llm_provider: _AsyncClosable,
         github: _AsyncClosable,
     ) -> None:
-        self.engine = engine
-        self.session_factory = session_factory
+        self._engine = engine
+        self._session_factory = session_factory
         self._http_client = http_client
         self._owns_http_client = owns_http_client
         self._llm_provider = llm_provider
@@ -77,7 +77,7 @@ class ProductionResources:
                     if self._owns_http_client:
                         await self._http_client.aclose()
                 finally:
-                    self.engine.dispose()
+                    self._engine.dispose()
 
 
 async def build_production_resources(

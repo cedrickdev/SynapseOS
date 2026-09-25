@@ -29,6 +29,8 @@ router = APIRouter(tags=["dashboard"], dependencies=[Depends(require_dashboard_a
 SessionDependency = Annotated[Session, Depends(get_session)]
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=10_000)]
+
+
 def _page[ViewT: DashboardModel](
     items: tuple[ViewT, ...], total: int, limit: int, offset: int
 ) -> Page[ViewT]:

@@ -6,7 +6,7 @@ import asyncio
 import uuid
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -83,6 +83,12 @@ def test_application_commits_audit_events_in_one_real_transaction(
             .where(AuditEvent.correlation_id == request.correlation_id)
         )
     assert count == len(ENGINEERING_V1_STAGE_ORDER) * 2
+    with sessions.begin() as cleanup:
+        cleanup.execute(
+            delete(AuditEvent).where(AuditEvent.correlation_id == request.correlation_id)
+        )
+        cleanup.execute(delete(Task).where(Task.id == request.task_id))
+        cleanup.execute(delete(Project).where(Project.id == request.project_id))
 
 
 def test_application_rolls_back_real_audit_events_on_failure(database_engine: Engine) -> None:

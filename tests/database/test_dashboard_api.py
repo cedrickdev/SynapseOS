@@ -99,9 +99,7 @@ def test_dashboard_routes_require_the_private_service_token(db_session: Session)
     client = _client(db_session)
 
     assert client.get("/projects").status_code == 401
-    invalid_response = client.get(
-        "/projects", headers={"x-synapseos-service-token": "wrong"}
-    )
+    invalid_response = client.get("/projects", headers={"x-synapseos-service-token": "wrong"})
     assert invalid_response.status_code == 401
 
 
@@ -162,9 +160,7 @@ def test_dashboard_details_return_real_records_without_raw_errors(
         assert response.json()["id"] == str(identifier)
         assert "provider-token-secret" not in response.text
 
-    missing_response = client.get(
-        "/projects/00000000-0000-0000-0000-000000000000", headers=HEADERS
-    )
+    missing_response = client.get("/projects/00000000-0000-0000-0000-000000000000", headers=HEADERS)
     assert missing_response.status_code == 404
 
 

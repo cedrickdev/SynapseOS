@@ -34,7 +34,7 @@ def _settings(**overrides: object) -> Settings:
         "engineering_v1_timeout_seconds": 900.0,
     }
     values.update(overrides)
-    return Settings(**values)
+    return Settings.model_validate(values)
 
 
 @pytest.mark.parametrize(
@@ -128,9 +128,10 @@ def test_production_settings_accept_complete_github_app_authentication() -> None
 
 def test_production_settings_are_immutable() -> None:
     validated = validate_production_settings(_settings())
+    field_name = "ollama_model"
 
     with pytest.raises(ValidationError):
-        validated.ollama_model = "another-model"
+        setattr(validated, field_name, "another-model")
 
 
 def test_production_validation_rejects_non_production_environment() -> None:

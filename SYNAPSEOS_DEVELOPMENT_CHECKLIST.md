@@ -2749,6 +2749,264 @@ flowchart TD
 
 ---
 
+# PHASE 46 — Production Integration
+
+## Objective
+
+Connect the verified SynapseOS components into one secure, durable, operable product flow. This
+phase does not redesign agent behavior. It provides the production composition, execution,
+authentication, API, frontend, deployment, and end-to-end verification required to operate the
+existing Engineering V1 workflow safely.
+
+Phase 46 is delivered incrementally. Each `INT-*` sub-phase has one objective, one branch, one PR,
+one validation report, and no premature implementation of the following sub-phase.
+
+## Authoritative production flow
+
+```text
+Authenticated human
+    -> Nuxt server session
+    -> FastAPI authentication and project/company authorization
+    -> production application service
+    -> durable PostgreSQL execution queue
+    -> Engineering V1 orchestrator
+    -> Security veto
+    -> Permission Engine
+    -> Autonomy Governor
+    -> worker / agent runtime
+```
+
+Security vetoes, the Permission Engine, and human approval requirements remain superior to Trust,
+Genome, Manager recommendations, workflow requests, and frontend actions. The browser never calls
+agents, tools, providers, the database, the filesystem, or the shell directly.
+
+## Mandatory invariants
+
+- [ ] Authenticate every non-health production operation and authorize it in FastAPI against the
+      requested company and project
+- [ ] Keep browser sessions in secure `HttpOnly`, `Secure`, and appropriate `SameSite` cookies
+- [ ] Validate OIDC issuer, audience, signature, expiry, and required claims server-side
+- [ ] Keep service tokens, provider credentials, OIDC refresh tokens, and infrastructure secrets
+      out of browser-visible configuration, responses, logs, errors, and audit metadata
+- [ ] Preserve Security veto, Permission Engine, Autonomy Governor, human approval, least
+      privilege, workspace isolation, append-only audit, and independent-review boundaries
+- [ ] Use explicit timeouts, bounded inputs and outputs, bounded history, bounded concurrency, and
+      bounded generation limits at every network and execution boundary
+- [ ] Perform no implicit retry, duplicate provider call, or unbounded background operation
+- [ ] Propagate cancellation immediately through API, queue, orchestration, runtime, and provider
+      boundaries
+- [ ] Reuse network connections with explicit lifecycle ownership; never close injected clients
+      owned by a caller
+- [ ] Persist no raw prompt, response, secret, or sensitive provider payload automatically
+- [ ] Filter provider and operational metadata through explicit allowlists before persistence
+- [ ] Make every mutation idempotent or protected by an explicit idempotency key
+- [ ] Keep PostgreSQL schema evolution exclusively under Alembic; tests never use
+      `metadata.create_all()`
+- [ ] Use real PostgreSQL for integration and end-to-end acceptance tests
+
+## INT-1 — Production Composition Root
+
+### Objective
+
+Create one explicit production composition root that constructs and owns the real adapters,
+application services, orchestrators, and resource lifecycles required by Engineering V1.
+
+### Checklist
+
+- [x] Define typed production settings with fail-closed validation for required dependencies
+- [x] Compose PostgreSQL repositories, permission services, governance services, tools, providers,
+      workflow stages, and `EngineeringV1Orchestrator` without caller-supplied stage operations
+- [x] Make application startup and shutdown own only the resources created by the composition root
+- [x] Preserve dependency injection seams for tests and externally owned clients
+- [x] Reject partial or unsafe startup instead of silently substituting development adapters
+- [x] Add focused composition and lifecycle tests
+- [x] Run complete pytest, Ruff, formatting, and mypy verification
+
+### Explicit exclusions
+
+- durable queue workers, public workflow mutation routes, OIDC, frontend mutations, or deployment
+  automation
+- new agent roles, new governance formulas, provider routing, or agent-behavior redesign
+
+## INT-2 — Durable PostgreSQL Execution Queue
+
+### Objective
+
+Add the production queue adapter and worker lifecycle while preserving the bounded Phase 42 queue
+contracts. PostgreSQL is the initial durable backend; Redis is not required for V1.
+
+### Checklist
+
+- [ ] Persist jobs, attempts, leases, heartbeats, cancellation state, idempotency keys, and terminal
+      outcomes through Alembic-managed PostgreSQL models
+- [ ] Claim eligible work atomically with `FOR UPDATE SKIP LOCKED`
+- [ ] Enforce bounded attempts, explicit retry classification, execution timeout, lease expiry, and
+      crash recovery
+- [ ] Prevent concurrent ownership, duplicate execution, and stale-worker completion
+- [ ] Propagate cancellation to the active execution and persist its final outcome once
+- [ ] Add an explicit worker startup, shutdown, heartbeat, and resource lifecycle
+- [ ] Audit enqueue, claim, retry, cancellation, recovery, completion, and failure without sensitive
+      payloads
+- [ ] Add real-PostgreSQL migration, concurrency, restart, cancellation, and idempotency tests
+- [ ] Run complete pytest, Ruff, formatting, and mypy verification
+
+### Explicit exclusions
+
+- Redis, distributed scheduling beyond the approved queue contracts, implicit retries, or arbitrary
+  job payload execution
+- workflow HTTP routes, OIDC, frontend controls, or deployment automation
+
+## INT-3 — Authenticated Control API
+
+### Objective
+
+Expose bounded backend-authoritative commands for creating and operating the existing Engineering
+V1 workflow.
+
+### Checklist
+
+- [ ] Add typed application services for project intake, workflow launch, status, cancellation,
+      human approval, and project closure
+- [ ] Add bounded FastAPI mutation contracts with explicit idempotency and correlation identifiers
+- [ ] Authorize every command against company, project, role, current state, and required human gate
+- [ ] Enqueue durable work instead of executing long-running agent workflows in request handlers
+- [ ] Return sanitized stable errors without prompts, credentials, raw provider data, or stack traces
+- [ ] Expose bounded status projections for workflow, agents, QA, Security, approvals, and merge gate
+- [ ] Audit accepted and rejected commands with actor identity and authoritative evidence references
+- [ ] Add unit and real-PostgreSQL API integration tests
+- [ ] Run complete pytest, Ruff, formatting, mypy, and OpenAPI contract verification
+
+### Explicit exclusions
+
+- OIDC login UI, Authentik deployment, Nuxt mutation screens, or direct synchronous agent execution
+- browser access to internal service credentials or infrastructure adapters
+
+## INT-4 — Authentik/OIDC Authentication and RBAC
+
+### Objective
+
+Authenticate human users with Authentik through standards-based OIDC and enforce company/project
+RBAC in the backend.
+
+### Checklist
+
+- [ ] Integrate Authentik as the initial OIDC provider through provider-neutral OIDC contracts
+- [ ] Establish server-managed Nuxt sessions with secure cookie and CSRF protections
+- [ ] Validate access tokens in FastAPI using bounded cached discovery/JWKS data and strict claim
+      validation
+- [ ] Map immutable external subjects to internal users, companies, memberships, and project roles
+- [ ] Enforce backend-authoritative RBAC for reads, commands, approvals, cancellations, and closure
+- [ ] Keep the existing internal service token limited to trusted service-to-service traffic
+- [ ] Implement explicit logout, session expiry, token expiry, key rotation, and fail-closed provider
+      outage behavior
+- [ ] Audit authentication and authorization outcomes without tokens or sensitive claims
+- [ ] Add tests for invalid issuer, audience, signature, expiry, CSRF, role isolation, and cross-project
+      access
+- [ ] Run backend and frontend tests, Ruff, mypy, lint, typecheck, and production build
+
+### Explicit exclusions
+
+- social-provider-specific business logic, self-service organization provisioning, billing, or
+  browser-visible service/provider secrets
+
+## INT-5 — Operational Frontend
+
+### Objective
+
+Turn the Nuxt 4 dashboard into the authenticated human control plane for the existing backend
+workflow without moving business authority into the frontend.
+
+### Checklist
+
+- [ ] Protect application routes with the server-managed OIDC session
+- [ ] Add project intake and launch flows using generated backend contracts
+- [ ] Add live bounded workflow status for assigned agents, current stage, QA, Security, merge gate,
+      costs, blockers, and terminal outcome
+- [ ] Add cancellation and human-approval controls with confirmation, idempotency, and clear pending
+      states
+- [ ] Display backend authorization failures, security vetoes, stale state, and dependency outages
+      safely and actionably
+- [ ] Preserve the Nuxt server proxy; never expose FastAPI service tokens or call protected backend
+      resources directly from the browser
+- [ ] Use bounded polling or server-mediated updates with explicit cleanup and no implicit retries
+- [ ] Add component, contract, accessibility, authorization, and Playwright user-flow tests
+- [ ] Run frontend unit tests, lint, typecheck, production build, and backend verification
+
+### Explicit exclusions
+
+- agentic reasoning in the browser, mock production data, direct shell/filesystem/database access,
+  or frontend-side permission decisions
+
+## INT-6 — Deployment Wiring
+
+### Objective
+
+Provide reproducible production-like deployment wiring for the web application, API, worker,
+PostgreSQL, and Authentik integration.
+
+### Checklist
+
+- [ ] Define separate API, worker, Nuxt, and migration process entry points
+- [ ] Extend local orchestration with health/readiness checks, dependency ordering, persistent data,
+      and graceful shutdown
+- [ ] Provide environment validation and secret references without committing secret values
+- [ ] Make migrations an explicit one-shot deployment step rather than an application-startup race
+- [ ] Configure trusted origins, proxy headers, secure cookies, network boundaries, and least-privilege
+      service connectivity
+- [ ] Define Vercel-compatible Nuxt deployment while keeping API, worker, PostgreSQL, and Authentik
+      on suitable persistent infrastructure
+- [ ] Add deployment smoke checks for API, worker, database, OIDC, and frontend connectivity
+- [ ] Verify local production-like startup and shutdown without orphan workers or leaked resources
+
+### Explicit exclusions
+
+- automatic production deployment, cloud-vendor lock-in, Kubernetes, multi-region failover, or
+  embedding persistent workers and PostgreSQL inside Vercel functions
+
+## INT-7 — Production Hardening and Real E2E Validation
+
+### Objective
+
+Prove that the complete production path is secure, recoverable, bounded, observable, and usable on
+real PostgreSQL before declaring SynapseOS V1 operational.
+
+### Checklist
+
+- [ ] Execute the complete authenticated path: create project, launch workflow, follow agents,
+      handle approvals, observe QA/Security, pass merge gate, and close project
+- [ ] Prove worker restart recovery, stale lease recovery, cancellation propagation, idempotency,
+      timeout, and bounded retry behavior
+- [ ] Prove Security veto, Permission Engine, Autonomy Governor, RBAC, company/project isolation,
+      and human gates cannot be bypassed
+- [ ] Prove audit continuity and correlation from the initiating human command to the terminal
+      workflow result
+- [ ] Test secret, prompt, response, error, log, metric, and provider-metadata redaction boundaries
+- [ ] Test request/response limits, queue bounds, concurrency bounds, history bounds, and resource
+      cleanup under failure
+- [ ] Run dependency, container, and application security checks with no unresolved critical finding
+- [ ] Run complete backend and frontend suites, Ruff, formatting, mypy, lint, typecheck, build, and
+      real-browser E2E validation
+- [ ] Produce the final operational validation report and update only verified checklist boxes
+
+### Final acceptance criteria
+
+- [ ] An authenticated authorized user can operate the complete Engineering V1 flow from Nuxt
+- [ ] The frontend is connected exclusively to authoritative backend state and commands
+- [ ] PostgreSQL preserves queued and running work across API and worker restarts
+- [ ] Cancellation, approvals, QA, Security, merge gate, permissions, and audit are effective end to
+      end
+- [ ] No browser path exposes internal credentials or bypasses backend authority
+- [ ] The production-like stack starts, becomes ready, operates, and shuts down cleanly
+- [ ] No unresolved critical security finding or failing required quality gate remains
+
+### Explicit exclusions
+
+- new agent roles, new governance algorithms, autonomous production deployment, financial actions,
+  model training, Context Intelligence implementation, GitLab support, or Phase V2 feature growth
+- declaring production readiness from unit tests, mocked databases, or isolated component tests alone
+
+---
+
 # FUTURE ARCHITECTURE BACKLOG — Context Intelligence Layer
 
 ## Status and scheduling
@@ -4911,6 +5169,7 @@ Ne saute pas directement aux phases avancées.
 43 Multi-project scheduling
 44 Training dataset
 45 Engineering V1 complète
+46 Production integration
 ```
 
 ---

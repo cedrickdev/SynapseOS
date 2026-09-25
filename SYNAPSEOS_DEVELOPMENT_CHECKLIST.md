@@ -2813,14 +2813,14 @@ application services, orchestrators, and resource lifecycles required by Enginee
 
 ### Checklist
 
-- [ ] Define typed production settings with fail-closed validation for required dependencies
-- [ ] Compose PostgreSQL repositories, permission services, governance services, tools, providers,
+- [x] Define typed production settings with fail-closed validation for required dependencies
+- [x] Compose PostgreSQL repositories, permission services, governance services, tools, providers,
       workflow stages, and `EngineeringV1Orchestrator` without caller-supplied stage operations
-- [ ] Make application startup and shutdown own only the resources created by the composition root
-- [ ] Preserve dependency injection seams for tests and externally owned clients
-- [ ] Reject partial or unsafe startup instead of silently substituting development adapters
-- [ ] Add focused composition and lifecycle tests
-- [ ] Run complete pytest, Ruff, formatting, and mypy verification
+- [x] Make application startup and shutdown own only the resources created by the composition root
+- [x] Preserve dependency injection seams for tests and externally owned clients
+- [x] Reject partial or unsafe startup instead of silently substituting development adapters
+- [x] Add focused composition and lifecycle tests
+- [x] Run complete pytest, Ruff, formatting, and mypy verification
 
 ### Explicit exclusions
 

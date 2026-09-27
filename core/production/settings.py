@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from core.config import Settings
 from core.production.errors import ProductionConfigurationError
@@ -42,6 +42,15 @@ class ProductionSettings(BaseModel):
     workspace_base_root: Path
     git_executable: Path
     engineering_v1_timeout_seconds: float
+    queue_max_size: int = Field(default=1_000, ge=1, le=100_000)
+    queue_worker_count: int = Field(default=4, ge=1, le=128)
+    queue_poll_interval_seconds: float = Field(default=0.25, gt=0.0, le=60.0, allow_inf_nan=False)
+    queue_heartbeat_interval_seconds: float = Field(
+        default=5.0, gt=0.0, le=60.0, allow_inf_nan=False
+    )
+    queue_recovery_interval_seconds: float = Field(
+        default=10.0, gt=0.0, le=60.0, allow_inf_nan=False
+    )
 
 
 def validate_production_settings(settings: Settings) -> ProductionSettings:
@@ -82,6 +91,11 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
             workspace_base_root=settings.workspace_base_root,
             git_executable=settings.git_executable,
             engineering_v1_timeout_seconds=float(settings.engineering_v1_timeout_seconds),
+            queue_max_size=settings.queue_max_size,
+            queue_worker_count=settings.queue_worker_count,
+            queue_poll_interval_seconds=float(settings.queue_poll_interval_seconds),
+            queue_heartbeat_interval_seconds=float(settings.queue_heartbeat_interval_seconds),
+            queue_recovery_interval_seconds=float(settings.queue_recovery_interval_seconds),
         )
     except (AttributeError, TypeError, ValueError):
         raise ProductionConfigurationError() from None

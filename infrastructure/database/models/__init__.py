@@ -26,6 +26,7 @@ from infrastructure.database.models.organization import (
     Project,
 )
 from infrastructure.database.models.pull_requests import Approval, PullRequest, PullRequestReview
+from infrastructure.database.models.queue import ExecutionQueueAttempt, ExecutionQueueJob
 from infrastructure.database.models.trust import (
     AgentTrustDimension,
     AgentTrustEvent,
@@ -60,6 +61,8 @@ __all__ = [
     "IncidentEvent",
     "MemoryEntry",
     "Decision",
+    "ExecutionQueueAttempt",
+    "ExecutionQueueJob",
     "Project",
     "Postmortem",
     "PullRequest",

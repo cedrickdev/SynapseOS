@@ -50,6 +50,15 @@ class Settings(BaseSettings):
         le=3_600.0,
         allow_inf_nan=False,
     )
+    queue_max_size: int = Field(default=1_000, ge=1, le=100_000)
+    queue_worker_count: int = Field(default=4, ge=1, le=128)
+    queue_poll_interval_seconds: float = Field(default=0.25, gt=0.0, le=60.0, allow_inf_nan=False)
+    queue_heartbeat_interval_seconds: float = Field(
+        default=5.0, gt=0.0, le=60.0, allow_inf_nan=False
+    )
+    queue_recovery_interval_seconds: float = Field(
+        default=10.0, gt=0.0, le=60.0, allow_inf_nan=False
+    )
     workspace_git_timeout_seconds: float = Field(
         default=120.0,
         gt=0,

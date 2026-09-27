@@ -118,6 +118,24 @@ def test_raw_settings_reject_unbounded_engineering_timeout() -> None:
         _settings(engineering_v1_timeout_seconds=3_601.0)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("queue_max_size", 0),
+        ("queue_worker_count", 129),
+        ("queue_poll_interval_seconds", 0.0),
+        ("queue_heartbeat_interval_seconds", 61.0),
+        ("queue_recovery_interval_seconds", float("inf")),
+    ],
+)
+def test_raw_settings_reject_unbounded_queue_configuration(
+    field: str,
+    value: object,
+) -> None:
+    with pytest.raises(ValidationError):
+        _settings(**{field: value})
+
+
 def test_production_settings_accept_service_token_authentication() -> None:
     validated = validate_production_settings(_settings())
 
@@ -125,6 +143,9 @@ def test_production_settings_accept_service_token_authentication() -> None:
     assert validated.github_service_token is not None
     assert validated.github_app_id is None
     assert validated.database_url.startswith("postgresql+psycopg://")
+    assert validated.queue_max_size == 1_000
+    assert validated.queue_worker_count == 4
+    assert validated.queue_poll_interval_seconds == 0.25
 
 
 def test_production_settings_accept_complete_github_app_authentication() -> None:

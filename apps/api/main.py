@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from apps.api.lifecycle import ProductionResourceFactory, production_lifespan
-from apps.api.routes import dashboard, health, metrics
+from apps.api.routes import control, dashboard, health, metrics
 from core.config import Settings, get_settings
 from core.observability.sink import InMemoryMetricsSink, MetricsSink
 from infrastructure.production import build_production_application
@@ -32,6 +32,7 @@ def create_app(
     app.include_router(health.router)
     app.include_router(metrics.router)
     app.include_router(dashboard.router)
+    app.include_router(control.router)
     app.state.metrics_sink = metrics_sink or InMemoryMetricsSink()
     configured_token = configured_settings.dashboard_service_token
     app.state.dashboard_service_token = (

@@ -68,42 +68,9 @@ class SQLAlchemyAgentRunQueue:
         if type(job) is not AgentRunJob:
             raise ValueError("job is invalid")
         with self._session_factory() as session:
-            session.execute(select(func.pg_advisory_xact_lock(_QUEUE_ENQUEUE_LOCK_ID)))
-            persisted_run = session.get(AgentRun, job.run_id)
-            if persisted_run is None or persisted_run.task_id != job.task_id:
-                raise ValueError("job scope is invalid")
-            duplicate = session.scalar(
-                select(ExecutionQueueJob.run_id).where(
-                    ExecutionQueueJob.idempotency_key == job.idempotency_key
-                )
-            )
-            if duplicate is not None:
+            created = self.enqueue_in_session(session, job)
+            if not created:
                 return False
-            active_count = session.scalar(
-                select(func.count())
-                .select_from(ExecutionQueueJob)
-                .where(ExecutionQueueJob.status.in_(_ACTIVE_STATUSES))
-            )
-            if active_count is None or active_count >= self._max_size:
-                raise QueueFullError
-            row = ExecutionQueueJob(
-                run_id=job.run_id,
-                task_id=job.task_id,
-                idempotency_key=job.idempotency_key,
-                status=AgentRunStatus.QUEUED,
-                attempt_count=0,
-                max_attempts=job.max_attempts,
-                timeout_seconds=Decimal(str(job.timeout_seconds)),
-                heartbeat_timeout_seconds=Decimal(str(job.heartbeat_timeout_seconds)),
-            )
-            session.add(row)
-            self._record(
-                session,
-                row,
-                actor_type=AuditActorType.SYSTEM,
-                actor_id=None,
-                action="enqueue",
-            )
             try:
                 session.commit()
             except IntegrityError:
@@ -117,6 +84,48 @@ class SQLAlchemyAgentRunQueue:
                     return False
                 raise RuntimeError("queue persistence failed") from None
             return True
+
+    def enqueue_in_session(self, session: Session, job: AgentRunJob) -> bool:
+        """Stage one enqueue in a caller-owned transaction."""
+        if not isinstance(session, Session) or type(job) is not AgentRunJob:
+            raise ValueError("job is invalid")
+        session.execute(select(func.pg_advisory_xact_lock(_QUEUE_ENQUEUE_LOCK_ID)))
+        persisted_run = session.get(AgentRun, job.run_id)
+        if persisted_run is None or persisted_run.task_id != job.task_id:
+            raise ValueError("job scope is invalid")
+        duplicate = session.scalar(
+            select(ExecutionQueueJob.run_id).where(
+                ExecutionQueueJob.idempotency_key == job.idempotency_key
+            )
+        )
+        if duplicate is not None:
+            return False
+        active_count = session.scalar(
+            select(func.count())
+            .select_from(ExecutionQueueJob)
+            .where(ExecutionQueueJob.status.in_(_ACTIVE_STATUSES))
+        )
+        if active_count is None or active_count >= self._max_size:
+            raise QueueFullError
+        row = ExecutionQueueJob(
+            run_id=job.run_id,
+            task_id=job.task_id,
+            idempotency_key=job.idempotency_key,
+            status=AgentRunStatus.QUEUED,
+            attempt_count=0,
+            max_attempts=job.max_attempts,
+            timeout_seconds=Decimal(str(job.timeout_seconds)),
+            heartbeat_timeout_seconds=Decimal(str(job.heartbeat_timeout_seconds)),
+        )
+        session.add(row)
+        self._record(
+            session,
+            row,
+            actor_type=AuditActorType.SYSTEM,
+            actor_id=None,
+            action="enqueue",
+        )
+        return True
 
     def claim(self, worker_id: str) -> ClaimedAgentRun | None:
         """Atomically claim one eligible job without waiting on competing workers."""
@@ -300,36 +309,40 @@ class SQLAlchemyAgentRunQueue:
 
     def cancel(self, run_id: UUID) -> bool:
         """Persist one cancellation request, terminalizing unclaimed jobs immediately."""
-        now = datetime.now(UTC)
         with self._session_factory() as session, session.begin():
-            row = session.scalar(
-                select(ExecutionQueueJob)
-                .where(ExecutionQueueJob.run_id == run_id)
-                .with_for_update()
-            )
-            if row is None or row.status not in _ACTIVE_STATUSES:
-                return False
-            if row.cancel_requested_at is not None:
-                return False
-            row.cancel_requested_at = now
-            if row.status in {AgentRunStatus.QUEUED, AgentRunStatus.RETRYING}:
-                row.status = AgentRunStatus.CANCELLED
-                row.terminal_at = now
-                self._clear_lease(row)
-                action = "cancellation"
-                result = AuditResult.CANCELLED
-            else:
-                action = "cancel_request"
-                result = AuditResult.SUCCEEDED
-            self._record(
-                session,
-                row,
-                actor_type=AuditActorType.SYSTEM,
-                actor_id=None,
-                action=action,
-                result=result,
-            )
-            return True
+            return self.cancel_in_session(session, run_id)
+
+    def cancel_in_session(self, session: Session, run_id: UUID) -> bool:
+        """Stage one cancellation in a caller-owned transaction."""
+        if not isinstance(session, Session) or type(run_id) is not UUID:
+            raise ValueError("queue cancellation is invalid")
+        now = datetime.now(UTC)
+        row = session.scalar(
+            select(ExecutionQueueJob).where(ExecutionQueueJob.run_id == run_id).with_for_update()
+        )
+        if row is None or row.status not in _ACTIVE_STATUSES:
+            return False
+        if row.cancel_requested_at is not None:
+            return False
+        row.cancel_requested_at = now
+        if row.status in {AgentRunStatus.QUEUED, AgentRunStatus.RETRYING}:
+            row.status = AgentRunStatus.CANCELLED
+            row.terminal_at = now
+            self._clear_lease(row)
+            action = "cancellation"
+            result = AuditResult.CANCELLED
+        else:
+            action = "cancel_request"
+            result = AuditResult.SUCCEEDED
+        self._record(
+            session,
+            row,
+            actor_type=AuditActorType.SYSTEM,
+            actor_id=None,
+            action=action,
+            result=result,
+        )
+        return True
 
     def cancellation_requested(self, claim: ClaimedAgentRun) -> bool:
         """Return whether the current authoritative lease has been cancelled."""

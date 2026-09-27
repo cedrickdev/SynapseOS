@@ -2865,16 +2865,16 @@ V1 workflow.
 
 ### Checklist
 
-- [ ] Add typed application services for project intake, workflow launch, status, cancellation,
+- [x] Add typed application services for project intake, workflow launch, status, cancellation,
       human approval, and project closure
-- [ ] Add bounded FastAPI mutation contracts with explicit idempotency and correlation identifiers
-- [ ] Authorize every command against company, project, role, current state, and required human gate
-- [ ] Enqueue durable work instead of executing long-running agent workflows in request handlers
-- [ ] Return sanitized stable errors without prompts, credentials, raw provider data, or stack traces
-- [ ] Expose bounded status projections for workflow, agents, QA, Security, approvals, and merge gate
-- [ ] Audit accepted and rejected commands with actor identity and authoritative evidence references
-- [ ] Add unit and real-PostgreSQL API integration tests
-- [ ] Run complete pytest, Ruff, formatting, mypy, and OpenAPI contract verification
+- [x] Add bounded FastAPI mutation contracts with explicit idempotency and correlation identifiers
+- [x] Authorize every command against company, project, role, current state, and required human gate
+- [x] Enqueue durable work instead of executing long-running agent workflows in request handlers
+- [x] Return sanitized stable errors without prompts, credentials, raw provider data, or stack traces
+- [x] Expose bounded status projections for workflow, agents, QA, Security, approvals, and merge gate
+- [x] Audit accepted and rejected commands with actor identity and authoritative evidence references
+- [x] Add unit and real-PostgreSQL API integration tests
+- [x] Run complete pytest, Ruff, formatting, mypy, and OpenAPI contract verification
 
 ### Explicit exclusions
 

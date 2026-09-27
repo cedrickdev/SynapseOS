@@ -2,6 +2,7 @@
 
 from infrastructure.database.models.budget import UsageRecord
 from infrastructure.database.models.component_trust import ComponentTrustManifest
+from infrastructure.database.models.control import ControlCommandReceipt, ControlProjectScope
 from infrastructure.database.models.execution import AgentRun, Decision, ToolCall
 from infrastructure.database.models.genome import (
     AgentCapabilityMetric,
@@ -57,6 +58,8 @@ __all__ = [
     "Approval",
     "AuditEvent",
     "ComponentTrustManifest",
+    "ControlCommandReceipt",
+    "ControlProjectScope",
     "Incident",
     "IncidentEvent",
     "MemoryEntry",

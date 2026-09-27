@@ -2837,18 +2837,18 @@ contracts. PostgreSQL is the initial durable backend; Redis is not required for 
 
 ### Checklist
 
-- [ ] Persist jobs, attempts, leases, heartbeats, cancellation state, idempotency keys, and terminal
+- [x] Persist jobs, attempts, leases, heartbeats, cancellation state, idempotency keys, and terminal
       outcomes through Alembic-managed PostgreSQL models
-- [ ] Claim eligible work atomically with `FOR UPDATE SKIP LOCKED`
-- [ ] Enforce bounded attempts, explicit retry classification, execution timeout, lease expiry, and
+- [x] Claim eligible work atomically with `FOR UPDATE SKIP LOCKED`
+- [x] Enforce bounded attempts, explicit retry classification, execution timeout, lease expiry, and
       crash recovery
-- [ ] Prevent concurrent ownership, duplicate execution, and stale-worker completion
-- [ ] Propagate cancellation to the active execution and persist its final outcome once
-- [ ] Add an explicit worker startup, shutdown, heartbeat, and resource lifecycle
-- [ ] Audit enqueue, claim, retry, cancellation, recovery, completion, and failure without sensitive
+- [x] Prevent concurrent ownership, duplicate execution, and stale-worker completion
+- [x] Propagate cancellation to the active execution and persist its final outcome once
+- [x] Add an explicit worker startup, shutdown, heartbeat, and resource lifecycle
+- [x] Audit enqueue, claim, retry, cancellation, recovery, completion, and failure without sensitive
       payloads
-- [ ] Add real-PostgreSQL migration, concurrency, restart, cancellation, and idempotency tests
-- [ ] Run complete pytest, Ruff, formatting, and mypy verification
+- [x] Add real-PostgreSQL migration, concurrency, restart, cancellation, and idempotency tests
+- [x] Run complete pytest, Ruff, formatting, and mypy verification
 
 ### Explicit exclusions
 

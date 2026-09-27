@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import cast
+import asyncio
+from collections.abc import Callable
+from typing import Protocol, cast
+from uuid import uuid4
 
 import httpx
 from sqlalchemy import select
@@ -30,7 +33,7 @@ from core.enums import AuditResult
 from core.intake import IntakeAgent, IntakeReadiness, IntakeRequest, IntakeResult
 from core.production import ProductionSettings
 from core.pull_requests import MergeGateDecision
-from infrastructure.database.models import Agent, AuditEvent, PullRequest, Task
+from infrastructure.database.models import Agent, AgentRun, AuditEvent, PullRequest, Task
 from infrastructure.engineering_v1 import (
     EngineeringRunState,
     ProductionEngineeringStageSuiteFactory,
@@ -42,6 +45,7 @@ from infrastructure.engineering_v1 import (
 )
 from infrastructure.production.resources import ProductionResources, build_production_resources
 from infrastructure.pull_requests.gate import SQLAlchemyMergeGate
+from infrastructure.queue import PostgreSQLAgentRunWorker, SQLAlchemyAgentRunQueue
 
 _EVENT_POLICY: dict[EngineeringStage, tuple[str, str]] = {
     EngineeringStage.REPOSITORY_INSPECTION: ("GIT_OPERATION_COMPLETED", "get_status"),
@@ -347,10 +351,70 @@ def _build_stage_factory(
     return ProductionEngineeringStageSuiteFactory(builder)
 
 
+class QueueWorkerLifecycle(Protocol):
+    @property
+    def failed(self) -> bool: ...
+
+    async def start(self) -> None: ...
+
+    async def stop(self) -> None: ...
+
+    async def wait_failed(self) -> None: ...
+
+
+QueueRuntimeBuilder = Callable[
+    [ProductionResources, EngineeringV1Application, ProductionSettings],
+    tuple[object, QueueWorkerLifecycle],
+]
+
+
+def _build_queue_runtime(
+    resources: ProductionResources,
+    application: EngineeringV1Application,
+    settings: ProductionSettings,
+) -> tuple[SQLAlchemyAgentRunQueue, PostgreSQLAgentRunWorker]:
+    queue = SQLAlchemyAgentRunQueue(
+        resources._session_factory,
+        max_size=settings.queue_max_size,
+    )
+
+    async def handle(job: object, cancel_event: asyncio.Event) -> None:
+        from core.queue import AgentRunJob
+
+        if type(job) is not AgentRunJob or cancel_event.is_set():
+            raise asyncio.CancelledError
+        with resources._session_factory() as session:
+            run = session.get(AgentRun, job.run_id)
+            task = session.get(Task, job.task_id)
+            if run is None or task is None or run.task_id != task.id:
+                raise RuntimeError("durable job scope is unavailable")
+            project_id = task.project_id
+        await application.run(
+            EngineeringV1Request(
+                project_id=project_id,
+                task_id=job.task_id,
+                correlation_id=job.run_id,
+                timeout_seconds=job.timeout_seconds,
+            )
+        )
+
+    worker = PostgreSQLAgentRunWorker(
+        queue,
+        handle,
+        worker_id=f"engineering-v1-{uuid4().hex}",
+        worker_count=settings.queue_worker_count,
+        poll_interval_seconds=settings.queue_poll_interval_seconds,
+        heartbeat_interval_seconds=settings.queue_heartbeat_interval_seconds,
+        recovery_interval_seconds=settings.queue_recovery_interval_seconds,
+    )
+    return queue, worker
+
+
 async def build_production_application(
     settings: ProductionSettings,
     *,
     http_client: httpx.AsyncClient | None = None,
+    queue_runtime_builder: QueueRuntimeBuilder = _build_queue_runtime,
 ) -> ProductionResources:
     """Build the high-level application without caller-supplied stage operations."""
     resources = await build_production_resources(settings, http_client=http_client)
@@ -362,6 +426,9 @@ async def build_production_application(
             timeout_seconds=settings.engineering_v1_timeout_seconds,
         )
         resources.attach_engineering_v1(application, stage_factory)
+        queue, worker = queue_runtime_builder(resources, application, settings)
+        resources.attach_execution_queue(queue, worker)
+        await worker.start()
         return resources
     except BaseException:
         await resources.aclose()

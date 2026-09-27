@@ -16,6 +16,7 @@ from alembic import command
 from core.config import get_settings
 from infrastructure.database.append_only import register_append_only_guard
 from infrastructure.database.task_status_guard import register_task_status_guard
+from tests.queue_database_records import QueueDatabaseRecords
 
 register_append_only_guard()
 register_task_status_guard()
@@ -107,3 +108,13 @@ def db_session(database_engine: Engine) -> Iterator[Session]:
         finally:
             session.close()
             transaction.rollback()
+
+
+@pytest.fixture
+def queue_database_records(database_engine: Engine) -> Iterator[QueueDatabaseRecords]:
+    """Clean records committed by one durable queue integration test."""
+    records = QueueDatabaseRecords(database_engine)
+    try:
+        yield records
+    finally:
+        records.cleanup()

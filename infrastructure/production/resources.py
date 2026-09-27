@@ -21,6 +21,17 @@ class _AsyncClosable(Protocol):
     async def aclose(self) -> None: ...
 
 
+class _QueueWorker(Protocol):
+    @property
+    def failed(self) -> bool: ...
+
+    async def start(self) -> None: ...
+
+    async def stop(self) -> None: ...
+
+    async def wait_failed(self) -> None: ...
+
+
 class ProductionResources:
     """Own only resources created by the production composition boundary."""
 
@@ -42,6 +53,8 @@ class ProductionResources:
         self._github = github
         self._engineering_v1: EngineeringV1Application | None = None
         self._stage_factory: ProductionEngineeringStageSuiteFactory | None = None
+        self._execution_queue: object | None = None
+        self._queue_worker: _QueueWorker | None = None
         self._closed = False
 
     @property
@@ -62,22 +75,61 @@ class ProductionResources:
         self._engineering_v1 = application
         self._stage_factory = stage_factory
 
+    @property
+    def execution_queue(self) -> object:
+        """Return the high-level durable queue service without exposing database authority."""
+        if self._execution_queue is None:
+            raise RuntimeError("production execution queue is not composed")
+        return self._execution_queue
+
+    @property
+    def execution_queue_failed(self) -> bool:
+        """Return whether the owned queue worker has failed its supervised lifecycle."""
+        if self._queue_worker is None:
+            raise RuntimeError("production execution queue is not composed")
+        return self._queue_worker.failed
+
+    async def wait_for_execution_queue_failure(self) -> None:
+        """Allow the process owner to supervise the durable queue worker."""
+        if self._queue_worker is None:
+            raise RuntimeError("production execution queue is not composed")
+        await self._queue_worker.wait_failed()
+
+    def attach_execution_queue(self, queue: object, worker: _QueueWorker) -> None:
+        """Attach the durable queue and its lifecycle owner exactly once."""
+        if self._execution_queue is not None or self._queue_worker is not None:
+            raise RuntimeError("production execution queue is already composed")
+        if (
+            queue is None
+            or type(getattr(worker, "failed", None)) is not bool
+            or not callable(getattr(worker, "start", None))
+            or not callable(getattr(worker, "stop", None))
+            or not callable(getattr(worker, "wait_failed", None))
+        ):
+            raise ValueError("production execution queue is invalid")
+        self._execution_queue = queue
+        self._queue_worker = worker
+
     async def aclose(self) -> None:
         """Close each owned resource once in dependency order."""
         if self._closed:
             return
         self._closed = True
         try:
-            await self._github.aclose()
+            if self._queue_worker is not None:
+                await self._queue_worker.stop()
         finally:
             try:
-                await self._llm_provider.aclose()
+                await self._github.aclose()
             finally:
                 try:
-                    if self._owns_http_client:
-                        await self._http_client.aclose()
+                    await self._llm_provider.aclose()
                 finally:
-                    self._engine.dispose()
+                    try:
+                        if self._owns_http_client:
+                            await self._http_client.aclose()
+                    finally:
+                        self._engine.dispose()
 
 
 async def build_production_resources(

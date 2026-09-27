@@ -59,6 +59,27 @@ class _RecordingAsyncResource:
         self.close_calls += 1
 
 
+class _RecordingWorker:
+    def __init__(self) -> None:
+        self.start_calls = 0
+        self.stop_calls = 0
+        self.failed = False
+        self._failure_event = asyncio.Event()
+
+    async def start(self) -> None:
+        self.start_calls += 1
+
+    async def stop(self) -> None:
+        self.stop_calls += 1
+
+    async def wait_failed(self) -> None:
+        await self._failure_event.wait()
+
+    def fail(self) -> None:
+        self.failed = True
+        self._failure_event.set()
+
+
 def test_shutdown_does_not_close_injected_http_client() -> None:
     async def scenario() -> None:
         client = httpx.AsyncClient(transport=httpx.MockTransport(_ok_response))
@@ -95,6 +116,38 @@ def test_resource_owner_closes_owned_dependencies_once() -> None:
         assert llm.close_calls == 1
         assert client.is_closed
         assert engine.dispose_calls == 1
+
+    asyncio.run(scenario())
+
+
+def test_resource_owner_exposes_queue_service_and_stops_worker_once() -> None:
+    async def scenario() -> None:
+        engine = _RecordingEngine()
+        client = httpx.AsyncClient(transport=httpx.MockTransport(_ok_response))
+        llm = _RecordingAsyncResource()
+        github = _RecordingAsyncResource()
+        worker = _RecordingWorker()
+        queue = object()
+        resources = ProductionResources(
+            engine=cast(Engine, engine),
+            session_factory=cast(sessionmaker[Session], object()),
+            http_client=client,
+            owns_http_client=True,
+            llm_provider=llm,
+            github=github,
+        )
+
+        resources.attach_execution_queue(queue, worker)
+        assert resources.execution_queue is queue
+        assert not resources.execution_queue_failed
+        failure_wait = asyncio.create_task(resources.wait_for_execution_queue_failure())
+        worker.fail()
+        await failure_wait
+        assert resources.execution_queue_failed
+        await resources.aclose()
+        await resources.aclose()
+
+        assert worker.stop_calls == 1
 
     asyncio.run(scenario())
 

@@ -18,6 +18,25 @@ class AgentRunStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+class AgentRunAttemptStatus(StrEnum):
+    """Durable outcome of one claimed queue attempt."""
+
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    TIMED_OUT = "TIMED_OUT"
+    RETRYABLE_FAILURE = "RETRYABLE_FAILURE"
+    LEASE_EXPIRED = "LEASE_EXPIRED"
+
+
+class RetryClassification(StrEnum):
+    """Explicit reasons that permit another bounded attempt."""
+
+    HANDLER_RETRYABLE = "HANDLER_RETRYABLE"
+    LEASE_EXPIRED = "LEASE_EXPIRED"
+
+
 class AgentRunJob(BaseModel):
     """Immutable bounded execution envelope for one AgentRun attempt."""
 

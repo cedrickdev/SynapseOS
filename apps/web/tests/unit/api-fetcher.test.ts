@@ -36,6 +36,42 @@ describe('backendFetch', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
+  it('routes generated control mutations through the Nuxt BFF without dropping the body', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      state: 'ready',
+      data: { project_id: 'project-id', task_id: 'task-id', status: 'PLANNING' }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    }))
+    vi.stubGlobal('fetch', fetcher)
+    const body = JSON.stringify({ command_id: 'command-id' })
+
+    await backendFetch('/control/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    })
+
+    expect(fetcher).toHaveBeenCalledWith('/api/control/projects', expect.objectContaining({
+      method: 'POST',
+      body,
+      headers: { accept: 'application/json', 'content-type': 'application/json' },
+      redirect: 'error'
+    }))
+  })
+
+  it('allows only exact generated control routes', async () => {
+    const fetcher = vi.fn()
+    vi.stubGlobal('fetch', fetcher)
+
+    await expect(backendFetch('/control/projects/not-a-uuid/launch', {
+      method: 'POST',
+      body: '{}'
+    })).rejects.toThrow('unsupported API path')
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it('does not expose upstream error details', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({
       state: 'error',

@@ -2918,19 +2918,19 @@ workflow without moving business authority into the frontend.
 
 ### Checklist
 
-- [ ] Protect application routes with the server-managed OIDC session
-- [ ] Add project intake and launch flows using generated backend contracts
-- [ ] Add live bounded workflow status for assigned agents, current stage, QA, Security, merge gate,
+- [x] Protect application routes with the server-managed OIDC session
+- [x] Add project intake and launch flows using generated backend contracts
+- [x] Add live bounded workflow status for assigned agents, current stage, QA, Security, merge gate,
       costs, blockers, and terminal outcome
-- [ ] Add cancellation and human-approval controls with confirmation, idempotency, and clear pending
+- [x] Add cancellation and human-approval controls with confirmation, idempotency, and clear pending
       states
-- [ ] Display backend authorization failures, security vetoes, stale state, and dependency outages
+- [x] Display backend authorization failures, security vetoes, stale state, and dependency outages
       safely and actionably
-- [ ] Preserve the Nuxt server proxy; never expose FastAPI service tokens or call protected backend
+- [x] Preserve the Nuxt server proxy; never expose FastAPI service tokens or call protected backend
       resources directly from the browser
-- [ ] Use bounded polling or server-mediated updates with explicit cleanup and no implicit retries
-- [ ] Add component, contract, accessibility, authorization, and Playwright user-flow tests
-- [ ] Run frontend unit tests, lint, typecheck, production build, and backend verification
+- [x] Use bounded polling or server-mediated updates with explicit cleanup and no implicit retries
+- [x] Add component, contract, accessibility, authorization, and Playwright user-flow tests
+- [x] Run frontend unit tests, lint, typecheck, production build, and backend verification
 
 ### Explicit exclusions
 

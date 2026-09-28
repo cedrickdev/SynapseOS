@@ -2,11 +2,13 @@
 import { useListProjectsProjectsGet } from '../../api/generated/dashboard'
 
 const projects = useListProjectsProjectsGet({ limit: 25, offset: 0 })
+withDefaults(defineProps<{ showHeading?: boolean }>(), { showHeading: true })
 </script>
 
 <template>
   <div class="page-stack">
     <PageHeading
+      v-if="showHeading"
       title="Projects"
       description="Portfolio, milestones and delivery state from the authoritative backend."
       icon="i-lucide-panels-top-left"

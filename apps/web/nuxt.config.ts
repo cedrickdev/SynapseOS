@@ -62,5 +62,8 @@ export default defineNuxtConfig({
         'permissions-policy': 'camera=(), microphone=(), geolocation=()'
       }
     }
-  }
+  },
+  serverHandlers: process.env.SYNAPSEOS_E2E_AUTH === '1'
+    ? [{ route: '/api/test/session', handler: './tests/e2e/fixtures/session.post.ts' }]
+    : []
 })

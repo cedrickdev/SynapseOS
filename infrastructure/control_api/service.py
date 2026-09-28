@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from decimal import Decimal
+from typing import Protocol, cast
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from core.closure import ClosurePreconditions, ProjectClosureRequest, ProjectClosureWorkflow
@@ -51,6 +52,7 @@ from infrastructure.database.models import (
     ExecutionQueueJob,
     Project,
     Task,
+    UsageRecord,
 )
 
 
@@ -437,6 +439,30 @@ class SQLAlchemyControlService:
             .order_by(AuditEvent.created_at.desc())
             .limit(1)
         )
+        qa_status = self._decision(qa)
+        security_status = self._decision(security)
+        merge_gate_status = self._safe_data(merge, "merge_decision")
+        human_approval = self._has_event(project.id, "CONTROL_HUMAN_APPROVED")
+        terminal = project.status in {
+            ProjectStatus.COMPLETED,
+            ProjectStatus.ARCHIVED,
+            ProjectStatus.CANCELLED,
+        }
+        blockers = self._workflow_blockers(
+            task_status=None if task is None else task.status,
+            queue_status=queue_status,
+            qa_status=qa_status,
+            security_status=security_status,
+            merge_gate_status=merge_gate_status,
+        )
+        provider_cost_total = cast(
+            Decimal | None,
+            self._session.scalar(
+                select(func.sum(UsageRecord.provider_cost)).where(
+                    UsageRecord.project_id == project.id
+                )
+            ),
+        ) or Decimal("0")
         return WorkflowStatus(
             project_id=project.id,
             project_status=project.status.value,
@@ -445,13 +471,94 @@ class SQLAlchemyControlService:
             run_id=None if run is None else run.id,
             queue_status=None if queue_status is None else queue_status.value,
             assigned_agent_id=None if task is None else task.assigned_agent_id,
-            qa_status=self._decision(qa),
-            security_status=self._decision(security),
-            human_approval=self._has_event(project.id, "CONTROL_HUMAN_APPROVED"),
-            merge_gate_status=self._safe_data(merge, "merge_decision"),
-            terminal=project.status
-            in {ProjectStatus.COMPLETED, ProjectStatus.ARCHIVED, ProjectStatus.CANCELLED},
+            qa_status=qa_status,
+            security_status=security_status,
+            human_approval=human_approval,
+            merge_gate_status=merge_gate_status,
+            current_stage=self._workflow_stage(
+                project_status=project.status,
+                task_status=None if task is None else task.status,
+                run_exists=run is not None,
+                queue_status=queue_status,
+                qa_status=qa_status,
+                security_status=security_status,
+                merge_gate_status=merge_gate_status,
+                human_approval=human_approval,
+                terminal=terminal,
+                blockers=blockers,
+            ),
+            blockers=blockers,
+            provider_cost_total=provider_cost_total,
+            terminal=terminal,
         )
+
+    @staticmethod
+    def _blocked_decision(value: str | None) -> bool:
+        if value is None:
+            return False
+        normalized = value.upper()
+        return normalized in {"BLOCK", "BLOCKED", "DENY", "FAILED", "REJECTED"}
+
+    @classmethod
+    def _workflow_blockers(
+        cls,
+        *,
+        task_status: TaskStatus | None,
+        queue_status: QueueStatus | None,
+        qa_status: str | None,
+        security_status: str | None,
+        merge_gate_status: str | None,
+    ) -> tuple[str, ...]:
+        blockers: list[str] = []
+        if task_status is TaskStatus.BLOCKED:
+            blockers.append("TASK_BLOCKED")
+        if queue_status is QueueStatus.FAILED:
+            blockers.append("QUEUE_FAILED")
+        if cls._blocked_decision(qa_status):
+            blockers.append("QA_BLOCKED")
+        if cls._blocked_decision(security_status):
+            blockers.append("SECURITY_BLOCKED")
+        if cls._blocked_decision(merge_gate_status):
+            blockers.append("MERGE_BLOCKED")
+        return tuple(blockers)
+
+    @staticmethod
+    def _workflow_stage(
+        *,
+        project_status: ProjectStatus,
+        task_status: TaskStatus | None,
+        run_exists: bool,
+        queue_status: QueueStatus | None,
+        qa_status: str | None,
+        security_status: str | None,
+        merge_gate_status: str | None,
+        human_approval: bool,
+        terminal: bool,
+        blockers: tuple[str, ...],
+    ) -> str:
+        if terminal:
+            return project_status.value
+        if blockers:
+            return "BLOCKED"
+        if task_status is None:
+            return "INTAKE"
+        if task_status is TaskStatus.WAITING_HUMAN or not human_approval:
+            return "HUMAN_APPROVAL"
+        if not run_exists:
+            return "READY_TO_LAUNCH"
+        if queue_status in {
+            QueueStatus.QUEUED,
+            QueueStatus.RUNNING,
+            QueueStatus.RETRYING,
+        }:
+            return "EXECUTION"
+        if qa_status is None:
+            return "QA"
+        if security_status is None:
+            return "SECURITY"
+        if merge_gate_status is None:
+            return "MERGE"
+        return "DELIVERY"
 
     def _authorize(
         self,

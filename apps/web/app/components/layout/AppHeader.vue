@@ -3,6 +3,7 @@ const route = useRoute()
 const shell = useShellStore(usePinia())
 const colorMode = useColorMode()
 const { locale, setLocale } = useI18n()
+const loggingOut = ref(false)
 
 const pageName = computed(() => {
   const segment = route.path.split('/').filter(Boolean)[0]
@@ -15,6 +16,28 @@ function toggleTheme(): void {
 
 async function toggleLocale(): Promise<void> {
   await setLocale(locale.value === 'en' ? 'fr' : 'en')
+}
+
+async function logout(): Promise<void> {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  try {
+    const session = await $fetch<{ authenticated: boolean, csrfToken?: string }>('/api/auth/session', {
+      retry: 0,
+      timeout: 8_000,
+    })
+    if (session.authenticated && session.csrfToken) {
+      await $fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'x-csrf-token': session.csrfToken },
+        retry: 0,
+        timeout: 8_000,
+      })
+    }
+  } finally {
+    await navigateTo('/login')
+    loggingOut.value = false
+  }
 }
 </script>
 
@@ -37,6 +60,9 @@ async function toggleLocale(): Promise<void> {
       </button>
       <button class="icon-button" type="button" aria-label="Toggle color theme" @click="toggleTheme">
         <UIcon :name="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'" />
+      </button>
+      <button class="icon-button" type="button" aria-label="Sign out" :disabled="loggingOut" @click="logout">
+        <UIcon name="i-lucide-log-out" />
       </button>
     </div>
   </header>

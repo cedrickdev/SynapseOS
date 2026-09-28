@@ -25,12 +25,23 @@ class Settings(BaseSettings):
     app_env: str = "development"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    trusted_hosts: Annotated[tuple[str, ...], Field(min_length=1, max_length=32)] = (
+        "localhost",
+        "127.0.0.1",
+        "testserver",
+    )
     postgres_user: str = "synapseos"
     postgres_password: str = "synapseos"
     postgres_db: str = "synapseos"
     test_postgres_host: str = "localhost"
     test_postgres_port: int = 55432
     database_url: str = "postgresql+psycopg://synapseos:synapseos@localhost:55432/synapseos"
+    database_connect_timeout_seconds: float = Field(
+        default=5.0,
+        ge=1.0,
+        le=30.0,
+        allow_inf_nan=False,
+    )
     dashboard_service_token: SecretStr | None = None
     oidc_issuer: str | None = None
     oidc_audience: str | None = None

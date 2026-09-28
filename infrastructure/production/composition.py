@@ -415,6 +415,7 @@ async def build_production_application(
     *,
     http_client: httpx.AsyncClient | None = None,
     queue_runtime_builder: QueueRuntimeBuilder = _build_queue_runtime,
+    start_queue_worker: bool = True,
 ) -> ProductionResources:
     """Build the high-level application without caller-supplied stage operations."""
     resources = await build_production_resources(settings, http_client=http_client)
@@ -428,8 +429,39 @@ async def build_production_application(
         resources.attach_engineering_v1(application, stage_factory)
         queue, worker = queue_runtime_builder(resources, application, settings)
         resources.attach_execution_queue(queue, worker)
-        await worker.start()
+        if start_queue_worker:
+            await worker.start()
         return resources
     except BaseException:
         await resources.aclose()
         raise
+
+
+async def build_production_api(
+    settings: ProductionSettings,
+    *,
+    http_client: httpx.AsyncClient | None = None,
+    queue_runtime_builder: QueueRuntimeBuilder = _build_queue_runtime,
+) -> ProductionResources:
+    """Compose API resources without claiming durable queue work."""
+    return await build_production_application(
+        settings,
+        http_client=http_client,
+        queue_runtime_builder=queue_runtime_builder,
+        start_queue_worker=False,
+    )
+
+
+async def build_production_worker(
+    settings: ProductionSettings,
+    *,
+    http_client: httpx.AsyncClient | None = None,
+    queue_runtime_builder: QueueRuntimeBuilder = _build_queue_runtime,
+) -> ProductionResources:
+    """Compose the dedicated durable queue worker process."""
+    return await build_production_application(
+        settings,
+        http_client=http_client,
+        queue_runtime_builder=queue_runtime_builder,
+        start_queue_worker=True,
+    )

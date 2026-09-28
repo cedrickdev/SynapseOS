@@ -28,6 +28,13 @@ class ProductionSettings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     database_url: str
+    database_connect_timeout_seconds: float = Field(
+        default=5.0,
+        ge=1.0,
+        le=30.0,
+        allow_inf_nan=False,
+    )
+    trusted_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "testserver")
     ollama_base_url: str
     ollama_model: str
     ollama_timeout_seconds: float
@@ -65,6 +72,8 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
         if type(settings) is not Settings or settings.app_env != "production":
             raise ValueError
         _validate_database_url(settings.database_url)
+        _validate_timeout(settings.database_connect_timeout_seconds)
+        trusted_hosts = _validate_trusted_hosts(settings.trusted_hosts)
         _validate_provider_url(settings.ollama_base_url, schemes=frozenset({"http", "https"}))
         _validate_provider_url(settings.github_base_url, schemes=frozenset({"https"}))
         if settings.oidc_issuer is None:
@@ -91,6 +100,8 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
             raise ValueError
         return ProductionSettings(
             database_url=settings.database_url,
+            database_connect_timeout_seconds=float(settings.database_connect_timeout_seconds),
+            trusted_hosts=trusted_hosts,
             ollama_base_url=settings.ollama_base_url.rstrip("/"),
             ollama_model=settings.ollama_model.strip(),
             ollama_timeout_seconds=float(settings.ollama_timeout_seconds),
@@ -149,6 +160,18 @@ def _validate_provider_url(value: str, *, schemes: frozenset[str]) -> None:
         or parsed.fragment
     ):
         raise ValueError
+
+
+def _validate_trusted_hosts(values: tuple[str, ...]) -> tuple[str, ...]:
+    canonical = tuple(value.strip().casefold() for value in values)
+    if (
+        not canonical
+        or len(canonical) > 32
+        or any(not value or value == "*" or "/" in value for value in canonical)
+        or len(set(canonical)) != len(canonical)
+    ):
+        raise ValueError
+    return canonical
 
 
 def _validate_timeout(value: float) -> None:

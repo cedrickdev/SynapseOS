@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from apps.api.dependencies.control import get_control_queue
 from apps.api.main import create_app
+from core.budget import UsageKind
 from core.enums import AgentSeniority, AuditActorType, AuditResult, ProjectStatus, TaskStatus
 from core.tasks.state_machine import TaskStateMachine
 from infrastructure.database.models import (
@@ -20,6 +22,7 @@ from infrastructure.database.models import (
     ExecutionQueueJob,
     Project,
     Task,
+    UsageRecord,
 )
 from infrastructure.database.session import get_session
 from infrastructure.queue import SQLAlchemyAgentRunQueue
@@ -132,9 +135,11 @@ def test_control_api_intake_approval_launch_and_status_are_durable_and_idempoten
         is not None
     )
 
-    status = client.get(f"/control/projects/{project_id}/status", headers=_headers())
-    assert status.status_code == 200
-    assert status.json() == {
+    status_response = client.get(f"/control/projects/{project_id}/status", headers=_headers())
+    assert status_response.status_code == 200
+    status = status_response.json()
+    assert Decimal(status.pop("provider_cost_total")) == Decimal("0")
+    assert status == {
         "project_id": project_id,
         "project_status": "IN_PROGRESS",
         "task_id": task_id,
@@ -146,8 +151,37 @@ def test_control_api_intake_approval_launch_and_status_are_durable_and_idempoten
         "security_status": None,
         "human_approval": True,
         "merge_gate_status": None,
+        "current_stage": "EXECUTION",
+        "blockers": [],
         "terminal": False,
     }
+
+    task = db_session.get(Task, UUID(task_id))
+    assert task is not None
+    TaskStateMachine(db_session).transition(
+        task,
+        TaskStatus.BLOCKED,
+        actor_type=AuditActorType.SYSTEM,
+        actor_id=None,
+        reason="Deterministic test blocker",
+    )
+    db_session.add(
+        UsageRecord(
+            project_id=UUID(project_id),
+            task_id=UUID(task_id),
+            run_id=UUID(run_id),
+            agent_id=agent.id,
+            kind=UsageKind.LLM_REQUEST,
+            duration_ms=Decimal("100"),
+            provider_cost=Decimal("0.125"),
+        )
+    )
+    db_session.commit()
+
+    blocked = client.get(f"/control/projects/{project_id}/status", headers=_headers()).json()
+    assert blocked["current_stage"] == "BLOCKED"
+    assert blocked["blockers"] == ["TASK_BLOCKED"]
+    assert Decimal(blocked["provider_cost_total"]) == Decimal("0.125")
 
 
 def test_control_api_rejects_cross_company_or_unauthorized_commands_and_audits_denial(

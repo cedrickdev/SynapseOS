@@ -278,6 +278,121 @@
         "title": "AuditView",
         "type": "object"
       },
+      "CancelWorkflowCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "correlation_id",
+          "idempotency_key",
+          "project_id",
+          "run_id"
+        ],
+        "title": "CancelWorkflowCommand",
+        "type": "object"
+      },
+      "CloseProjectCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "evidence_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "correlation_id",
+          "idempotency_key",
+          "project_id",
+          "evidence_id"
+        ],
+        "title": "CloseProjectCommand",
+        "type": "object"
+      },
+      "CommandReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "correlation_id",
+          "project_id",
+          "result"
+        ],
+        "title": "CommandReceipt",
+        "type": "object"
+      },
       "CostView": {
         "additionalProperties": false,
         "properties": {
@@ -518,6 +633,97 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HumanApprovalCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "evidence_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "task_id": {
+            "format": "uuid",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "correlation_id",
+          "idempotency_key",
+          "project_id",
+          "task_id",
+          "evidence_id"
+        ],
+        "title": "HumanApprovalCommand",
+        "type": "object"
+      },
+      "LaunchWorkflowCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "task_id": {
+            "format": "uuid",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 900.0,
+            "exclusiveMinimum": 0.0,
+            "maximum": 3600.0,
+            "title": "Timeout Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "command_id",
+          "correlation_id",
+          "idempotency_key",
+          "project_id",
+          "task_id"
+        ],
+        "title": "LaunchWorkflowCommand",
         "type": "object"
       },
       "Page_AgentView_": {
@@ -814,6 +1020,91 @@
           "offset"
         ],
         "title": "Page[TaskView]",
+        "type": "object"
+      },
+      "ProjectIntakeCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "assigned_agent_id": {
+            "format": "uuid",
+            "title": "Assigned Agent Id",
+            "type": "string"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "specification": {
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Specification",
+            "type": "string"
+          },
+          "task_title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Task Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "correlation_id",
+          "idempotency_key",
+          "name",
+          "specification",
+          "task_title",
+          "assigned_agent_id"
+        ],
+        "title": "ProjectIntakeCommand",
+        "type": "object"
+      },
+      "ProjectIntakeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "task_id": {
+            "format": "uuid",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "task_id",
+          "status"
+        ],
+        "title": "ProjectIntakeResult",
         "type": "object"
       },
       "ProjectStatus": {
@@ -1246,6 +1537,200 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WorkflowLaunchResult": {
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "queue_status": {
+            "title": "Queue Status",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "task_id": {
+            "format": "uuid",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "task_id",
+          "run_id",
+          "queue_status"
+        ],
+        "title": "WorkflowLaunchResult",
+        "type": "object"
+      },
+      "WorkflowStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "assigned_agent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent Id"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Blockers",
+            "type": "array"
+          },
+          "current_stage": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Current Stage",
+            "type": "string"
+          },
+          "human_approval": {
+            "title": "Human Approval",
+            "type": "boolean"
+          },
+          "merge_gate_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merge Gate Status"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "project_status": {
+            "title": "Project Status",
+            "type": "string"
+          },
+          "provider_cost_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,25}0*$)\\d{0,16}\\.\\d{0,8}0*$)",
+            "title": "Provider Cost Total",
+            "type": "string"
+          },
+          "qa_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Status"
+          },
+          "queue_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Status"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "security_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Security Status"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "task_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Status"
+          },
+          "terminal": {
+            "title": "Terminal",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_id",
+          "project_status",
+          "task_id",
+          "task_status",
+          "run_id",
+          "queue_status",
+          "assigned_agent_id",
+          "qa_status",
+          "security_status",
+          "human_approval",
+          "merge_gate_status",
+          "current_stage",
+          "blockers",
+          "provider_cost_total",
+          "terminal"
+        ],
+        "title": "WorkflowStatus",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
@@ -1282,6 +1767,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1306,6 +1809,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Agents",
         "tags": [
           "dashboard"
@@ -1324,6 +1832,24 @@
               "format": "uuid",
               "title": "Identifier",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
             }
           }
         ],
@@ -1349,6 +1875,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Agent",
         "tags": [
           "dashboard"
@@ -1382,6 +1913,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1406,9 +1955,630 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Audit",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/control/projects": {
+      "post": {
+        "operationId": "intake_project_control_projects_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Actor-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "X-Synapseos-Company-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Control-Roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Control-Roles"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectIntakeCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectIntakeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Intake Project",
+        "tags": [
+          "control"
+        ]
+      }
+    },
+    "/control/projects/{project_id}/approve": {
+      "post": {
+        "operationId": "approve_project_control_projects__project_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Actor-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "X-Synapseos-Company-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Control-Roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Control-Roles"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HumanApprovalCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Project",
+        "tags": [
+          "control"
+        ]
+      }
+    },
+    "/control/projects/{project_id}/cancel": {
+      "post": {
+        "operationId": "cancel_workflow_control_projects__project_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Actor-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "X-Synapseos-Company-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Control-Roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Control-Roles"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelWorkflowCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Workflow",
+        "tags": [
+          "control"
+        ]
+      }
+    },
+    "/control/projects/{project_id}/close": {
+      "post": {
+        "operationId": "close_project_control_projects__project_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Actor-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "X-Synapseos-Company-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Control-Roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Control-Roles"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseProjectCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Project",
+        "tags": [
+          "control"
+        ]
+      }
+    },
+    "/control/projects/{project_id}/launch": {
+      "post": {
+        "operationId": "launch_workflow_control_projects__project_id__launch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Actor-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "X-Synapseos-Company-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Control-Roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Control-Roles"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaunchWorkflowCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowLaunchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Launch Workflow",
+        "tags": [
+          "control"
+        ]
+      }
+    },
+    "/control/projects/{project_id}/status": {
+      "get": {
+        "operationId": "workflow_status_control_projects__project_id__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Actor-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Actor-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "X-Synapseos-Company-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Control-Roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Control-Roles"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Workflow Status",
+        "tags": [
+          "control"
         ]
       }
     },
@@ -1439,6 +2609,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1463,6 +2651,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Costs",
         "tags": [
           "dashboard"
@@ -1496,6 +2689,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1520,6 +2731,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Feedback",
         "tags": [
           "dashboard"
@@ -1603,6 +2819,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1627,6 +2861,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Projects",
         "tags": [
           "dashboard"
@@ -1645,6 +2884,24 @@
               "format": "uuid",
               "title": "Identifier",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
             }
           }
         ],
@@ -1670,6 +2927,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Project",
         "tags": [
           "dashboard"
@@ -1703,6 +2965,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1727,6 +3007,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Runs",
         "tags": [
           "dashboard"
@@ -1745,6 +3030,24 @@
               "format": "uuid",
               "title": "Identifier",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
             }
           }
         ],
@@ -1770,6 +3073,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Run",
         "tags": [
           "dashboard"
@@ -1803,6 +3111,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1827,6 +3153,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Security Findings",
         "tags": [
           "dashboard"
@@ -1860,6 +3191,24 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
+            }
           }
         ],
         "responses": {
@@ -1884,6 +3233,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Tasks",
         "tags": [
           "dashboard"
@@ -1902,6 +3256,24 @@
               "format": "uuid",
               "title": "Identifier",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SynapseOS-Company-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Synapseos-Company-Id"
             }
           }
         ],
@@ -1927,6 +3299,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Task",
         "tags": [
           "dashboard"

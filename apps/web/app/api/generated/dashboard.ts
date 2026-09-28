@@ -5,13 +5,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/vue-query';
 import type {
   DataTag,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationReturnType,
   UseQueryOptions,
   UseQueryReturnType
 } from '@tanstack/vue-query';
@@ -27,8 +31,13 @@ import type {
 
 import type {
   AgentView,
+  CancelWorkflowCommand,
+  CloseProjectCommand,
+  CommandReceipt,
   HTTPValidationError,
   HealthHealthGet200,
+  HumanApprovalCommand,
+  LaunchWorkflowCommand,
   ListAgentsAgentsGetParams,
   ListAuditAuditGetParams,
   ListCostsCostsGetParams,
@@ -46,9 +55,13 @@ import type {
   PageRunView,
   PageSecurityFindingView,
   PageTaskView,
+  ProjectIntakeCommand,
+  ProjectIntakeResult,
   ProjectView,
   RunView,
-  TaskView
+  TaskView,
+  WorkflowLaunchResult,
+  WorkflowStatus
 } from './models';
 
 import { backendFetch } from '../backend-fetcher.ts';
@@ -293,6 +306,529 @@ export function useListAuditAuditGet<TData = Awaited<ReturnType<typeof listAudit
  ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListAuditAuditGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
+
+  return query;
+}
+
+
+
+
+
+
+
+export const getIntakeProjectControlProjectsPostUrl = () => {
+
+
+
+
+  return `/control/projects`
+}
+
+/**
+ * @summary Intake Project
+ */
+export const intakeProjectControlProjectsPost = async (projectIntakeCommand: ProjectIntakeCommand, options?: Parameters<typeof backendFetch>[1]): Promise<ProjectIntakeResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return backendFetch<ProjectIntakeResult>(getIntakeProjectControlProjectsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectIntakeCommand)
+  }
+);}
+
+
+
+
+
+export const getIntakeProjectControlProjectsPostMutationKey = () => ['intakeProjectControlProjectsPost'] as const;
+
+export const getIntakeProjectControlProjectsPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intakeProjectControlProjectsPost>>, TError,IntakeProjectControlProjectsPostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof intakeProjectControlProjectsPost>>, TError,IntakeProjectControlProjectsPostMutationVariables, TContext> => {
+
+const mutationKey = getIntakeProjectControlProjectsPostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof intakeProjectControlProjectsPost>>, IntakeProjectControlProjectsPostMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  intakeProjectControlProjectsPost(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IntakeProjectControlProjectsPostMutationResult = NonNullable<Awaited<ReturnType<typeof intakeProjectControlProjectsPost>>>
+    export type IntakeProjectControlProjectsPostMutationBody = ProjectIntakeCommand
+    export type IntakeProjectControlProjectsPostMutationError = HTTPValidationError
+    export type IntakeProjectControlProjectsPostMutationVariables = {data: ProjectIntakeCommand}
+
+    /**
+ * @summary Intake Project
+ */
+export const useIntakeProjectControlProjectsPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intakeProjectControlProjectsPost>>, TError,IntakeProjectControlProjectsPostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof intakeProjectControlProjectsPost>>,
+        TError,
+        IntakeProjectControlProjectsPostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getIntakeProjectControlProjectsPostMutationOptions(options), queryClient);
+    }
+
+export const getApproveProjectControlProjectsProjectIdApprovePostUrl = (projectId: string,) => {
+
+
+
+
+  return `/control/projects/${projectId}/approve`
+}
+
+/**
+ * @summary Approve Project
+ */
+export const approveProjectControlProjectsProjectIdApprovePost = async (projectId: string,
+    humanApprovalCommand: HumanApprovalCommand, options?: Parameters<typeof backendFetch>[1]): Promise<CommandReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return backendFetch<CommandReceipt>(getApproveProjectControlProjectsProjectIdApprovePostUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(humanApprovalCommand)
+  }
+);}
+
+
+
+
+
+export const getApproveProjectControlProjectsProjectIdApprovePostMutationKey = () => ['approveProjectControlProjectsProjectIdApprovePost'] as const;
+
+export const getApproveProjectControlProjectsProjectIdApprovePostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveProjectControlProjectsProjectIdApprovePost>>, TError,ApproveProjectControlProjectsProjectIdApprovePostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveProjectControlProjectsProjectIdApprovePost>>, TError,ApproveProjectControlProjectsProjectIdApprovePostMutationVariables, TContext> => {
+
+const mutationKey = getApproveProjectControlProjectsProjectIdApprovePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveProjectControlProjectsProjectIdApprovePost>>, ApproveProjectControlProjectsProjectIdApprovePostMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  approveProjectControlProjectsProjectIdApprovePost(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveProjectControlProjectsProjectIdApprovePostMutationResult = NonNullable<Awaited<ReturnType<typeof approveProjectControlProjectsProjectIdApprovePost>>>
+    export type ApproveProjectControlProjectsProjectIdApprovePostMutationBody = HumanApprovalCommand
+    export type ApproveProjectControlProjectsProjectIdApprovePostMutationError = HTTPValidationError
+    export type ApproveProjectControlProjectsProjectIdApprovePostMutationVariables = {projectId: string;data: HumanApprovalCommand}
+
+    /**
+ * @summary Approve Project
+ */
+export const useApproveProjectControlProjectsProjectIdApprovePost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveProjectControlProjectsProjectIdApprovePost>>, TError,ApproveProjectControlProjectsProjectIdApprovePostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof approveProjectControlProjectsProjectIdApprovePost>>,
+        TError,
+        ApproveProjectControlProjectsProjectIdApprovePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApproveProjectControlProjectsProjectIdApprovePostMutationOptions(options), queryClient);
+    }
+
+export const getCancelWorkflowControlProjectsProjectIdCancelPostUrl = (projectId: string,) => {
+
+
+
+
+  return `/control/projects/${projectId}/cancel`
+}
+
+/**
+ * @summary Cancel Workflow
+ */
+export const cancelWorkflowControlProjectsProjectIdCancelPost = async (projectId: string,
+    cancelWorkflowCommand: CancelWorkflowCommand, options?: Parameters<typeof backendFetch>[1]): Promise<CommandReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return backendFetch<CommandReceipt>(getCancelWorkflowControlProjectsProjectIdCancelPostUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cancelWorkflowCommand)
+  }
+);}
+
+
+
+
+
+export const getCancelWorkflowControlProjectsProjectIdCancelPostMutationKey = () => ['cancelWorkflowControlProjectsProjectIdCancelPost'] as const;
+
+export const getCancelWorkflowControlProjectsProjectIdCancelPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelWorkflowControlProjectsProjectIdCancelPost>>, TError,CancelWorkflowControlProjectsProjectIdCancelPostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelWorkflowControlProjectsProjectIdCancelPost>>, TError,CancelWorkflowControlProjectsProjectIdCancelPostMutationVariables, TContext> => {
+
+const mutationKey = getCancelWorkflowControlProjectsProjectIdCancelPostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelWorkflowControlProjectsProjectIdCancelPost>>, CancelWorkflowControlProjectsProjectIdCancelPostMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  cancelWorkflowControlProjectsProjectIdCancelPost(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelWorkflowControlProjectsProjectIdCancelPostMutationResult = NonNullable<Awaited<ReturnType<typeof cancelWorkflowControlProjectsProjectIdCancelPost>>>
+    export type CancelWorkflowControlProjectsProjectIdCancelPostMutationBody = CancelWorkflowCommand
+    export type CancelWorkflowControlProjectsProjectIdCancelPostMutationError = HTTPValidationError
+    export type CancelWorkflowControlProjectsProjectIdCancelPostMutationVariables = {projectId: string;data: CancelWorkflowCommand}
+
+    /**
+ * @summary Cancel Workflow
+ */
+export const useCancelWorkflowControlProjectsProjectIdCancelPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelWorkflowControlProjectsProjectIdCancelPost>>, TError,CancelWorkflowControlProjectsProjectIdCancelPostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof cancelWorkflowControlProjectsProjectIdCancelPost>>,
+        TError,
+        CancelWorkflowControlProjectsProjectIdCancelPostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCancelWorkflowControlProjectsProjectIdCancelPostMutationOptions(options), queryClient);
+    }
+
+export const getCloseProjectControlProjectsProjectIdClosePostUrl = (projectId: string,) => {
+
+
+
+
+  return `/control/projects/${projectId}/close`
+}
+
+/**
+ * @summary Close Project
+ */
+export const closeProjectControlProjectsProjectIdClosePost = async (projectId: string,
+    closeProjectCommand: CloseProjectCommand, options?: Parameters<typeof backendFetch>[1]): Promise<CommandReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return backendFetch<CommandReceipt>(getCloseProjectControlProjectsProjectIdClosePostUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(closeProjectCommand)
+  }
+);}
+
+
+
+
+
+export const getCloseProjectControlProjectsProjectIdClosePostMutationKey = () => ['closeProjectControlProjectsProjectIdClosePost'] as const;
+
+export const getCloseProjectControlProjectsProjectIdClosePostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof closeProjectControlProjectsProjectIdClosePost>>, TError,CloseProjectControlProjectsProjectIdClosePostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof closeProjectControlProjectsProjectIdClosePost>>, TError,CloseProjectControlProjectsProjectIdClosePostMutationVariables, TContext> => {
+
+const mutationKey = getCloseProjectControlProjectsProjectIdClosePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof closeProjectControlProjectsProjectIdClosePost>>, CloseProjectControlProjectsProjectIdClosePostMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  closeProjectControlProjectsProjectIdClosePost(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CloseProjectControlProjectsProjectIdClosePostMutationResult = NonNullable<Awaited<ReturnType<typeof closeProjectControlProjectsProjectIdClosePost>>>
+    export type CloseProjectControlProjectsProjectIdClosePostMutationBody = CloseProjectCommand
+    export type CloseProjectControlProjectsProjectIdClosePostMutationError = HTTPValidationError
+    export type CloseProjectControlProjectsProjectIdClosePostMutationVariables = {projectId: string;data: CloseProjectCommand}
+
+    /**
+ * @summary Close Project
+ */
+export const useCloseProjectControlProjectsProjectIdClosePost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof closeProjectControlProjectsProjectIdClosePost>>, TError,CloseProjectControlProjectsProjectIdClosePostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof closeProjectControlProjectsProjectIdClosePost>>,
+        TError,
+        CloseProjectControlProjectsProjectIdClosePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCloseProjectControlProjectsProjectIdClosePostMutationOptions(options), queryClient);
+    }
+
+export const getLaunchWorkflowControlProjectsProjectIdLaunchPostUrl = (projectId: string,) => {
+
+
+
+
+  return `/control/projects/${projectId}/launch`
+}
+
+/**
+ * @summary Launch Workflow
+ */
+export const launchWorkflowControlProjectsProjectIdLaunchPost = async (projectId: string,
+    launchWorkflowCommand: LaunchWorkflowCommand, options?: Parameters<typeof backendFetch>[1]): Promise<WorkflowLaunchResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return backendFetch<WorkflowLaunchResult>(getLaunchWorkflowControlProjectsProjectIdLaunchPostUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(launchWorkflowCommand)
+  }
+);}
+
+
+
+
+
+export const getLaunchWorkflowControlProjectsProjectIdLaunchPostMutationKey = () => ['launchWorkflowControlProjectsProjectIdLaunchPost'] as const;
+
+export const getLaunchWorkflowControlProjectsProjectIdLaunchPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof launchWorkflowControlProjectsProjectIdLaunchPost>>, TError,LaunchWorkflowControlProjectsProjectIdLaunchPostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof launchWorkflowControlProjectsProjectIdLaunchPost>>, TError,LaunchWorkflowControlProjectsProjectIdLaunchPostMutationVariables, TContext> => {
+
+const mutationKey = getLaunchWorkflowControlProjectsProjectIdLaunchPostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof launchWorkflowControlProjectsProjectIdLaunchPost>>, LaunchWorkflowControlProjectsProjectIdLaunchPostMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  launchWorkflowControlProjectsProjectIdLaunchPost(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LaunchWorkflowControlProjectsProjectIdLaunchPostMutationResult = NonNullable<Awaited<ReturnType<typeof launchWorkflowControlProjectsProjectIdLaunchPost>>>
+    export type LaunchWorkflowControlProjectsProjectIdLaunchPostMutationBody = LaunchWorkflowCommand
+    export type LaunchWorkflowControlProjectsProjectIdLaunchPostMutationError = HTTPValidationError
+    export type LaunchWorkflowControlProjectsProjectIdLaunchPostMutationVariables = {projectId: string;data: LaunchWorkflowCommand}
+
+    /**
+ * @summary Launch Workflow
+ */
+export const useLaunchWorkflowControlProjectsProjectIdLaunchPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof launchWorkflowControlProjectsProjectIdLaunchPost>>, TError,LaunchWorkflowControlProjectsProjectIdLaunchPostMutationVariables, TContext>, request?: SecondParameter<typeof backendFetch>}
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof launchWorkflowControlProjectsProjectIdLaunchPost>>,
+        TError,
+        LaunchWorkflowControlProjectsProjectIdLaunchPostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLaunchWorkflowControlProjectsProjectIdLaunchPostMutationOptions(options), queryClient);
+    }
+
+export const getWorkflowStatusControlProjectsProjectIdStatusGetUrl = (projectId: string,) => {
+
+
+
+
+  return `/control/projects/${projectId}/status`
+}
+
+/**
+ * @summary Workflow Status
+ */
+export const workflowStatusControlProjectsProjectIdStatusGet = async (projectId: string, options?: Parameters<typeof backendFetch>[1]): Promise<WorkflowStatus> => {
+
+  return backendFetch<WorkflowStatus>(getWorkflowStatusControlProjectsProjectIdStatusGetUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getWorkflowStatusControlProjectsProjectIdStatusGetQueryKey = (projectId: MaybeRefOrGetter<string>,) => {
+    return [
+    'control','projects',projectId,'status'
+    ] as const;
+    }
+
+
+export const getWorkflowStatusControlProjectsProjectIdStatusGetQueryOptions = <TData = Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>, TError = HTTPValidationError>(projectId: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>, TError, TData>>, request?: SecondParameter<typeof backendFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  getWorkflowStatusControlProjectsProjectIdStatusGetQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>> = ({ signal }) => workflowStatusControlProjectsProjectIdStatusGet(toValue(projectId), { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: computed(() => toValue(projectId) !== null && toValue(projectId) !== undefined), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>, TError, TData>
+}
+
+export type WorkflowStatusControlProjectsProjectIdStatusGetQueryResult = NonNullable<Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>>
+export type WorkflowStatusControlProjectsProjectIdStatusGetQueryError = HTTPValidationError
+
+
+/**
+ * @summary Workflow Status
+ */
+
+export function useWorkflowStatusControlProjectsProjectIdStatusGet<TData = Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>, TError = HTTPValidationError>(
+ projectId: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof workflowStatusControlProjectsProjectIdStatusGet>>, TError, TData>>, request?: SecondParameter<typeof backendFetch>}
+ , queryClient?: QueryClient
+ ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getWorkflowStatusControlProjectsProjectIdStatusGetQueryOptions(projectId,options)
 
   const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

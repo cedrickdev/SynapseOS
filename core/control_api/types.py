@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Self
 from uuid import UUID
@@ -135,4 +136,7 @@ class WorkflowStatus(_ControlModel):
     security_status: str | None
     human_approval: bool
     merge_gate_status: str | None
+    current_stage: Annotated[str, Field(min_length=1, max_length=64)]
+    blockers: Annotated[tuple[str, ...], Field(max_length=8)]
+    provider_cost_total: Annotated[Decimal, Field(ge=0, max_digits=24, decimal_places=8)]
     terminal: bool

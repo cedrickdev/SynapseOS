@@ -15,8 +15,23 @@ const pathResources = new Map<string, BackendResource>([
   ['/costs', 'costs'],
 ])
 
-function buildProxyPath(url: string): string {
+const uuidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}'
+const controlActionPattern = new RegExp(`^/control/projects/${uuidPattern}/(approve|launch|cancel|close)$`)
+const controlStatusPattern = new RegExp(`^/control/projects/${uuidPattern}/status$`)
+
+function buildProxyPath(url: string, method: string): string {
   const target = new URL(url, 'http://synapseos.invalid')
+  if (target.search || target.hash) {
+    if (target.pathname.startsWith('/control/')) {
+      throw new Error('unsupported API path')
+    }
+  }
+  if (
+    (method === 'POST' && (target.pathname === '/control/projects' || controlActionPattern.test(target.pathname)))
+    || (method === 'GET' && controlStatusPattern.test(target.pathname))
+  ) {
+    return `/api${target.pathname}`
+  }
   const segments = target.pathname.split('/').filter(Boolean)
   const basePath = segments.length > 1 ? `/${segments.slice(0, -1).join('/')}` : target.pathname
   const resource = pathResources.get(basePath) ?? pathResources.get(target.pathname)
@@ -47,18 +62,32 @@ function unwrapEnvelope<T>(payload: BackendEnvelope): T {
   if (payload.state === 'unavailable') {
     throw new Error('This backend contract is not available yet.')
   }
-  throw new Error('The backend could not complete this request.')
+  const safeMessages = new Set([
+    'Your session expired. Sign in again.',
+    'You do not have permission to perform this action.',
+    'The project changed. Refresh its status before trying again.',
+    'The workflow service is temporarily unavailable.',
+    'The backend is unreachable or returned an invalid response.',
+    'The backend could not complete this request.',
+  ])
+  throw new Error(safeMessages.has(payload.message)
+    ? payload.message
+    : 'The backend could not complete this request.')
 }
 
 export async function backendFetch<T>(url: string, options: RequestInit): Promise<T> {
-  const proxyPath = buildProxyPath(url)
+  const method = (options.method ?? 'GET').toUpperCase()
+  const proxyPath = buildProxyPath(url, method)
   const timeoutSignal = AbortSignal.timeout(API_TIMEOUT_MS)
   const signal = options.signal
     ? AbortSignal.any([options.signal, timeoutSignal])
     : timeoutSignal
   const response = await fetch(proxyPath, {
     ...options,
-    headers: { accept: 'application/json' },
+    method,
+    headers: method === 'POST'
+      ? { accept: 'application/json', 'content-type': 'application/json' }
+      : { accept: 'application/json' },
     redirect: 'error',
     signal,
   })

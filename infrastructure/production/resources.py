@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+import asyncio
+import math
+from typing import TYPE_CHECKING, Protocol, cast
 
 import httpx
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.auth import OIDCConfiguration
@@ -60,6 +63,18 @@ class ProductionResources:
         self._execution_queue: object | None = None
         self._queue_worker: _QueueWorker | None = None
         self._closed = False
+
+    async def check_database_readiness(self) -> bool:
+        """Run one bounded, side-effect-free PostgreSQL readiness probe."""
+
+        def probe() -> bool:
+            try:
+                with self._engine.connect() as connection:
+                    return cast(int | None, connection.scalar(text("SELECT 1"))) == 1
+            except SQLAlchemyError:
+                return False
+
+        return await asyncio.to_thread(probe)
 
     @property
     def oidc_verifier(self) -> OIDCVerifier:
@@ -149,7 +164,15 @@ async def build_production_resources(
     http_client: httpx.AsyncClient | None = None,
 ) -> ProductionResources:
     """Build production adapters without opening a database connection."""
-    engine = create_engine(settings.database_url, pool_pre_ping=True)
+    timeout_seconds = settings.database_connect_timeout_seconds
+    engine = create_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        connect_args={
+            "connect_timeout": math.ceil(timeout_seconds),
+            "options": f"-c statement_timeout={math.ceil(timeout_seconds * 1_000)}",
+        },
+    )
     session_factory: sessionmaker[Session] = sessionmaker(
         bind=engine,
         autoflush=False,

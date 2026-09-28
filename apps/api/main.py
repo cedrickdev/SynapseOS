@@ -7,12 +7,13 @@ at this stage — only the application shell and a health endpoint.
 from __future__ import annotations
 
 from fastapi import FastAPI
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from apps.api.lifecycle import ProductionResourceFactory, production_lifespan
 from apps.api.routes import control, dashboard, health, metrics
 from core.config import Settings, get_settings
 from core.observability.sink import InMemoryMetricsSink, MetricsSink
-from infrastructure.production import build_production_application
+from infrastructure.production import build_production_api
 
 
 def create_app(
@@ -21,7 +22,7 @@ def create_app(
     oidc_verifier: object | None = None,
     *,
     settings: Settings | None = None,
-    production_factory: ProductionResourceFactory = build_production_application,
+    production_factory: ProductionResourceFactory = build_production_api,
 ) -> FastAPI:
     """Build and configure the FastAPI application."""
     configured_settings = settings or get_settings()
@@ -29,6 +30,10 @@ def create_app(
         title="SynapseOS Platform API",
         version="0.1.0",
         lifespan=production_lifespan(configured_settings, production_factory),
+    )
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=list(configured_settings.trusted_hosts),
     )
     app.include_router(health.router)
     app.include_router(metrics.router)

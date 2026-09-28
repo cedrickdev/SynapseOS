@@ -12,7 +12,11 @@ from pydantic import SecretStr
 
 from core.engineering_v1 import EngineeringV1Application
 from core.production import ProductionSettings
-from infrastructure.production.composition import build_production_application
+from infrastructure.production.composition import (
+    build_production_api,
+    build_production_application,
+    build_production_worker,
+)
 from infrastructure.production.resources import ProductionResources
 
 
@@ -92,6 +96,39 @@ def test_root_exposes_fully_composed_application_and_preserves_client_ownership(
         assert worker.stop_calls == 1
         assert not client.is_closed
         await client.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_api_and_worker_composition_have_separate_queue_lifecycles() -> None:
+    async def scenario() -> None:
+        api_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, request=request))
+        )
+        api_resources = await build_production_api(
+            _settings(),
+            http_client=api_client,
+            queue_runtime_builder=_queue_runtime_builder,
+        )
+        api_worker = cast(_Worker, api_resources._queue_worker)
+        assert api_worker.start_calls == 0
+        await api_resources.aclose()
+        assert api_worker.stop_calls == 1
+        await api_client.aclose()
+
+        worker_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, request=request))
+        )
+        worker_resources = await build_production_worker(
+            _settings(),
+            http_client=worker_client,
+            queue_runtime_builder=_queue_runtime_builder,
+        )
+        queue_worker = cast(_Worker, worker_resources._queue_worker)
+        assert queue_worker.start_calls == 1
+        await worker_resources.aclose()
+        assert queue_worker.stop_calls == 1
+        await worker_client.aclose()
 
     asyncio.run(scenario())
 

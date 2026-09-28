@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+.worktrees
+.synapseos
+**/__pycache__
+**/.mypy_cache
+**/.nuxt
+**/.output
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+**/playwright-report
+**/test-results
+.env
+.env.*

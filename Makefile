@@ -6,7 +6,7 @@ VENV ?= .venv
 BIN := $(VENV)/bin
 
 .PHONY: help venv install dev test lint format typecheck check migrate migration-current \
-	migration-downgrade up down clean
+	migration-downgrade up smoke down clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -44,8 +44,11 @@ migration-current: ## Show the current PostgreSQL migration revision
 migration-downgrade: ## Downgrade PostgreSQL by one migration (development only)
 	$(BIN)/alembic downgrade -1
 
-up: ## Start API + PostgreSQL via Docker Compose
-	docker compose up --build
+up: ## Start the production-like local stack and wait for health checks
+	docker compose up --build --wait
+
+smoke: ## Run bounded deployment smoke checks against the composed stack
+	docker compose --profile smoke run --build --rm smoke
 
 down: ## Stop and remove Docker Compose services
 	docker compose down

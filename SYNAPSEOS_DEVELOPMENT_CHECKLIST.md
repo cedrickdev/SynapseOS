@@ -2946,17 +2946,17 @@ PostgreSQL, and Authentik integration.
 
 ### Checklist
 
-- [ ] Define separate API, worker, Nuxt, and migration process entry points
-- [ ] Extend local orchestration with health/readiness checks, dependency ordering, persistent data,
+- [x] Define separate API, worker, Nuxt, and migration process entry points
+- [x] Extend local orchestration with health/readiness checks, dependency ordering, persistent data,
       and graceful shutdown
-- [ ] Provide environment validation and secret references without committing secret values
-- [ ] Make migrations an explicit one-shot deployment step rather than an application-startup race
-- [ ] Configure trusted origins, proxy headers, secure cookies, network boundaries, and least-privilege
+- [x] Provide environment validation and secret references without committing secret values
+- [x] Make migrations an explicit one-shot deployment step rather than an application-startup race
+- [x] Configure trusted origins, proxy headers, secure cookies, network boundaries, and least-privilege
       service connectivity
-- [ ] Define Vercel-compatible Nuxt deployment while keeping API, worker, PostgreSQL, and Authentik
+- [x] Define Vercel-compatible Nuxt deployment while keeping API, worker, PostgreSQL, and Authentik
       on suitable persistent infrastructure
-- [ ] Add deployment smoke checks for API, worker, database, OIDC, and frontend connectivity
-- [ ] Verify local production-like startup and shutdown without orphan workers or leaked resources
+- [x] Add deployment smoke checks for API, worker, database, OIDC, and frontend connectivity
+- [x] Verify local production-like startup and shutdown without orphan workers or leaked resources
 
 ### Explicit exclusions
 

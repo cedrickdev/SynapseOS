@@ -37,7 +37,7 @@ class _ControlModel(BaseModel):
 
 class ControlPrincipal(_ControlModel):
     actor_id: Identifier
-    company_id: Identifier
+    company_id: StrictUUID
     roles: Annotated[tuple[ControlRole, ...], Field(min_length=1, max_length=4)]
 
     @field_validator("roles", mode="before")

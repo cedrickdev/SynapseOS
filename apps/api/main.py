@@ -18,6 +18,7 @@ from infrastructure.production import build_production_application
 def create_app(
     metrics_sink: MetricsSink | None = None,
     dashboard_service_token: str | None = None,
+    oidc_verifier: object | None = None,
     *,
     settings: Settings | None = None,
     production_factory: ProductionResourceFactory = build_production_application,
@@ -34,6 +35,7 @@ def create_app(
     app.include_router(dashboard.router)
     app.include_router(control.router)
     app.state.metrics_sink = metrics_sink or InMemoryMetricsSink()
+    app.state.oidc_verifier = oidc_verifier
     configured_token = configured_settings.dashboard_service_token
     app.state.dashboard_service_token = (
         dashboard_service_token

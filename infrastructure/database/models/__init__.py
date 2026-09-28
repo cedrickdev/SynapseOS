@@ -1,5 +1,12 @@
 """Phase 2 SQLAlchemy persistence models."""
 
+from infrastructure.database.models.auth import (
+    Company,
+    CompanyAgentAssignment,
+    CompanyMembership,
+    HumanUser,
+    ProjectRoleAssignment,
+)
 from infrastructure.database.models.budget import UsageRecord
 from infrastructure.database.models.component_trust import ComponentTrustManifest
 from infrastructure.database.models.control import ControlCommandReceipt, ControlProjectScope
@@ -58,15 +65,20 @@ __all__ = [
     "Approval",
     "AuditEvent",
     "ComponentTrustManifest",
+    "Company",
+    "CompanyAgentAssignment",
+    "CompanyMembership",
     "ControlCommandReceipt",
     "ControlProjectScope",
     "Incident",
     "IncidentEvent",
     "MemoryEntry",
+    "HumanUser",
     "Decision",
     "ExecutionQueueAttempt",
     "ExecutionQueueJob",
     "Project",
+    "ProjectRoleAssignment",
     "Postmortem",
     "PullRequest",
     "PullRequestReview",

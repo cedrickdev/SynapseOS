@@ -31,6 +31,14 @@ export default defineNuxtConfig({
     backendTimeoutMs: 8_000,
     backendMaxResponseBytes: 1_048_576,
     backendServiceToken: '',
+    oidcAuthorizationEndpoint: '',
+    oidcTokenEndpoint: '',
+    oidcClientId: '',
+    oidcClientSecret: '',
+    oidcRedirectUri: '',
+    oidcCompanySlug: '',
+    oidcTimeoutMs: 8_000,
+    oidcMaxResponseBytes: 65_536,
     public: {
       appName: 'SynapseOS'
     }

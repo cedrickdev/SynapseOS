@@ -37,6 +37,11 @@ def production_lifespan(
         validated = validate_production_settings(settings)
         resources = await resource_factory(validated)
         app.state.production_resources = resources
+        oidc_verifier = getattr(resources, "oidc_verifier", None)
+        if oidc_verifier is None:
+            await resources.aclose()
+            raise RuntimeError("production OIDC verifier is not composed")
+        app.state.oidc_verifier = oidc_verifier
         try:
             yield
         finally:

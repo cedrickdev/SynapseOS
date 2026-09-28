@@ -39,6 +39,12 @@ class ProductionSettings(BaseModel):
     github_installation_id: int | None
     github_app_private_key: SecretStr | None
     dashboard_service_token: SecretStr
+    oidc_issuer: str
+    oidc_audience: str
+    oidc_discovery_timeout_seconds: float
+    oidc_max_response_bytes: int
+    oidc_jwks_cache_seconds: float
+    oidc_max_jwks_keys: int
     workspace_base_root: Path
     git_executable: Path
     engineering_v1_timeout_seconds: float
@@ -61,12 +67,20 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
         _validate_database_url(settings.database_url)
         _validate_provider_url(settings.ollama_base_url, schemes=frozenset({"http", "https"}))
         _validate_provider_url(settings.github_base_url, schemes=frozenset({"https"}))
+        if settings.oidc_issuer is None:
+            raise ValueError
+        _validate_provider_url(settings.oidc_issuer, schemes=frozenset({"https"}))
+        oidc_audience = settings.oidc_audience.strip() if settings.oidc_audience else ""
+        if not oidc_audience or len(oidc_audience) > 255:
+            raise ValueError
         if not settings.ollama_model.strip():
             raise ValueError
         _validate_timeout(settings.ollama_timeout_seconds)
         _validate_timeout(settings.engineering_v1_timeout_seconds)
+        _validate_timeout(settings.oidc_discovery_timeout_seconds)
         _validate_response_limit(settings.ollama_max_response_bytes)
         _validate_response_limit(settings.github_max_response_bytes)
+        _validate_response_limit(settings.oidc_max_response_bytes)
         if not settings.workspace_base_root.is_absolute():
             raise ValueError
         if not settings.git_executable.is_absolute():
@@ -88,6 +102,12 @@ def validate_production_settings(settings: Settings) -> ProductionSettings:
             github_installation_id=settings.github_installation_id,
             github_app_private_key=settings.github_app_private_key,
             dashboard_service_token=SecretStr(dashboard_service_token),
+            oidc_issuer=settings.oidc_issuer,
+            oidc_audience=oidc_audience,
+            oidc_discovery_timeout_seconds=float(settings.oidc_discovery_timeout_seconds),
+            oidc_max_response_bytes=settings.oidc_max_response_bytes,
+            oidc_jwks_cache_seconds=float(settings.oidc_jwks_cache_seconds),
+            oidc_max_jwks_keys=settings.oidc_max_jwks_keys,
             workspace_base_root=settings.workspace_base_root,
             git_executable=settings.git_executable,
             engineering_v1_timeout_seconds=float(settings.engineering_v1_timeout_seconds),

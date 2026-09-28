@@ -13,6 +13,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.production import ProductionSettings
+from infrastructure.auth import OIDCVerifier
 from infrastructure.production.resources import (
     ProductionResources,
     build_production_resources,
@@ -33,6 +34,12 @@ def _settings() -> ProductionSettings:
         github_installation_id=None,
         github_app_private_key=None,
         dashboard_service_token=SecretStr("dashboard-service-token-value"),
+        oidc_issuer="https://auth.example/application/o/synapseos/",
+        oidc_audience="synapseos-api",
+        oidc_discovery_timeout_seconds=5.0,
+        oidc_max_response_bytes=65_536,
+        oidc_jwks_cache_seconds=300.0,
+        oidc_max_jwks_keys=16,
         workspace_base_root=Path("/var/lib/synapseos/workspaces"),
         git_executable=Path("/usr/bin/git"),
         engineering_v1_timeout_seconds=900.0,
@@ -88,6 +95,20 @@ def test_shutdown_does_not_close_injected_http_client() -> None:
         await resources.aclose()
         await resources.aclose()
 
+        assert not client.is_closed
+        await client.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_resources_expose_oidc_verifier_using_shared_client() -> None:
+    async def scenario() -> None:
+        client = httpx.AsyncClient(transport=httpx.MockTransport(_ok_response))
+        resources = await build_production_resources(_settings(), http_client=client)
+
+        assert isinstance(resources.oidc_verifier, OIDCVerifier)
+
+        await resources.aclose()
         assert not client.is_closed
         await client.aclose()
 

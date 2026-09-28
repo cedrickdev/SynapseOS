@@ -13,7 +13,9 @@ describe('requestBackend', () => {
       baseUrl: 'http://backend:8000',
       timeoutMs: 500,
       maxResponseBytes: 128,
-      serviceToken: 'private-dashboard-token'
+      serviceToken: 'private-dashboard-token',
+      accessToken: 'private-user-token',
+      companyId: 'acme'
     }, fetcher)).resolves.toEqual({ state: 'ready', data: { status: 'ok' } })
 
     expect(fetcher).toHaveBeenCalledTimes(1)
@@ -22,6 +24,8 @@ describe('requestBackend', () => {
       redirect: 'error',
       headers: {
         accept: 'application/json',
+        authorization: 'Bearer private-user-token',
+        'x-synapseos-company-id': 'acme',
         'x-synapseos-service-token': 'private-dashboard-token'
       }
     }))
@@ -38,7 +42,9 @@ describe('requestBackend', () => {
       baseUrl: 'http://backend:8000',
       timeoutMs: 500,
       maxResponseBytes: 128,
-      serviceToken: 'private-dashboard-token'
+      serviceToken: 'private-dashboard-token',
+      accessToken: 'private-user-token',
+      companyId: 'acme'
     }, fetcher)
 
     expect(JSON.stringify(result)).not.toContain(secret)
@@ -51,7 +57,9 @@ describe('requestBackend', () => {
       baseUrl: 'http://backend:8000',
       timeoutMs: 500,
       maxResponseBytes: 128,
-      serviceToken: ''
+      serviceToken: '',
+      accessToken: 'private-user-token',
+      companyId: 'acme'
     }, fetcher)).resolves.toEqual({
       state: 'error',
       message: 'The backend connection is not configured safely.'
@@ -62,14 +70,23 @@ describe('requestBackend', () => {
 
   it('propagates cancellation instead of converting it into an application error', async () => {
     const cancellation = new DOMException('request cancelled', 'AbortError')
-    const fetcher = vi.fn(async () => Promise.reject(cancellation))
+    const controller = new AbortController()
+    controller.abort()
+    const fetcher = vi.fn(async (_input: string, init: RequestInit) => {
+      if (init.signal?.aborted) {
+        throw cancellation
+      }
+      return new Response(null, { status: 500 })
+    })
 
     await expect(requestBackend('projects', undefined, {
       baseUrl: 'http://backend:8000',
       timeoutMs: 500,
       maxResponseBytes: 128,
-      serviceToken: 'private-dashboard-token'
-    }, fetcher)).rejects.toBe(cancellation)
+      serviceToken: 'private-dashboard-token',
+      accessToken: 'private-user-token',
+      companyId: 'acme'
+    }, fetcher, controller.signal)).rejects.toBe(cancellation)
 
     expect(fetcher).toHaveBeenCalledTimes(1)
   })

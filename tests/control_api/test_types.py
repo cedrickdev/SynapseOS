@@ -16,9 +16,10 @@ from core.control_api import (
 
 
 def test_control_principal_requires_unique_bounded_roles() -> None:
+    company_id = uuid4()
     principal = ControlPrincipal(
         actor_id="human-owner",
-        company_id="neocraft",
+        company_id=company_id,
         roles=(ControlRole.OWNER, ControlRole.OPERATOR),
     )
 
@@ -26,7 +27,7 @@ def test_control_principal_requires_unique_bounded_roles() -> None:
     with pytest.raises(ValidationError):
         ControlPrincipal(
             actor_id="human-owner",
-            company_id="neocraft",
+            company_id=company_id,
             roles=(ControlRole.OWNER, ControlRole.OWNER),
         )
 

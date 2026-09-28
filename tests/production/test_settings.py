@@ -30,6 +30,8 @@ def _settings(**overrides: object) -> Settings:
         "github_installation_id": None,
         "github_app_private_key": None,
         "dashboard_service_token": SecretStr("dashboard-service-token-value"),
+        "oidc_issuer": "https://auth.example/application/o/synapseos/",
+        "oidc_audience": "synapseos-api",
         "workspace_base_root": Path("/var/lib/synapseos/workspaces"),
         "git_executable": Path("/usr/bin/git"),
         "engineering_v1_timeout_seconds": 900.0,
@@ -82,6 +84,8 @@ def test_production_settings_require_exactly_one_github_auth_strategy() -> None:
         {"database_url": "postgresql+psycopg://synapse:strong-password@db:5432"},
         {"dashboard_service_token": None},
         {"dashboard_service_token": SecretStr("replace-me")},
+        {"oidc_issuer": None},
+        {"oidc_audience": None},
     ),
 )
 def test_production_settings_reject_development_or_missing_service_credentials(
@@ -97,6 +101,8 @@ def test_production_settings_reject_development_or_missing_service_credentials(
         ("database_url", "sqlite:///synapseos.db"),
         ("ollama_base_url", "http://user:password@ollama:11434"),
         ("github_base_url", "https://user:password@api.github.com"),
+        ("oidc_issuer", "http://auth.example/application/o/synapseos/"),
+        ("oidc_issuer", "https://user:password@auth.example/application/o/synapseos/"),
         ("ollama_model", "   "),
         ("ollama_timeout_seconds", 3_601.0),
         ("ollama_max_response_bytes", 16_777_217),
@@ -146,6 +152,8 @@ def test_production_settings_accept_service_token_authentication() -> None:
     assert validated.queue_max_size == 1_000
     assert validated.queue_worker_count == 4
     assert validated.queue_poll_interval_seconds == 0.25
+    assert validated.oidc_issuer == "https://auth.example/application/o/synapseos/"
+    assert validated.oidc_audience == "synapseos-api"
 
 
 def test_production_settings_accept_complete_github_app_authentication() -> None:

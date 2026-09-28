@@ -32,6 +32,22 @@ class Settings(BaseSettings):
     test_postgres_port: int = 55432
     database_url: str = "postgresql+psycopg://synapseos:synapseos@localhost:55432/synapseos"
     dashboard_service_token: SecretStr | None = None
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+    oidc_discovery_timeout_seconds: float = Field(
+        default=5.0,
+        gt=0.0,
+        le=30.0,
+        allow_inf_nan=False,
+    )
+    oidc_max_response_bytes: int = Field(default=65_536, ge=1_024, le=1_048_576)
+    oidc_jwks_cache_seconds: float = Field(
+        default=300.0,
+        gt=0.0,
+        le=3_600.0,
+        allow_inf_nan=False,
+    )
+    oidc_max_jwks_keys: int = Field(default=16, ge=1, le=64)
     github_base_url: str = "https://api.github.com"
     github_max_response_bytes: int = 16_777_216
     github_service_token: SecretStr | None = None

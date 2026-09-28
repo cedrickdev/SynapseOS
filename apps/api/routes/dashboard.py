@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from apps.api.dependencies.dashboard import require_dashboard_access
+from apps.api.dependencies.auth import get_dashboard_principal
 from apps.api.schemas.dashboard import (
     AgentView,
     AuditView,
@@ -21,12 +21,14 @@ from apps.api.schemas.dashboard import (
     SecurityFindingView,
     TaskView,
 )
+from core.control_api import ControlPrincipal
 from infrastructure.database.models import AuditEvent
-from infrastructure.database.repositories.dashboard import DashboardRepository
+from infrastructure.database.repositories.dashboard import DashboardAccessScope, DashboardRepository
 from infrastructure.database.session import get_session
 
-router = APIRouter(tags=["dashboard"], dependencies=[Depends(require_dashboard_access)])
+router = APIRouter(tags=["dashboard"])
 SessionDependency = Annotated[Session, Depends(get_session)]
+PrincipalDependency = Annotated[ControlPrincipal | None, Depends(get_dashboard_principal)]
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=10_000)]
 
@@ -39,6 +41,16 @@ def _page[ViewT: DashboardModel](
 
 def _not_found() -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found.")
+
+
+def _access_scope(principal: ControlPrincipal | None) -> DashboardAccessScope | None:
+    if principal is None:
+        return None
+    return DashboardAccessScope(
+        company_id=principal.company_id,
+        user_id=uuid.UUID(principal.actor_id),
+        company_roles=principal.roles,
+    )
 
 
 def _safe_text(data: dict[str, object], key: str) -> str | None:
@@ -82,29 +94,43 @@ def _security(event: AuditEvent) -> SecurityFindingView:
 
 @router.get("/projects", response_model=Page[ProjectView])
 def list_projects(
-    session: SessionDependency, limit: Limit = 25, offset: Offset = 0
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
 ) -> Page[ProjectView]:
-    items, total = DashboardRepository(session).list_projects(limit, offset)
+    items, total = DashboardRepository(session).list_projects(
+        limit, offset, _access_scope(principal)
+    )
     return _page(tuple(ProjectView.model_validate(item) for item in items), total, limit, offset)
 
 
 @router.get("/projects/{identifier}", response_model=ProjectView)
-def get_project(identifier: uuid.UUID, session: SessionDependency) -> ProjectView:
-    item = DashboardRepository(session).get_project(identifier)
+def get_project(
+    identifier: uuid.UUID, session: SessionDependency, principal: PrincipalDependency
+) -> ProjectView:
+    item = DashboardRepository(session).get_project(identifier, _access_scope(principal))
     if item is None:
         raise _not_found()
     return ProjectView.model_validate(item)
 
 
 @router.get("/tasks", response_model=Page[TaskView])
-def list_tasks(session: SessionDependency, limit: Limit = 25, offset: Offset = 0) -> Page[TaskView]:
-    items, total = DashboardRepository(session).list_tasks(limit, offset)
+def list_tasks(
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
+) -> Page[TaskView]:
+    items, total = DashboardRepository(session).list_tasks(limit, offset, _access_scope(principal))
     return _page(tuple(TaskView.model_validate(item) for item in items), total, limit, offset)
 
 
 @router.get("/tasks/{identifier}", response_model=TaskView)
-def get_task(identifier: uuid.UUID, session: SessionDependency) -> TaskView:
-    item = DashboardRepository(session).get_task(identifier)
+def get_task(
+    identifier: uuid.UUID, session: SessionDependency, principal: PrincipalDependency
+) -> TaskView:
+    item = DashboardRepository(session).get_task(identifier, _access_scope(principal))
     if item is None:
         raise _not_found()
     return TaskView.model_validate(item)
@@ -112,29 +138,41 @@ def get_task(identifier: uuid.UUID, session: SessionDependency) -> TaskView:
 
 @router.get("/agents", response_model=Page[AgentView])
 def list_agents(
-    session: SessionDependency, limit: Limit = 25, offset: Offset = 0
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
 ) -> Page[AgentView]:
-    items, total = DashboardRepository(session).list_agents(limit, offset)
+    items, total = DashboardRepository(session).list_agents(limit, offset, _access_scope(principal))
     return _page(tuple(AgentView.model_validate(item) for item in items), total, limit, offset)
 
 
 @router.get("/agents/{identifier}", response_model=AgentView)
-def get_agent(identifier: uuid.UUID, session: SessionDependency) -> AgentView:
-    item = DashboardRepository(session).get_agent(identifier)
+def get_agent(
+    identifier: uuid.UUID, session: SessionDependency, principal: PrincipalDependency
+) -> AgentView:
+    item = DashboardRepository(session).get_agent(identifier, _access_scope(principal))
     if item is None:
         raise _not_found()
     return AgentView.model_validate(item)
 
 
 @router.get("/runs", response_model=Page[RunView])
-def list_runs(session: SessionDependency, limit: Limit = 25, offset: Offset = 0) -> Page[RunView]:
-    items, total = DashboardRepository(session).list_runs(limit, offset)
+def list_runs(
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
+) -> Page[RunView]:
+    items, total = DashboardRepository(session).list_runs(limit, offset, _access_scope(principal))
     return _page(tuple(RunView.model_validate(item) for item in items), total, limit, offset)
 
 
 @router.get("/runs/{identifier}", response_model=RunView)
-def get_run(identifier: uuid.UUID, session: SessionDependency) -> RunView:
-    item = DashboardRepository(session).get_run(identifier)
+def get_run(
+    identifier: uuid.UUID, session: SessionDependency, principal: PrincipalDependency
+) -> RunView:
+    item = DashboardRepository(session).get_run(identifier, _access_scope(principal))
     if item is None:
         raise _not_found()
     return RunView.model_validate(item)
@@ -142,29 +180,47 @@ def get_run(identifier: uuid.UUID, session: SessionDependency) -> RunView:
 
 @router.get("/audit", response_model=Page[AuditView])
 def list_audit(
-    session: SessionDependency, limit: Limit = 25, offset: Offset = 0
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
 ) -> Page[AuditView]:
-    items, total = DashboardRepository(session).list_audit(limit, offset)
+    items, total = DashboardRepository(session).list_audit(limit, offset, _access_scope(principal))
     return _page(tuple(AuditView.model_validate(item) for item in items), total, limit, offset)
 
 
 @router.get("/feedback", response_model=Page[FeedbackView])
 def list_feedback(
-    session: SessionDependency, limit: Limit = 25, offset: Offset = 0
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
 ) -> Page[FeedbackView]:
-    items, total = DashboardRepository(session).list_feedback(limit, offset)
+    items, total = DashboardRepository(session).list_feedback(
+        limit, offset, _access_scope(principal)
+    )
     return _page(tuple(_feedback(item) for item in items), total, limit, offset)
 
 
 @router.get("/security-findings", response_model=Page[SecurityFindingView])
 def list_security_findings(
-    session: SessionDependency, limit: Limit = 25, offset: Offset = 0
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
 ) -> Page[SecurityFindingView]:
-    items, total = DashboardRepository(session).list_security(limit, offset)
+    items, total = DashboardRepository(session).list_security(
+        limit, offset, _access_scope(principal)
+    )
     return _page(tuple(_security(item) for item in items), total, limit, offset)
 
 
 @router.get("/costs", response_model=Page[CostView])
-def list_costs(session: SessionDependency, limit: Limit = 25, offset: Offset = 0) -> Page[CostView]:
-    items, total = DashboardRepository(session).list_costs(limit, offset)
+def list_costs(
+    session: SessionDependency,
+    principal: PrincipalDependency,
+    limit: Limit = 25,
+    offset: Offset = 0,
+) -> Page[CostView]:
+    items, total = DashboardRepository(session).list_costs(limit, offset, _access_scope(principal))
     return _page(tuple(CostView.model_validate(item) for item in items), total, limit, offset)

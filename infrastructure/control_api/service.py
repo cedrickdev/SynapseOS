@@ -44,6 +44,8 @@ from infrastructure.database.models import (
     Agent,
     AgentRun,
     AuditEvent,
+    Company,
+    CompanyAgentAssignment,
     ControlCommandReceipt,
     ControlProjectScope,
     ExecutionQueueJob,
@@ -89,7 +91,16 @@ class SQLAlchemyControlService:
             ControlRole.OWNER,
             ControlRole.OPERATOR,
         )
-        agent = self._session.get(Agent, command.assigned_agent_id)
+        agent = self._session.scalar(
+            select(Agent)
+            .join(CompanyAgentAssignment)
+            .join(Company, Company.id == CompanyAgentAssignment.company_id)
+            .where(
+                Agent.id == command.assigned_agent_id,
+                Company.id == principal.company_id,
+                Company.active.is_(True),
+            )
+        )
         if agent is None or agent.role != "Developer":
             self._reject(principal, command.correlation_id, "PROJECT_INTAKE", "INVALID_SCOPE")
             raise ControlError(ControlErrorCode.CONFLICT)

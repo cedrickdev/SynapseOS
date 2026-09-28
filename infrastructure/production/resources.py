@@ -8,7 +8,9 @@ import httpx
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from core.auth import OIDCConfiguration
 from core.production import ProductionSettings
+from infrastructure.auth import HTTPJWKSetLoader, OIDCVerifier
 from infrastructure.git.github import GitHubProviderResources, build_github_provider
 from infrastructure.llm import OllamaLLMProvider
 
@@ -44,6 +46,7 @@ class ProductionResources:
         owns_http_client: bool,
         llm_provider: _AsyncClosable,
         github: _AsyncClosable,
+        oidc_verifier: OIDCVerifier | None = None,
     ) -> None:
         self._engine = engine
         self._session_factory = session_factory
@@ -51,11 +54,19 @@ class ProductionResources:
         self._owns_http_client = owns_http_client
         self._llm_provider = llm_provider
         self._github = github
+        self._oidc_verifier = oidc_verifier
         self._engineering_v1: EngineeringV1Application | None = None
         self._stage_factory: ProductionEngineeringStageSuiteFactory | None = None
         self._execution_queue: object | None = None
         self._queue_worker: _QueueWorker | None = None
         self._closed = False
+
+    @property
+    def oidc_verifier(self) -> OIDCVerifier:
+        """Return the production OIDC verifier without exposing its HTTP client."""
+        if self._oidc_verifier is None:
+            raise RuntimeError("production OIDC verifier is not composed")
+        return self._oidc_verifier
 
     @property
     def engineering_v1(self) -> EngineeringV1Application:
@@ -174,6 +185,23 @@ async def build_production_resources(
             ),
             client=client,
         )
+        oidc_verifier = OIDCVerifier(
+            OIDCConfiguration.model_validate(
+                {
+                    "issuer": settings.oidc_issuer,
+                    "audience": settings.oidc_audience,
+                    "jwks_cache_seconds": settings.oidc_jwks_cache_seconds,
+                    "max_jwks_keys": settings.oidc_max_jwks_keys,
+                }
+            ),
+            HTTPJWKSetLoader(
+                client,
+                issuer=settings.oidc_issuer,
+                timeout_seconds=settings.oidc_discovery_timeout_seconds,
+                max_response_bytes=settings.oidc_max_response_bytes,
+                max_keys=settings.oidc_max_jwks_keys,
+            ),
+        )
         return ProductionResources(
             engine=engine,
             session_factory=session_factory,
@@ -181,6 +209,7 @@ async def build_production_resources(
             owns_http_client=owns_http_client,
             llm_provider=llm_provider,
             github=github,
+            oidc_verifier=oidc_verifier,
         )
     except BaseException:
         if github is not None:

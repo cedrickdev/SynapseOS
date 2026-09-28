@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infrastructure.database.append_only import AppendOnlyMixin
 from infrastructure.database.base import Base, CreatedAtMixin
+
+if TYPE_CHECKING:
+    from infrastructure.database.models.auth import Company
+    from infrastructure.database.models.organization import Project
 
 
 class ControlProjectScope(AppendOnlyMixin, CreatedAtMixin, Base):
@@ -22,7 +27,11 @@ class ControlProjectScope(AppendOnlyMixin, CreatedAtMixin, Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), primary_key=True
     )
-    company_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False
+    )
+    project: Mapped[Project] = relationship()
+    company: Mapped[Company] = relationship()
 
 
 class ControlCommandReceipt(AppendOnlyMixin, CreatedAtMixin, Base):
@@ -30,7 +39,11 @@ class ControlCommandReceipt(AppendOnlyMixin, CreatedAtMixin, Base):
 
     __tablename__ = "control_command_receipts"
     __table_args__ = (
-        UniqueConstraint("company_id", "idempotency_key", name="company_idempotency_key"),
+        UniqueConstraint(
+            "company_id",
+            "idempotency_key",
+            name="uq_control_command_receipts_company_idempotency_key",
+        ),
         Index("ix_control_command_receipts_project_created", "project_id", "created_at"),
         Index("ix_control_command_receipts_correlation", "correlation_id"),
     )
@@ -39,7 +52,9 @@ class ControlCommandReceipt(AppendOnlyMixin, CreatedAtMixin, Base):
     correlation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
     command_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    company_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="RESTRICT"), nullable=False
+    )
     actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True

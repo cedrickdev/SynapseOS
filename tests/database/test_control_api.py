@@ -12,18 +12,28 @@ from apps.api.dependencies.control import get_control_queue
 from apps.api.main import create_app
 from core.enums import AgentSeniority, AuditActorType, AuditResult, ProjectStatus, TaskStatus
 from core.tasks.state_machine import TaskStateMachine
-from infrastructure.database.models import Agent, AuditEvent, ExecutionQueueJob, Project, Task
+from infrastructure.database.models import (
+    Agent,
+    AuditEvent,
+    Company,
+    CompanyAgentAssignment,
+    ExecutionQueueJob,
+    Project,
+    Task,
+)
 from infrastructure.database.session import get_session
 from infrastructure.queue import SQLAlchemyAgentRunQueue
 
 TOKEN = "control-test-token"
+COMPANY_ID = UUID("00000000-0000-4000-8000-000000000001")
+OTHER_COMPANY_ID = UUID("00000000-0000-4000-8000-000000000002")
 
 
-def _headers(*, roles: str = "OWNER", company: str = "neocraft") -> dict[str, str]:
+def _headers(*, roles: str = "OWNER", company: UUID = COMPANY_ID) -> dict[str, str]:
     return {
         "x-synapseos-service-token": TOKEN,
         "x-synapseos-actor-id": "human-owner",
-        "x-synapseos-company-id": company,
+        "x-synapseos-company-id": str(company),
         "x-synapseos-control-roles": roles,
     }
 
@@ -40,6 +50,7 @@ def _client(db_session: Session) -> TestClient:
 
 
 def _agent(db_session: Session) -> Agent:
+    company = Company(id=COMPANY_ID, name="Neocraft", slug="neocraft")
     agent = Agent(
         name="Control Developer",
         slug=f"control-developer-{uuid4().hex}",
@@ -47,7 +58,7 @@ def _agent(db_session: Session) -> Agent:
         department="Engineering",
         seniority=AgentSeniority.ENGINEER,
     )
-    db_session.add(agent)
+    db_session.add(CompanyAgentAssignment(company=company, agent=agent))
     db_session.commit()
     return agent
 
@@ -378,7 +389,7 @@ def test_control_status_fails_closed_across_company_scope(db_session: Session) -
 
     response = client.get(
         f"/control/projects/{intake['project_id']}/status",
-        headers=_headers(company="other-company"),
+        headers=_headers(company=OTHER_COMPANY_ID),
     )
 
     assert response.status_code == 403
@@ -387,7 +398,7 @@ def test_control_status_fails_closed_across_company_scope(db_session: Session) -
     close_id = uuid4()
     denied_command = client.post(
         f"/control/projects/{intake['project_id']}/close",
-        headers=_headers(company="other-company", roles="APPROVER"),
+        headers=_headers(company=OTHER_COMPANY_ID, roles="APPROVER"),
         json={
             "command_id": str(close_id),
             "correlation_id": str(uuid4()),

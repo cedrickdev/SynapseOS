@@ -19,6 +19,8 @@ def _production_settings() -> Settings:
         database_url="postgresql+psycopg://synapse:strong-password@db:5432/synapseos",
         github_service_token=SecretStr("github-service-token-value"),
         dashboard_service_token=SecretStr("dashboard-service-token-value"),
+        oidc_issuer="https://auth.example/application/o/synapseos/",
+        oidc_audience="synapseos-api",
         workspace_base_root=Path("/var/lib/synapseos/workspaces"),
         git_executable=Path("/usr/bin/git"),
     )
@@ -27,6 +29,7 @@ def _production_settings() -> Settings:
 class _Resources:
     def __init__(self) -> None:
         self.close_calls = 0
+        self.oidc_verifier = object()
 
     async def aclose(self) -> None:
         self.close_calls += 1
@@ -52,6 +55,7 @@ def test_lifespan_attaches_and_closes_resources_once() -> None:
     app = create_app(settings=_production_settings(), production_factory=factory)
     with TestClient(app):
         assert app.state.production_resources is resources
+        assert app.state.oidc_verifier is resources.oidc_verifier
     assert resources.close_calls == 1
 
 

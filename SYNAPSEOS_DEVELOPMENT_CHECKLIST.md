@@ -2890,19 +2890,19 @@ RBAC in the backend.
 
 ### Checklist
 
-- [ ] Integrate Authentik as the initial OIDC provider through provider-neutral OIDC contracts
-- [ ] Establish server-managed Nuxt sessions with secure cookie and CSRF protections
-- [ ] Validate access tokens in FastAPI using bounded cached discovery/JWKS data and strict claim
+- [x] Integrate Authentik as the initial OIDC provider through provider-neutral OIDC contracts
+- [x] Establish server-managed Nuxt sessions with secure cookie and CSRF protections
+- [x] Validate access tokens in FastAPI using bounded cached discovery/JWKS data and strict claim
       validation
-- [ ] Map immutable external subjects to internal users, companies, memberships, and project roles
-- [ ] Enforce backend-authoritative RBAC for reads, commands, approvals, cancellations, and closure
-- [ ] Keep the existing internal service token limited to trusted service-to-service traffic
-- [ ] Implement explicit logout, session expiry, token expiry, key rotation, and fail-closed provider
+- [x] Map immutable external subjects to internal users, companies, memberships, and project roles
+- [x] Enforce backend-authoritative RBAC for reads, commands, approvals, cancellations, and closure
+- [x] Keep the existing internal service token limited to trusted service-to-service traffic
+- [x] Implement explicit logout, session expiry, token expiry, key rotation, and fail-closed provider
       outage behavior
-- [ ] Audit authentication and authorization outcomes without tokens or sensitive claims
-- [ ] Add tests for invalid issuer, audience, signature, expiry, CSRF, role isolation, and cross-project
+- [x] Audit authentication and authorization outcomes without tokens or sensitive claims
+- [x] Add tests for invalid issuer, audience, signature, expiry, CSRF, role isolation, and cross-project
       access
-- [ ] Run backend and frontend tests, Ruff, mypy, lint, typecheck, and production build
+- [x] Run backend and frontend tests, Ruff, mypy, lint, typecheck, and production build
 
 ### Explicit exclusions
 
